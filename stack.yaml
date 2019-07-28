@@ -1,0 +1,8 @@
+resolver: lts-12.4
+
+packages:
+- '.'
+
+extra-deps:
+- sexp-grammar-2.0.2
+- invertible-grammar-0.1.2

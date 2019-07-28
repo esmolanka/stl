@@ -1,0 +1,38 @@
+name:                stl
+version:             0.0.0.1
+-- synopsis:
+-- description:
+homepage:            https://github.com/esmolanka/stl#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Eugene Smolanka
+maintainer:          esmolanka@gmail.com
+copyright:           Eugene Smolanka
+category:            Language
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  ghc-options:         -Wall -fno-warn-name-shadowing -fno-warn-unused-do-bind
+  exposed-modules:
+    STL
+    STL.Types
+    STL.Eval
+    STL.Check
+    STL.Subsumption
+    STL.DSL
+  build-depends:
+    base >= 4.7 && < 5, prettyprinter, containers, mtl, text,
+    recursion-schemes, free, sexp-grammar
+
+  default-language:    Haskell2010
+
+executable stl
+  main-is:             Main.hs
+  ghc-options:         -Wall -fno-warn-name-shadowing -fno-warn-unused-do-bind
+  default-language:    Haskell2010
+  build-depends:
+    stl, base >= 4.7 && < 5, mtl, bytestring, text,
+    prettyprinter, sexp-grammar

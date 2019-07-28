@@ -1,0 +1,238 @@
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE ConstraintKinds            #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+
+module STL.Subsumption where
+
+import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Except
+
+import Data.Functor.Foldable (Fix(..))
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IM
+import Data.Set (Set)
+import qualified Data.Set as S
+import Data.Text.Prettyprint.Doc as PP
+  ( Pretty(..), Doc,  (<+>), vsep, nest, indent, list)
+
+import STL.Types
+import STL.Eval
+
+----------------------------------------------------------------------
+-- Unification
+
+data UnifyErr
+  = IsNotSubtypeOf Type Type
+  | ArgumentCountMismatch Int Int
+  | InfiniteType Type
+  | CannotEscapeBindings (Set (Var, Int))
+  | NotPolymorphicEnough Type Var
+
+instance Pretty UnifyErr where
+  pretty = \case
+    IsNotSubtypeOf a b ->
+      nest 4 $ vsep
+        [ "Cannot unify types."
+        , indent 4 (pretty a)
+        , "is not a subtype of"
+        , indent 4 (pretty b)
+        ]
+    ArgumentCountMismatch n m ->
+      nest 4 $ vsep
+        [ "Cannot unify type application, different number of arguments:"
+        , pretty n <+> "vs." <+> pretty m
+        ]
+    InfiniteType t ->
+      nest 4 $ vsep
+        [ "Infinite type:"
+        , pretty t
+        ]
+    CannotEscapeBindings vars ->
+      nest 4 $ vsep
+        [ "Variables should not escape their scope:"
+        , PP.list $ map (\(x, n) -> pretty (Fix (TRef dummyPos x n))) $ S.toList vars
+        ]
+    NotPolymorphicEnough ty var ->
+      nest 4 $ vsep
+        [ "Type is not polymorphic enough:"
+        , pretty var <+> "~" <+> pretty ty
+        ]
+
+data UnifyEnv = UnifyEnv
+  { envVarMap :: [(Var, Var)]
+  }
+
+data UnifyState = UnifyState
+  { stFreshName :: Int
+  , stMetas :: IntMap Type
+  }
+
+instance Pretty UnifyState where
+  pretty st =
+    PP.list $
+      map (\(name, ty) -> "?" <> pretty name <+> "->" <+> pretty ty) $
+        IM.toList (stMetas st)
+
+type MonadUnify m =
+  ( MonadError UnifyErr m
+  , MonadReader UnifyEnv m
+  , MonadState UnifyState m
+  )
+
+pushAlphaEq :: (MonadUnify m) => Var -> Var -> m a -> m a
+pushAlphaEq x x' =
+  local (\env -> env { envVarMap = (x, x') : envVarMap env })
+
+checkAlphaEq :: (MonadUnify m) => (Var, Int) -> (Var, Int) -> m Bool
+checkAlphaEq (x, n) (y, m) = go 0 0 <$> asks envVarMap
+  where
+    go :: Int -> Int -> [(Var, Var)] -> Bool
+    go !n' !m' = \case
+      ((x', y') : rest) ->
+        x == x' && y == y' && n == n' && m == m' ||
+        go (if x == x' then succ n' else n')
+           (if y == y' then succ m' else m')
+           rest
+      [] ->
+        x == y && n' == m'
+
+newMeta :: (MonadUnify m) => Position -> Kind -> m Type
+newMeta pos kind = do
+  modify (\st -> st { stFreshName = succ (stFreshName st) })
+  n <- gets stFreshName
+  pure (Fix (TMeta pos (MetaVar n) kind))
+
+newSkolem :: (MonadUnify m) => Position -> Var -> Kind -> m Type
+newSkolem pos hint kind = do
+  modify (\st -> st { stFreshName = succ (stFreshName st) })
+  n <- gets stFreshName
+  pure (Fix (TSkolem pos (Skolem n) hint kind))
+
+lookupMeta :: (MonadUnify m) => MetaVar -> m (Maybe Type)
+lookupMeta (MetaVar name) =
+  gets (IM.lookup name . stMetas)
+
+writeMeta :: (MonadUnify m) => MetaVar -> Type -> m ()
+writeMeta (MetaVar name) ty =
+  modify (\st -> st { stMetas = IM.insert name ty (stMetas st) })
+
+subsumes :: forall m. (MonadUnify m) => Type -> Type -> m ()
+subsumes sub sup =
+  let (Fix tyConSub, argsSub) = tele sub
+      (Fix tyConSup, argsSup) = tele sup
+  in case (tyConSub, argsSub, tyConSup, argsSup) of
+       (TRef _ x n, _, TRef _ x' n', _) -> do
+         mathces <- checkAlphaEq (x, n) (x', n')
+         unless mathces $
+           throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
+         argsSub `subsumesTele` argsSup
+
+       (TGlobal _ n, _, TGlobal _ n', _)
+         | n == n' -> argsSub `subsumesTele` argsSup
+
+       (TArrow _, (a : bs), TArrow _, (a' : bs')) ->
+         a' `subsumes` a >>    -- Argument is contravariant
+         bs `subsumesTele` bs' -- Return type is covariant
+
+       (TLambda _ x k b, _, TLambda _ x' k' b', _) -> do
+         unless (k == k') $
+           throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
+         pushAlphaEq x x' $
+           subsumes b b'
+         argsSub `subsumesTele` argsSup
+
+       (TForall pos x k b, [], other', _) -> do
+         imp <- newMeta pos k
+         subst x 0 imp b `subsumes` untele (Fix other') argsSup
+
+       (other, _, TForall pos' x' k' b', []) -> do
+         imp <- newSkolem pos' x' k'
+         untele (Fix other) argsSub `subsumes` subst x' 0 imp b'
+
+       (TMu _ x b, _, TMu _ x' b', _) -> do
+         pushAlphaEq x x' $
+           subsumes b b'
+         argsSub `subsumesTele` argsSup
+
+       (TSkolem _ n _ _, _, TSkolem _ n' _ _, _)
+         | n == n' -> argsSub `subsumesTele` argsSup
+
+       (TMeta _ n _, _, other', _) -> do
+         subsumesMeta MetaToType n argsSub (Fix other') argsSup
+
+       (other, _, TMeta _ n' _, _) -> do
+         subsumesMeta TypeToMeta n' argsSub (Fix other) argsSup
+
+       (TSkolem _ _ var _, _, other', _) ->
+         throwError $ NotPolymorphicEnough (Fix other') var
+
+       (other, _, TSkolem _ _ var' _, _) ->
+         throwError $ NotPolymorphicEnough (Fix other) var'
+
+       _ | tyConSub `eqTypeCon` tyConSup ->
+             subsumesTele argsSub argsSup
+         | otherwise ->
+             throwError $ IsNotSubtypeOf sub sup
+
+data Direction = MetaToType | TypeToMeta
+
+subsumesMeta :: forall m. (MonadUnify m) => Direction -> MetaVar -> [Type] -> Type -> [Type] -> m ()
+subsumesMeta dir n nArgs other otherArgs = do
+  mty <- lookupMeta n
+  case mty of
+    Nothing ->
+      if freeMeta n other
+      then throwError $ InfiniteType other
+      else do
+        let vars = freeVars other
+        unless (S.null vars) $
+          throwError $ CannotEscapeBindings vars
+        writeMeta n other
+    Just ty ->
+      case dir of
+        MetaToType -> untele ty nArgs `subsumes` untele other otherArgs
+        TypeToMeta -> untele other otherArgs `subsumes` untele ty nArgs
+
+subsumesTele :: forall m. (MonadUnify m) => [Type] -> [Type] -> m ()
+subsumesTele subs sups = do
+  let countSubs = length subs
+      countSups = length sups
+  unless (countSubs == countSups) $
+    throwError $ ArgumentCountMismatch countSubs countSups
+  zipWithM_ subsumes subs sups
+
+eqTypeCon :: TypeF Type -> TypeF Type -> Bool
+eqTypeCon a b =
+  case (a, b) of
+    -- Trivial
+    (TUnit _         , TUnit _         ) -> True
+    (TVoid _         , TVoid _         ) -> True
+    (TArrow _        , TArrow _        ) -> True
+    (TRecord _       , TRecord _       ) -> True
+    (TVariant _      , TVariant _      ) -> True
+    (TPresent _      , TPresent _      ) -> True
+    (TAbsent _       , TAbsent _       ) -> True
+
+    (TExtend _ la    , TExtend _ lb    ) -> la == lb
+    (TNil _          , TNil _          ) -> True
+
+    -- Non-trivial, therefore never equal
+    (TRef _ _ _      , TRef _ _ _      ) -> False
+    (TMeta _ _ _     , TMeta _ _ _     ) -> False
+    (TLambda _ _ _ _ , TLambda _ _ _ _ ) -> False
+    (TForall _ _ _ _ , TForall _ _ _ _ ) -> False
+    (TMu _ _ _       , TMu _ _ _       ) -> False
+    (TApp _ _ _      , TApp _ _ _      ) -> False
+    (_               , _               ) -> False
+
+subsumes' :: Type -> Type -> Doc a
+subsumes' sub sup =
+  either (errorWithoutStackTrace . ("\n" ++) . show . pretty) (pretty . snd) $
+    runReader (runExceptT (runStateT (subsumes sub sup) initState)) initEnv
+  where
+    initState = UnifyState { stFreshName = 100, stMetas = IM.empty }
+    initEnv   = UnifyEnv []
