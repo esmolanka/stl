@@ -145,33 +145,32 @@ subsumes sub sup =
            subsumes b b'
          argsSub `subsumesTele` argsSup
 
-       (TForall pos x k b, [], other', _) -> do
+       (TForall pos x k b, [], _, _) -> do
          imp <- newMeta pos k
-         subst x 0 imp b `subsumes` untele (Fix other') argsSup
+         subst x 0 imp b `subsumes` sup
 
-       (other, _, TForall pos' x' k' b', []) -> do
+       (_, _, TForall pos' x' k' b', []) -> do
          imp <- newSkolem pos' x' k'
-         untele (Fix other) argsSub `subsumes` subst x' 0 imp b'
+         sub `subsumes` subst x' 0 imp b'
 
-       (TMu _ x b, _, TMu _ x' b', _) -> do
+       (TMu _ x b, [], TMu _ x' b', []) -> do
          pushAlphaEq x x' $
            subsumes b b'
-         argsSub `subsumesTele` argsSup
 
-       (TSkolem _ n _ _, _, TSkolem _ n' _ _, _)
-         | n == n' -> argsSub `subsumesTele` argsSup
+       (TMeta _ n _, [], _, _) -> do
+         subsumesMeta MetaToType n sup
 
-       (TMeta _ n _, _, other', _) -> do
-         subsumesMeta MetaToType n argsSub (Fix other') argsSup
+       (_, _, TMeta _ n' _, []) -> do
+         subsumesMeta TypeToMeta n' sub
 
-       (other, _, TMeta _ n' _, _) -> do
-         subsumesMeta TypeToMeta n' argsSub (Fix other) argsSup
+       (TSkolem _ n _ _, [], TSkolem _ n' _ _, [])
+         | n == n' -> pure ()
 
-       (TSkolem _ _ var _, _, other', _) ->
-         throwError $ NotPolymorphicEnough (Fix other') var
+       (TSkolem _ _ var _, [], _, _) ->
+         throwError $ NotPolymorphicEnough sup var
 
-       (other, _, TSkolem _ _ var' _, _) ->
-         throwError $ NotPolymorphicEnough (Fix other) var'
+       (_, _, TSkolem _ _ var' _, []) ->
+         throwError $ NotPolymorphicEnough sub var'
 
        _ | tyConSub `eqTypeCon` tyConSup ->
              subsumesTele argsSub argsSup
@@ -180,8 +179,8 @@ subsumes sub sup =
 
 data Direction = MetaToType | TypeToMeta
 
-subsumesMeta :: forall m. (MonadUnify m) => Direction -> MetaVar -> [Type] -> Type -> [Type] -> m ()
-subsumesMeta dir n nArgs other otherArgs = do
+subsumesMeta :: forall m. (MonadUnify m) => Direction -> MetaVar -> Type -> m ()
+subsumesMeta dir n other = do
   mty <- lookupMeta n
   case mty of
     Nothing ->
@@ -194,8 +193,8 @@ subsumesMeta dir n nArgs other otherArgs = do
         writeMeta n other
     Just ty ->
       case dir of
-        MetaToType -> untele ty nArgs `subsumes` untele other otherArgs
-        TypeToMeta -> untele other otherArgs `subsumes` untele ty nArgs
+        MetaToType -> ty `subsumes` other
+        TypeToMeta -> other `subsumes` ty
 
 subsumesTele :: forall m. (MonadUnify m) => [Type] -> [Type] -> m ()
 subsumesTele subs sups = do
@@ -231,8 +230,14 @@ eqTypeCon a b =
 
 subsumes' :: Type -> Type -> Doc a
 subsumes' sub sup =
-  either (errorWithoutStackTrace . ("\n" ++) . show . pretty) (pretty . snd) $
-    runReader (runExceptT (runStateT (subsumes sub sup) initState)) initEnv
+  vsep
+  [ pretty sub
+  , indent 2 "<:"
+  , pretty sup
+  , indent 2 "~>"
+  , either pretty (pretty . snd) $
+      runReader (runExceptT (runStateT (subsumes sub sup) initState)) initEnv
+  ]
   where
     initState = UnifyState { stFreshName = 100, stMetas = IM.empty }
     initEnv   = UnifyEnv []
