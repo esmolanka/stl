@@ -9,14 +9,12 @@ module STL.Check where
 import Control.Monad.Reader
 import Control.Monad.Except
 
-import Data.Bifunctor
 import Data.Foldable (fold)
 import Data.Functor.Foldable (Fix(..), cata, para)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
 import Data.Monoid (Any (..))
-import qualified Data.Set as S
 import Data.Text.Prettyprint.Doc as PP
   ( Pretty(..), Doc, (<+>), vsep, nest, indent, colon, squotes
   , parens, line
@@ -249,23 +247,19 @@ containsNodes = getAnys . cata alg
       TSkolem _ _ _ _ -> mempty { containsMetasOrSkolems = Any True }
       other -> fold other
 
-quantifyOverFreeVars :: [(Var, Kind)] -> Type -> Type
-quantifyOverFreeVars params ty =
-  let vars = S.toList (freeVars ty `S.difference` S.fromList (map (second (const 0)) params))
-  in foldr (\(x, _) -> Fix . TForall (getPosition ty) x Star) ty vars
-
-quantifyOverRecursion :: GlobalName -> Type -> Type
-quantifyOverRecursion name ty =
-  let ty' = substGlobal name (\p -> Fix (TRef p (Var "self") 0)) ty
-  in if getAny (containsRecursion ty) then Fix (TMu (getPosition ty) (Var "self") ty') else ty
+handleSelfReference :: GlobalName -> Type -> Type
+handleSelfReference name ty =
+  let (GlobalName dname) = name
+      ty' = substGlobal name (\p -> Fix (TRef p (Var dname) 0)) ty
+  in if getAny (containsRecursion ty) then Fix (TMu (getPosition ty) (Var dname) ty') else ty
     where
       containsRecursion :: Type -> Any
       containsRecursion = cata $ \case
         TGlobal _ name' -> Any (name == name')
         other -> fold other
 
-quantifyOverParametrisation :: Position -> [(Var, Kind)] -> Type -> Type
-quantifyOverParametrisation pos params ty =
+extendWithParameters :: Position -> [(Var, Kind)] -> Type -> Type
+extendWithParameters pos params ty =
   foldr (\(x, k) -> Fix . TLambda pos x k) ty params
 
 checkDefinitionTypeWellformedness :: forall m. (MonadTC m) => Position -> Maybe GlobalName -> Type -> m ()
@@ -288,9 +282,8 @@ checkProgram program cont = cata alg program
       PLet pos (Definition name params ty) rest -> do
         checkDefinitionTypeWellformedness pos (Just name) ty
         let ty' =
-              quantifyOverParametrisation pos params $
-              quantifyOverFreeVars params $
-              quantifyOverRecursion name ty
+              extendWithParameters pos params $
+              handleSelfReference name ty
         kind <- inferKind ty'
         withGlobal name ty' kind $ rest
 
@@ -300,8 +293,7 @@ checkProgram program cont = cata alg program
 
       PReturn pos ty -> do
         checkDefinitionTypeWellformedness pos Nothing ty
-        let ty' = quantifyOverFreeVars [] ty
-        kind <- inferKind ty'
+        kind <- inferKind ty
         unless (kind == Star) $
-          throwError $ KindMismatch pos ty' Star kind
+          throwError $ KindMismatch pos ty Star kind
         cont ty
