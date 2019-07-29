@@ -3,13 +3,14 @@
 module STL.DSL where
 
 import Data.Functor.Foldable (Fix(..))
+import Data.Text (Text)
 import STL.Types
 
 pattern Ref :: Var -> Int -> Type
 pattern Ref x n <- Fix (TRef _ x n)
   where Ref x n = Fix (TRef dummyPos x n)
 
-pattern Global :: String -> Type
+pattern Global :: Text -> Type
 pattern Global x <- Fix (TGlobal _ (GlobalName x))
   where Global x = Fix (TGlobal dummyPos (GlobalName x))
 
@@ -67,7 +68,7 @@ pattern Mu :: Var -> Type -> Type
 pattern Mu x b <- Fix (TMu _ x b)
   where Mu x b = Fix (TMu dummyPos x b)
 
-pattern Let :: String -> [(Var, Kind)] -> Type -> Program -> Program
+pattern Let :: Text -> [(Var, Kind)] -> Type -> Program -> Program
 pattern Let name params ty cont <- Fix (PLet _ (Definition (GlobalName name) params ty) cont)
   where Let name params ty cont = Fix (PLet dummyPos (Definition (GlobalName name) params ty) cont)
 

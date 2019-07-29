@@ -1,12 +1,17 @@
 {-# LANGUAGE DeriveFoldable             #-}
 {-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
-module STL.Types where
+module STL.Types
+  ( module STL.Types
+  , Position(..)
+  , dummyPos
+  ) where
 
 import Control.Category ((>>>))
 import Control.Monad.Reader
@@ -15,17 +20,21 @@ import Data.Char (isUpper)
 import Data.Functor.Foldable (Fix(..), para)
 import Data.List (foldl')
 import Data.String
+import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc as PP
   ( Pretty(..), Doc,  (<+>), vsep, indent, colon, squotes
   , parens, hsep, group, braces, angles, brackets, line
   )
+import GHC.Generics
+import Language.Sexp.Located (Position(..), dummyPos)
 
 data Kind
   = Star
   | Row
   | Presence
   | Arr Kind Kind
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Generic)
 
 instance Pretty Kind where
   pretty = ppKind False
@@ -42,43 +51,32 @@ instance Pretty Kind where
         Arr f a -> parensIf nested $
           ppKind True f <+> "->" <+> ppKind False a
 
-newtype Var = Var String
+newtype Var = Var Text
   deriving (Show, Eq, Ord, IsString)
 
 instance Pretty Var where
   pretty (Var name) = pretty name
 
-newtype Label = Label String
+newtype Label = Label Text
   deriving (Show, Eq, Ord, IsString)
 
 instance Pretty Label where
   pretty (Label name) = squotes (pretty name)
 
-data Position = Position
-  { _posFileName :: FilePath
-  , _posLine     :: {-# UNPACK #-} !Int
-  , _posCol      :: {-# UNPACK #-} !Int
-  } deriving (Ord, Eq)
+newtype MetaVar = MetaVar Int
+  deriving (Eq, Ord, Show)
 
-dummyPos :: Position
-dummyPos = Position "<no location information>" 1 0
+newtype Skolem = Skolem Int
+  deriving (Eq, Ord, Show)
 
-instance Pretty Position where
-  pretty (Position fn lin col) =
-    pretty fn <> colon <> pretty lin <> colon <> pretty col
-
-instance Show Position where
-  show (Position fn lin col) =
-    fn ++ ":" ++ show lin ++ ":" ++ show col
-
-newtype MetaVar = MetaVar Int   deriving (Eq, Ord, Show)
-newtype Skolem = Skolem Int     deriving (Eq, Ord, Show)
-newtype GlobalName = GlobalName String  deriving (Eq, Ord, Show)
+newtype GlobalName = GlobalName Text
+  deriving (Eq, Ord, Show, IsString)
 
 instance Pretty GlobalName where
-  pretty (GlobalName []) = "$"
-  pretty (GlobalName (n:ame)) =
-    if isUpper n then pretty (n:ame) else "$" <> pretty (n:ame)
+  pretty (GlobalName name) =
+    case T.uncons name of
+      Nothing     -> "$"
+      Just (n, _) -> if isUpper n then pretty name else "$" <> pretty name
 
 data TypeF e
   = TRef      { _getPosition :: Position, _refName :: Var, _refIndex :: Int }
@@ -98,7 +96,7 @@ data TypeF e
   | TLambda   { _getPosition :: Position, _lambdaName :: Var, _lambdaKind :: Kind, _lambdaBody :: e }
   | TForall   { _getPosition :: Position, _forallName :: Var, _forallKind :: Kind, _forallBody :: e }
   | TMu       { _getPosition :: Position, _muName :: Var, _muBody :: e }
-  deriving (Eq, Ord, Functor, Foldable, Traversable)
+  deriving (Eq, Ord, Functor, Foldable, Traversable, Generic)
 
 type Type = Fix TypeF
 
@@ -190,7 +188,7 @@ data Definition = Definition
   { defName   :: GlobalName
   , defParams :: [(Var, Kind)]
   , defType   :: Type
-  }
+  } deriving (Generic)
 
 instance Pretty Definition where
   pretty (Definition name params ty) =
@@ -205,7 +203,7 @@ data ProgramF e
   = PLet    Position Definition e
   | PMutual Position [Definition] e
   | PReturn Position Type
-  deriving (Functor, Foldable, Traversable)
+  deriving (Functor, Foldable, Traversable, Generic)
 
 type Program = Fix ProgramF
 
