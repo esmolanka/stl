@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module STL.Grammar where

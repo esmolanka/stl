@@ -140,10 +140,11 @@ withGlobal name ty k cont = do
     Nothing -> local (\ctx -> ctx { ctxGlobals = M.insert name (ty, k) (ctxGlobals ctx) } ) cont
     Just (oldty, _) -> throwError $ GlobalAlreadyDefined (getPosition ty) name (getPosition oldty)
 
-runTC :: Pretty a => ExceptT Err (Reader Ctx) a -> a
-runTC k =
-  either (errorWithoutStackTrace . ("\n" ++) . show . pretty) id $
-    runReader (runExceptT k) (Ctx M.empty M.empty)
+runTC :: ExceptT Err (Reader Ctx) a -> a
+runTC k = case runReader (runExceptT k) (Ctx M.empty M.empty) of
+  Left err -> errorWithoutStackTrace ("\n" ++ show (pretty err))
+  Right a  -> a
+
 
 ----------------------------------------------------------------------
 -- Kind Inference
@@ -248,15 +249,17 @@ containsNodes = getAnys . cata alg
       other -> fold other
 
 handleSelfReference :: GlobalName -> Type -> Type
-handleSelfReference name ty =
-  let (GlobalName dname) = name
-      ty' = substGlobal name (\p -> Fix (TRef p (Var dname) 0)) ty
-  in if getAny (containsRecursion ty) then Fix (TMu (getPosition ty) (Var dname) ty') else ty
-    where
-      containsRecursion :: Type -> Any
-      containsRecursion = cata $ \case
-        TGlobal _ name' -> Any (name == name')
-        other -> fold other
+handleSelfReference name@(GlobalName dname) ty =
+  if containsRecursion ty
+  then Fix $ TMu (getPosition ty) (Var dname) $
+         substGlobal name (\p -> Fix (TRef p (Var dname) 0)) $
+           shift 1 (Var dname) ty
+  else ty
+  where
+    containsRecursion :: Type -> Bool
+    containsRecursion = (getAny .) . cata $ \case
+      TGlobal _ name' -> Any (name == name')
+      other -> fold other
 
 extendWithParameters :: Position -> [(Var, Kind)] -> Type -> Type
 extendWithParameters pos params ty =

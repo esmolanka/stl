@@ -75,7 +75,7 @@ newtype GlobalName = GlobalName Text
 instance Pretty GlobalName where
   pretty (GlobalName name) =
     case T.uncons name of
-      Nothing     -> "$"
+      Nothing -> "$"
       Just (n, _) -> if isUpper n then pretty name else "$" <> pretty name
 
 data TypeF e
@@ -161,6 +161,9 @@ instance Pretty (TypeF (Fix TypeF)) where
 
 instance Pretty (Fix TypeF) where
   pretty (Fix a) = pretty a
+
+instance {-# OVERLAPPING #-} Show (Fix TypeF) where
+  showsPrec n x = showParen (n > 1) $ shows (pretty x)
 
 ----------------------------------------------------------------------
 

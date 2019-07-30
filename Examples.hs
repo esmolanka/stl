@@ -6,7 +6,6 @@ import STL
 import STL.Check
 import STL.Subsumption
 import STL.DSL
-import Data.Text.Prettyprint.Doc
 
 recordSelect :: Type
 recordSelect =
@@ -83,3 +82,17 @@ programA =
       Nil) $
   Return
    (Global "List" :$ (Global "List" :$ Unit))
+
+mutuallyRecursive1 :: Type
+mutuallyRecursive1 =
+  Mu (Var "Odd") $
+    Variant $
+      Extend "OZero" Present Unit $
+      Extend "OSucc" Present
+        (Mu "Even" $
+          Variant $
+            Extend "EZero" Present Unit $
+            Extend "ESucc" Present
+              (Ref "Odd" 0) $
+            Nil) $
+      Nil
