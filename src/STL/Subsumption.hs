@@ -125,6 +125,20 @@ subsumes sub sup =
   let (Fix tyConSub, argsSub) = tele sub
       (Fix tyConSup, argsSup) = tele sup
   in case (tyConSub, argsSub, tyConSup, argsSup) of
+       (TForall pos x k b, [], _, _) -> do
+         imp <- newMeta pos k
+         subst x 0 imp b `subsumes` sup
+
+       (_, _, TForall pos' x' k' b', []) -> do
+         imp <- newSkolem pos' x' k'
+         sub `subsumes` subst x' 0 imp b'
+
+       (TMeta _ n _, [], _, _) -> do
+         subsumesMeta MetaToType n sup
+
+       (_, _, TMeta _ n' _, []) -> do
+         subsumesMeta TypeToMeta n' sub
+
        (TRef _ x n, _, TRef _ x' n', _) -> do
          mathces <- checkAlphaEq (x, n) (x', n')
          unless mathces $
@@ -145,23 +159,36 @@ subsumes sub sup =
            subsumes b b'
          argsSub `subsumesTele` argsSup
 
-       (TForall pos x k b, [], _, _) -> do
-         imp <- newMeta pos k
-         subst x 0 imp b `subsumes` sup
-
-       (_, _, TForall pos' x' k' b', []) -> do
-         imp <- newSkolem pos' x' k'
-         sub `subsumes` subst x' 0 imp b'
-
        (TMu _ x b, [], TMu _ x' b', []) -> do
          pushAlphaEq x x' $
            subsumes b b'
 
-       (TMeta _ n _, [], _, _) -> do
-         subsumesMeta MetaToType n sup
+       (TNil _, [], TNil _, []) ->
+         pure ()
 
-       (_, _, TMeta _ n' _, []) -> do
-         subsumesMeta TypeToMeta n' sub
+       (TNil pos, [], TExtend _ lbl', [_, f', _]) ->
+         untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
+         `subsumes`
+         sup
+
+       (TExtend _ lbl, [_, f, _], TNil pos', []) ->
+         sub
+         `subsumes`
+         untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
+
+       (TSkolem pos _ _ _, [], TExtend _ lbl', [_, f', _]) ->
+         untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
+         `subsumes`
+         sup
+
+       (TExtend _ lbl, [_, f, _], TSkolem pos' _ _ _, []) ->
+         sub
+         `subsumes`
+         untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
+
+       (TExtend _ lbl, [pty, fty, tail_], TExtend pos' lbl', [pty', fty', tail']) -> do
+         (pty'', fty'', tail'') <- rewriteRow TypeToMeta lbl pos' lbl' pty' fty' tail'
+         [pty, fty, tail_] `subsumesTele` [pty'', fty'', tail'']
 
        (TSkolem _ n _ _, [], TSkolem _ n' _ _, [])
          | n == n' -> pure ()
@@ -195,6 +222,29 @@ subsumesMeta dir n other = do
       case dir of
         MetaToType -> ty `subsumes` other
         TypeToMeta -> other `subsumes` ty
+
+rewriteRow :: (MonadUnify m) => Direction -> Label -> Position -> Label -> Type -> Type -> Type -> m (Type, Type, Type)
+rewriteRow dir newLabel pos label pty fty tail_
+  | newLabel == label = return (pty, fty, tail_)
+  | otherwise =
+      case tele tail_ of
+        (Fix (TMeta pos' alpha _), []) -> do
+          beta <- newMeta pos Row
+          gamma <- newMeta pos Star
+          theta <- newMeta pos Presence
+          subsumesMeta dir alpha (untele (Fix (TExtend pos' newLabel)) [theta, gamma, beta])
+          return (theta, gamma, untele (Fix (TExtend pos label)) [pty, fty, beta])
+        (Fix (TExtend pos' label'), [pty', fty', tail']) -> do
+          (pty'', fty'', tail'') <- rewriteRow dir newLabel pos' label' pty' fty' tail'
+          return (pty'', fty'', untele (Fix (TExtend pos label)) [pty, fty, tail''])
+        (Fix (TNil pos'), []) -> do
+          gamma <- newMeta pos' Star
+          return (Fix (TAbsent pos'), gamma, untele (Fix (TExtend pos label)) [pty, fty, Fix (TNil pos')])
+        (Fix (TSkolem pos' _ _ _), []) -> do
+          gamma <- newMeta pos' Star
+          return (Fix (TAbsent pos'), gamma, untele (Fix (TExtend pos label)) [pty, fty, Fix (TNil pos')])
+        _other ->
+          error $ "Unexpected type: " ++ show tail_
 
 subsumesTele :: forall m. (MonadUnify m) => [Type] -> [Type] -> m ()
 subsumesTele subs sups = do
@@ -234,4 +284,3 @@ runSubsumption k =
   where
     initState = UnifyState { stFreshName = 100, stMetas = mempty }
     initEnv   = UnifyEnv []
-
