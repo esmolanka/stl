@@ -6,9 +6,13 @@ import Data.Functor.Foldable (Fix(..))
 import Data.Text (Text)
 import STL.Types
 
-pattern Ref :: Var -> Int -> Type
-pattern Ref x n <- Fix (TRef _ x n)
-  where Ref x n = Fix (TRef dummyPos x n)
+pattern Ref :: Var -> Type
+pattern Ref x <- Fix (TRef _ x 0)
+  where Ref x = Fix (TRef dummyPos x 0)
+
+pattern Refn :: Var -> Int -> Type
+pattern Refn x n <- Fix (TRef _ x n)
+  where Refn x n = Fix (TRef dummyPos x n)
 
 pattern Global :: Text -> Type
 pattern Global x <- Fix (TGlobal _ (GlobalName x))

@@ -17,7 +17,7 @@ import qualified Data.IntMap as IM
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text.Prettyprint.Doc as PP
-  ( Pretty(..), Doc,  (<+>), vsep, nest, indent, list)
+  ( Pretty(..), (<+>), vsep, nest, indent, list)
 
 import STL.Types
 import STL.Eval
@@ -228,16 +228,10 @@ eqTypeCon a b =
     (TApp _ _ _      , TApp _ _ _      ) -> False
     (_               , _               ) -> False
 
-subsumes' :: Type -> Type -> Doc a
-subsumes' sub sup =
-  vsep
-  [ pretty sub
-  , indent 2 "<:"
-  , pretty sup
-  , indent 2 "~>"
-  , either pretty (pretty . snd) $
-      runReader (runExceptT (runStateT (subsumes sub sup) initState)) initEnv
-  ]
+runSubsumption :: ExceptT e (StateT UnifyState (Reader UnifyEnv)) a -> (Either e a, UnifyState)
+runSubsumption k =
+  runReader (runStateT (runExceptT k) initState) initEnv
   where
-    initState = UnifyState { stFreshName = 100, stMetas = IM.empty }
+    initState = UnifyState { stFreshName = 100, stMetas = mempty }
     initEnv   = UnifyEnv []
+

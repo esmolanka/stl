@@ -14,7 +14,7 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
-  hs-source-dirs:      src
+  hs-source-dirs:      src, .
   ghc-options:         -Wall -fno-warn-name-shadowing -fno-warn-unused-do-bind
   exposed-modules:
     STL
@@ -23,6 +23,7 @@ library
     STL.Check
     STL.Subsumption
     STL.DSL
+    STL.Grammar
   build-depends:
     base >= 4.7 && < 5, prettyprinter, containers, mtl, text,
     recursion-schemes, free, sexp-grammar

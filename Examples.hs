@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Test where
 
@@ -6,11 +6,40 @@ import STL
 import STL.Check
 import STL.Subsumption
 import STL.DSL
+import Data.Text.Prettyprint.Doc
 
-recordSelect :: Type
-recordSelect =
-  Forall "a" Star $
-    Record (Extend "foo" Present (Ref "a" 0) Nil) :~> Ref "a" 0
+----------------------------------------------------------------------
+-- Utils
+
+(<:) :: Type -> Type -> Doc a
+(<:) sub sup =
+  let (res, state) =
+        inferKindClosed sub == inferKindClosed sup `seq`
+        runSubsumption (subsumes sub sup)
+  in vsep
+     [ pretty sub
+     , indent 2 "<:"
+     , pretty sup
+     , mempty
+     , either pretty (\_ -> "OK") $ res
+     , "State:"
+     , indent 2 $ pretty state
+     ]
+infix 0 <:
+
+q :: Type -> Doc a
+q ty =
+  let k = inferKindClosed ty
+      ty' = k `seq` normaliseClosed ty
+      k' = inferKindClosed ty'
+  in vsep
+     [ pretty ty
+     , "~~~>"
+     , pretty ty'
+     , ":" <+> pretty k' <+> if k /= k' then "/=" <+> pretty k <+> "!!!" else mempty
+     ]
+
+----------------------------------------------------------------------
 
 bool :: Type
 bool =
@@ -19,17 +48,13 @@ bool =
     Extend "False" Present Unit $
     Nil
 
-someRecord :: Type
-someRecord =
-  Record (Extend "foo" Present bool Nil)
-
 pair :: Label -> Label -> Type
 pair la lb =
   Lambda "a" Star $
     Lambda "b" Star $
       Record $
-        Extend la Present (Ref "a" 0) $
-        Extend lb Present (Ref "b" 0) $
+        Extend la Present (Ref "a") $
+        Extend lb Present (Ref "b") $
         Nil
 
 alt :: Label -> Label -> Type
@@ -37,8 +62,8 @@ alt la lb =
   Lambda "a" Star $
     Lambda "b" Star $
       Variant $
-        Extend la Present (Ref "a" 0) $
-        Extend lb Present (Ref "b" 0) $
+        Extend la Present (Ref "a") $
+        Extend lb Present (Ref "b") $
         Nil
 
 list :: Type
@@ -48,8 +73,20 @@ list =
       alt "Nil" "Cons" :$
         Unit :$
         (pair "head" "tail" :$
-          Ref "el" 0 :$
-          Ref "list" 0)
+          Ref "el" :$
+          Ref "list")
+
+
+----------------------------------------------------------------------
+
+someRecord :: Type
+someRecord =
+  Record (Extend "foo" Present bool Nil)
+
+recordSelect :: Type
+recordSelect =
+  Forall "a" Star $
+    Record (Extend "foo" Present (Ref "a") Nil) :~> Ref "a"
 
 ----------------------------------------------------------------------
 
@@ -58,8 +95,8 @@ moduleA =
   Forall "a" Star $
   Forall "b" Star $
     Record $
-      Extend "to"   Present (Ref "a" 0 :~> Ref "b" 0) $
-      Extend "from" Present (Ref "b" 0 :~> Ref "a" 0) $
+      Extend "to"   Present (Ref "a" :~> Ref "b") $
+      Extend "from" Present (Ref "b" :~> Ref "a") $
       Nil
 
 moduleB :: Type
@@ -76,7 +113,7 @@ programA =
       Extend "Nil"  Present Unit $
       Extend "Cons" Present (
         Record $
-          Extend "head" Present (Ref "el" 0) $
+          Extend "head" Present (Ref "el") $
           Extend "tail" Present (Global "List") $
           Nil) $
       Nil) $
@@ -93,6 +130,6 @@ mutuallyRecursive1 =
           Variant $
             Extend "EZero" Present Unit $
             Extend "ESucc" Present
-              (Ref "Odd" 0) $
+              (Ref "Odd") $
             Nil) $
       Nil
