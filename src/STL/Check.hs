@@ -15,10 +15,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
 import Data.Monoid (Any (..))
-import Data.Text.Prettyprint.Doc as PP
-  ( Pretty(..), Doc, (<+>), vsep, nest, indent, colon, squotes
-  , parens, line
-  )
+import STL.Pretty
 
 import STL.Types
 import STL.Eval
@@ -40,37 +37,37 @@ data IllegalDefinitionReason
   | DefinitionContainsExplicitRecursion
   | DefinitionContainsExplicitParametrisation
 
-instance Pretty Err where
-  pretty = \case
+instance CPretty Err where
+  cpretty = \case
     VariableNotFound pos x n ->
-      pretty pos <> ": Undefined variable" <+> squotes (if n > 0 then pretty x <> "/" <> pretty n else pretty x) <> "."
+      pretty pos <> ": Undefined variable" <+> aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x) <> "."
     KindMismatch pos t k k' ->
       nest 4 $ vsep
         [ pretty pos <> ": Kind mismatch while checking type:"
-        , indent 4 (pretty t)
+        , indent 4 (cpretty t)
         , "Expected kind:"
-        , indent 4 (pretty k)
+        , indent 4 (cpretty k)
         , "Actual kind:"
-        , indent 4 (pretty k')
+        , indent 4 (cpretty k')
         ]
     ArrowExpected pos t k ->
       nest 4 $ vsep
         [ pretty pos <> ": Type application to a non-arrow kinded type:"
-        , indent 4 (pretty t)
+        , indent 4 (cpretty t)
         , "Actual kind:"
-        , indent 4 (pretty k)
+        , indent 4 (cpretty k)
         ]
     GlobalNotFound pos name ->
-      pretty pos <> ": Undefined global definition" <+> pretty name <> "."
+      pretty pos <> ": Undefined global definition" <+> cpretty name <> "."
     GlobalAlreadyDefined pos name oldpos ->
       nest 4 $ vsep
-        [ pretty pos <> ": Duplicate global definition" <+> pretty name <+> ". It has already been defined at:"
+        [ pretty pos <> ": Duplicate global definition" <+> cpretty name <+> ". It has already been defined at:"
         , pretty oldpos
         ]
     IllegalDefinition pos name t reason ->
       nest 4 $ vsep
-        [ pretty pos <> ": Illegal global definition" <+> pretty name <+> parens (pretty reason) <> colon
-        , indent 4 (pretty t)
+        [ pretty pos <> ": Illegal global definition" <+> cpretty name <+> parens (pretty reason) <> colon
+        , indent 4 (cpretty t)
         ]
 
 instance Pretty IllegalDefinitionReason where
@@ -90,28 +87,28 @@ data Ctx = Ctx
   , ctxGlobals :: Map GlobalName (Type, Kind)
   }
 
-instance Pretty Ctx where
-  pretty ctx = vsep
+instance CPretty Ctx where
+  cpretty ctx = vsep
     [ "Locals:"
-    , indent 4 (ppLocals (ctxGamma ctx)) <> line
+    , indent 2 (ppLocals (ctxGamma ctx)) <> line
     , "Globals:"
-    , indent 4 (ppGlobals (ctxGlobals ctx))
+    , indent 2 (ppGlobals (ctxGlobals ctx))
     ]
     where
-      ppLocals :: Map Var [Kind] -> Doc a
+      ppLocals :: Map Var [Kind] -> Doc AnsiStyle
       ppLocals gamma =
         let vars = concatMap (\(var, kinds) -> (,) <$> pure var <*> zip [0..] kinds) $ M.toList gamma
         in vsep $ map ppVar vars
 
-      ppVar :: (Var, (Int, Kind)) -> Doc a
-      ppVar (x, (n, k)) = pretty x <> "/" <> pretty n <+> "->" <+> pretty k
+      ppVar :: (Var, (Int, Kind)) -> Doc AnsiStyle
+      ppVar (x, (n, k)) = aVariable (cpretty x <> "/" <> pretty n) <+> "->" <+> cpretty k
 
-      ppGlobals :: Map GlobalName (Type, Kind) -> Doc a
+      ppGlobals :: Map GlobalName (Type, Kind) -> Doc AnsiStyle
       ppGlobals globals = vsep $ map ppDefinition (M.toList globals)
 
-      ppDefinition :: (GlobalName, (Type, Kind)) -> Doc a
+      ppDefinition :: (GlobalName, (Type, Kind)) -> Doc AnsiStyle
       ppDefinition (name, (ty, k)) =
-        "type" <+> parens (pretty name <+> colon <+> pretty k) <+> "=" <+> pretty ty
+        aKeyword "type" <+> parens (cpretty name <+> colon <+> cpretty k) <+> "=" <+> cpretty ty
 
 ----------------------------------------------------------------------
 -- Typechecking Monad
@@ -142,7 +139,7 @@ withGlobal name ty k cont = do
 
 runTC :: ExceptT Err (Reader Ctx) a -> a
 runTC k = case runReader (runExceptT k) (Ctx M.empty M.empty) of
-  Left err -> errorWithoutStackTrace ("\n" ++ show (pretty err))
+  Left err -> errorWithoutStackTrace ("\n" ++ show (cpretty err))
   Right a  -> a
 
 
@@ -214,7 +211,7 @@ inferKind = para alg
 
 inferKindClosed :: Type -> Kind
 inferKindClosed ty =
-  either (errorWithoutStackTrace . ("\n" ++) . show . pretty) id $
+  either (errorWithoutStackTrace . ("\n" ++) . show . cpretty) id $
     runReader (runExceptT (inferKind ty)) (Ctx M.empty M.empty)
 
 ----------------------------------------------------------------------

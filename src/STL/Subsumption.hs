@@ -7,20 +7,19 @@
 
 module STL.Subsumption where
 
+import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad.State
-import Control.Monad.Except
 
 import Data.Functor.Foldable (Fix(..))
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
 import Data.Set (Set)
 import qualified Data.Set as S
-import Data.Text.Prettyprint.Doc as PP
-  ( Pretty(..), (<+>), vsep, nest, indent, list)
 
-import STL.Types
 import STL.Eval
+import STL.Pretty as PP
+import STL.Types
 
 ----------------------------------------------------------------------
 -- Unification
@@ -32,34 +31,35 @@ data UnifyErr
   | CannotEscapeBindings (Set (Var, Int))
   | NotPolymorphicEnough Type Var
 
-instance Pretty UnifyErr where
-  pretty = \case
+instance CPretty UnifyErr where
+  cpretty = \case
     IsNotSubtypeOf a b ->
-      nest 4 $ vsep
+      nest 2 $ vsep
         [ "Cannot unify types."
-        , indent 4 (pretty a)
-        , "is not a subtype of"
-        , indent 4 (pretty b)
+        , indent 2 $ cpretty a
+        , "Does not subsume:"
+        , indent 2 $ cpretty b
         ]
     ArgumentCountMismatch n m ->
-      nest 4 $ vsep
+      nest 2 $ vsep
         [ "Cannot unify type application, different number of arguments:"
-        , pretty n <+> "vs." <+> pretty m
+        , indent 2 $ pretty n <+> "vs." <+> pretty m
         ]
     InfiniteType t ->
-      nest 4 $ vsep
+      nest 2 $ vsep
         [ "Infinite type:"
-        , pretty t
+        , indent 2 $ cpretty t
         ]
     CannotEscapeBindings vars ->
-      nest 4 $ vsep
+      nest 2 $ vsep
         [ "Variables should not escape their scope:"
-        , PP.list $ map (\(x, n) -> pretty (Fix (TRef dummyPos x n))) $ S.toList vars
+        , indent 2 $ PP.list $ map (\(x, n) -> cpretty (Fix (TRef dummyPos x n))) $ S.toList vars
         ]
     NotPolymorphicEnough ty var ->
-      nest 4 $ vsep
-        [ "Type is not polymorphic enough:"
-        , pretty var <+> "~" <+> pretty ty
+      nest 2 $ vsep
+        [ "Type is not polymorphic enough."
+        , "Rigid variable" <+> cpretty var <+> "does not unify with:"
+        , indent 2 $ cpretty ty
         ]
 
 data UnifyEnv = UnifyEnv
@@ -71,10 +71,10 @@ data UnifyState = UnifyState
   , stMetas :: IntMap Type
   }
 
-instance Pretty UnifyState where
-  pretty st =
+instance CPretty UnifyState where
+  cpretty st =
     PP.list $
-      map (\(name, ty) -> "?" <> pretty name <+> "->" <+> pretty ty) $
+      map (\(name, ty) -> "?" <> pretty name <+> "->" <+> cpretty ty) $
         IM.toList (stMetas st)
 
 type MonadUnify m =

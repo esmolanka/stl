@@ -6,37 +6,41 @@ import STL
 import STL.Check
 import STL.Subsumption
 import STL.DSL
-import Data.Text.Prettyprint.Doc
+import STL.Pretty hiding (list)
 
 ----------------------------------------------------------------------
 -- Utils
 
-(<:) :: Type -> Type -> Doc a
+(<:) :: Type -> Type -> IO ()
 (<:) sub sup =
   let (res, state) =
         inferKindClosed sub == inferKindClosed sup `seq`
         runSubsumption (subsumes sub sup)
-  in vsep
-     [ pretty sub
+  in putDocLn $ vsep
+     [ cpretty sub
      , indent 2 "<:"
-     , pretty sup
+     , cpretty sup
      , mempty
-     , either pretty (\_ -> "OK") $ res
+     , either cpretty (\_ -> "OK") $ res
      , "State:"
-     , indent 2 $ pretty state
+     , indent 2 $ cpretty state
      ]
 infix 0 <:
 
-q :: Type -> Doc a
+(>:) :: Type -> Type -> IO ()
+(>:) sup sub = sub <: sup
+
+q :: Type -> IO ()
 q ty =
   let k = inferKindClosed ty
       ty' = k `seq` normaliseClosed ty
       k' = inferKindClosed ty'
-  in vsep
-     [ pretty ty
+  in putDocLn $ vsep
+     [ cpretty ty
      , "~~~>"
-     , pretty ty'
-     , ":" <+> pretty k' <+> if k /= k' then "/=" <+> pretty k <+> "!!!" else mempty
+     , cpretty ty'
+     , ":" <+> cpretty k' <+>
+         if k /= k' then "/=" <+> cpretty k <+> "!!!" else mempty
      ]
 
 ----------------------------------------------------------------------

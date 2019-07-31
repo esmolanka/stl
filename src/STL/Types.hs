@@ -22,11 +22,8 @@ import Data.List (foldl')
 import Data.String
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Text.Prettyprint.Doc as PP
-  ( Pretty(..), Doc,  (<+>), vsep, indent, colon, squotes
-  , parens, hsep, group, braces, angles, brackets, line
-  )
 import GHC.Generics
+import STL.Pretty
 import Language.Sexp.Located (Position(..), dummyPos)
 
 data Kind
@@ -36,32 +33,32 @@ data Kind
   | Arr Kind Kind
   deriving (Show, Eq, Ord, Generic)
 
-instance Pretty Kind where
-  pretty = ppKind False
+instance CPretty Kind where
+  cpretty = aKind . ppKind' False
     where
       parensIf :: Bool -> Doc a -> Doc a
       parensIf True = parens
       parensIf False = id
 
-      ppKind :: Bool -> Kind -> Doc a
-      ppKind nested = \case
+      ppKind' :: Bool -> Kind -> Doc a
+      ppKind' nested = \case
         Star -> "Star"
         Row -> "Row"
-        Presence -> "Presence"
+        Presence -> "Prs"
         Arr f a -> parensIf nested $
-          ppKind True f <+> "->" <+> ppKind False a
+          ppKind' True f <+> "->" <+> ppKind' False a
 
 newtype Var = Var Text
   deriving (Show, Eq, Ord, IsString)
 
-instance Pretty Var where
-  pretty (Var name) = pretty name
+instance CPretty Var where
+  cpretty (Var name) = aVariable (pretty name)
 
 newtype Label = Label Text
   deriving (Show, Eq, Ord, IsString)
 
-instance Pretty Label where
-  pretty (Label name) = squotes (pretty name)
+instance CPretty Label where
+  cpretty (Label name) = aLabel (pretty name)
 
 newtype MetaVar = MetaVar Int
   deriving (Eq, Ord, Show)
@@ -72,11 +69,12 @@ newtype Skolem = Skolem Int
 newtype GlobalName = GlobalName Text
   deriving (Eq, Ord, Show, IsString)
 
-instance Pretty GlobalName where
-  pretty (GlobalName name) =
-    case T.uncons name of
-      Nothing -> "$"
-      Just (n, _) -> if isUpper n then pretty name else "$" <> pretty name
+instance CPretty GlobalName where
+  cpretty (GlobalName name) =
+    aConstructor $
+      case T.uncons name of
+        Nothing -> "$"
+        Just (n, _) -> if isUpper n then pretty name else "$" <> pretty name
 
 data TypeF e
   = TRef      { _getPosition :: Position, _refName :: Var, _refIndex :: Int }
@@ -100,70 +98,74 @@ data TypeF e
 
 type Type = Fix TypeF
 
-instance Pretty (TypeF (Fix TypeF)) where
-  pretty = Fix >>> ppType 0
-    where
-      parensIf :: Bool -> Doc a -> Doc a
-      parensIf True = parens
-      parensIf False = id
+instance CPretty (TypeF (Fix TypeF)) where
+  cpretty = ppType . Fix
 
-      ppTele :: TypeF Type -> [Type] -> Doc a
-      ppTele f args = hsep (ppTypeCon 1 f : map (ppType 1) args)
+instance CPretty (Fix TypeF) where
+  cpretty = ppType
 
-      ppTypeCon :: Int -> TypeF Type -> Doc a
-      ppTypeCon lvl = \case
-        TRef _ x n -> if n > 0 then pretty x <> "/" <> pretty n else pretty x
-        TGlobal _ name -> pretty name
-        TSkolem _ (Skolem name) hint _ -> pretty hint <> brackets (pretty name)
-        TMeta _ (MetaVar name) k ->
-          if k == Star
-          then "?" <> pretty name
-          else parens ("?" <> pretty name <+> colon <+> pretty k)
-        TUnit _ -> "Unit"
-        TVoid _ -> "Void"
-        TArrow _ -> "(->)"
-        TRecord _ -> "Record"
-        TVariant _ -> "Variant"
-        TPresent _ -> "▪︎"
-        TAbsent _ -> "▫︎"
-        TExtend _ lbl -> "Extend" <+> pretty lbl
-        TNil _ -> "Nil"
-        TApp _ f a -> parensIf (lvl > 1) $ ppType 1 f <+> ppType 2 a
-        TLambda _ x k b ->
-          let variable = if k == Star then pretty x else parens (pretty x <+> colon <+> pretty k)
-          in parensIf (lvl > 0) $ "λ" <+> variable <> "." <+> ppType 1 b
-        TForall _ x k b ->
-          let variable = if k == Star then pretty x else parens (pretty x <+> colon <+> pretty k)
-          in parensIf (lvl > 0) $ "∀" <+> variable <> "." <+> ppType 1 b
-        TMu _ x b -> parensIf (lvl > 0) $ "μ" <+> pretty x <> "." <+> ppType 1 b
+ppType :: Type -> Doc AnsiStyle
+ppType = ppType' 0
+  where
+    parensIf :: Bool -> Doc a -> Doc a
+    parensIf True = parens
+    parensIf False = id
 
-      ppType :: Int -> Type -> Doc a
-      ppType lvl = tele >>> \case
-        (Fix (TArrow _), [a, b]) -> parensIf (lvl > 0) $ ppType 1 a <+> "->" <+> ppType 0 b
-        (Fix (TRecord _), [Fix (TNil _)]) -> braces mempty
-        (Fix (TVariant _), [Fix (TNil _)]) -> angles mempty
-        (Fix (TRecord _), [row]) -> group $ braces $ ppType 0 row
-        (Fix (TVariant _), [row]) -> group $ angles $ ppType 0 row
-        (Fix (TExtend _ (Label lbl)), [presence, ty, row]) ->
-          let fieldName =
-                case presence of
-                  Fix (TPresent _) -> pretty lbl
-                  Fix (TAbsent _)  -> "¬" <> pretty lbl
-                  _other           -> pretty lbl <> "^" <> ppType 2 presence
-              rest =
-                case tele row of
-                  (Fix (TNil _), _) -> mempty
-                  (Fix (TExtend _ _), _) -> "," <+> ppType 0 row
-                  _other -> " |" <+> ppType 0 row
-          in fieldName <+> ":" <+> ppType 0 ty <> rest
-        (Fix otherTyCon, [])     -> ppTypeCon lvl otherTyCon
-        (Fix otherTyCon, rest)   -> parensIf (lvl > 0) $ ppTele otherTyCon rest
+    ppTele :: TypeF Type -> [Type] -> Doc AnsiStyle
+    ppTele f args = hsep (ppTypeCon 1 f : map (ppType' 1) args)
 
-instance Pretty (Fix TypeF) where
-  pretty (Fix a) = pretty a
+    ppTypeCon :: Int -> TypeF Type -> Doc AnsiStyle
+    ppTypeCon lvl = \case
+      TRef _ x n -> aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x)
+      TGlobal _ name -> cpretty name
+      TSkolem _ (Skolem name) hint _ -> cpretty hint <> brackets (pretty name)
+      TMeta _ (MetaVar name) k ->
+        if k == Star
+        then "?" <> pretty name
+        else parens ("?" <> pretty name <+> colon <+> cpretty k)
+      TUnit _ -> aConstructor "Unit"
+      TVoid _ -> aConstructor "Void"
+      TArrow _ -> aConstructor "(->)"
+      TRecord _ -> aConstructor "Record"
+      TVariant _ -> aConstructor "Variant"
+      TPresent _ -> aConstructor "▪︎"
+      TAbsent _ -> aConstructor "▫︎"
+      TExtend _ lbl -> aConstructor "Extend" <+> cpretty lbl
+      TNil _ -> aConstructor "Nil"
+      TApp _ f a -> parensIf (lvl > 1) $ ppType' 1 f <+> ppType' 2 a
+      TLambda _ x k b ->
+        let var = if k == Star then cpretty x else parens (cpretty x <+> colon <+> cpretty k)
+        in parensIf (lvl > 0) $ aKeyword "λ" <+> var <> "." <+> ppType' 1 b
+      TForall _ x k b ->
+        let var = if k == Star then cpretty x else parens (cpretty x <+> colon <+> cpretty k)
+        in parensIf (lvl > 0) $ aKeyword "∀" <+> var <> "." <+> ppType' 1 b
+      TMu _ x b -> parensIf (lvl > 0) $ aKeyword "μ" <+> cpretty x <> "." <+> ppType' 1 b
+
+    ppType' :: Int -> Type -> Doc AnsiStyle
+    ppType' lvl = tele >>> \case
+      (Fix (TArrow _), [a, b]) -> parensIf (lvl > 0) $ ppType' 1 a <+> "->" <+> ppType' 0 b
+      (Fix (TRecord _), [Fix (TNil _)]) -> braces mempty
+      (Fix (TVariant _), [Fix (TNil _)]) -> angles mempty
+      (Fix (TRecord _), [row]) -> group $ braces $ ppType' 0 row
+      (Fix (TVariant _), [row]) -> group $ angles $ ppType' 0 row
+      (Fix (TExtend _ (Label lbl)), [presence, ty, row]) ->
+        let fieldName =
+              case presence of
+                Fix (TPresent _) -> aLabel (pretty lbl)
+                Fix (TAbsent _)  -> "¬" <> aLabel (pretty lbl)
+                _other           -> aLabel (pretty lbl) <> "^" <> ppType' 2 presence
+            rest =
+              case tele row of
+                (Fix (TNil _), _) -> mempty
+                (Fix (TExtend _ _), _) -> "," <+> ppType' 0 row
+                _other -> " |" <+> ppType' 0 row
+        in fieldName <+> ":" <+> ppType' 0 ty <> rest
+      (Fix otherTyCon, [])     -> ppTypeCon lvl otherTyCon
+      (Fix otherTyCon, rest)   -> parensIf (lvl > 0) $ ppTele otherTyCon rest
+
 
 instance {-# OVERLAPPING #-} Show (Fix TypeF) where
-  showsPrec n x = showParen (n > 1) $ shows (pretty x)
+  showsPrec n x = showParen (n > 1) $ shows (ppType x)
 
 ----------------------------------------------------------------------
 
@@ -193,14 +195,16 @@ data Definition = Definition
   , defType   :: Type
   } deriving (Generic)
 
-instance Pretty Definition where
-  pretty (Definition name params ty) =
-    hsep $ [ "type", pretty name ]
+instance CPretty Definition where
+  cpretty (Definition name params ty) =
+    hsep $ [ aKeyword "type", cpretty name ]
         ++ map ppParam params
-        ++ [ "=", pretty ty ]
+        ++ [ "=", cpretty ty ]
     where
       ppParam (var, kind) =
-        if kind == Star then pretty var else parens (pretty var <+> colon <+> pretty kind)
+        if kind == Star
+        then cpretty var
+        else parens (cpretty var <+> colon <+> cpretty kind)
 
 data ProgramF e
   = PLet    Position Definition e
@@ -210,18 +214,18 @@ data ProgramF e
 
 type Program = Fix ProgramF
 
-instance Pretty (ProgramF Program) where
-  pretty = \case
+instance CPretty (ProgramF Program) where
+  cpretty = \case
     PLet _ def rest ->
-      vsep [ pretty def <> line, pretty rest ]
+      vsep [ cpretty def <> line, cpretty rest ]
     PMutual _ defs rest ->
-      vsep [ "mutual" <+> "{"
-           , indent 4 $ vsep $ map pretty defs
+      vsep [ aKeyword "mutual" <+> "{"
+           , indent 4 $ vsep $ map cpretty defs
            , "}" <> line
-           , pretty rest
+           , cpretty rest
            ]
     PReturn _ ty ->
-      pretty ty
+      cpretty ty
 
-instance Pretty (Fix ProgramF) where
-  pretty (Fix a) = pretty a
+instance CPretty (Fix ProgramF) where
+  cpretty (Fix a) = cpretty a
