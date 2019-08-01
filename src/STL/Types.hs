@@ -23,8 +23,9 @@ import Data.String
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics
+
 import STL.Pretty
-import Language.Sexp.Located (Position(..), dummyPos)
+import STL.Syntax.Position
 
 data Kind
   = Star
