@@ -28,7 +28,6 @@ library
 
     STL.Syntax.Position
     STL.Syntax.Lexer
-    STL.Syntax.LexerInterface
     STL.Syntax.Parser
     STL.Syntax.Token
     STL.Syntax.Types

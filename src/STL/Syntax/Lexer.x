@@ -8,23 +8,24 @@
 {-# OPTIONS_GHC -fno-warn-unused-imports     #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches     #-}
 
-module STL.Syntax.Lexer
-  ( lex
-  ) where
+module STL.Syntax.Lexer (lex) where
 
 import Prelude hiding (lex)
+
 import Data.Bifunctor
+import qualified Data.ByteString.Lazy as BLW
 import Data.ByteString.Lazy.Char8 (ByteString)
-import qualified Data.ByteString.Lazy.UTF8 as UTF8
 import qualified Data.ByteString.Lazy.Char8 as BL
+import qualified Data.ByteString.Lazy.UTF8 as UTF8
+import Data.Int
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Text.Read
+import Data.Word
 
-import STL.Syntax.LexerInterface
-import STL.Syntax.Token
 import STL.Syntax.Position
+import STL.Syntax.Token
 
 }
 
@@ -64,10 +65,8 @@ $whitespace+       ;
 .                  { TokUnknown `via` BL.head    }
 
 {
-type AlexAction = LineCol -> ByteString -> LocatedBy LineCol Token
-
-decode :: ByteString -> T.Text
-decode = TL.toStrict . decodeUtf8
+----------------------------------------------------------------------
+-- Actions
 
 just :: Token -> AlexAction
 just tok pos _ =
@@ -76,6 +75,26 @@ just tok pos _ =
 via :: (a -> Token) -> (ByteString -> a) -> AlexAction
 via ftok f pos str =
   (L pos) . ftok . f $ str
+
+----------------------------------------------------------------------
+-- Decoders
+
+decode :: ByteString -> T.Text
+decode = TL.toStrict . decodeUtf8
+
+----------------------------------------------------------------------
+-- Entry point
+
+lex :: Position -> ByteString -> [LocatedBy Position Token]
+lex (Position fn line1 col1) =
+  map (bimap fixPos id) . alexScanTokens . mkAlexInput (LineCol line1 col1)
+  where
+    fixPos (LineCol l c) = Position fn l c
+
+----------------------------------------------------------------------
+-- Machinery
+
+type AlexAction = LineCol -> ByteString -> LocatedBy LineCol Token
 
 alexScanTokens :: AlexInput -> [LocatedBy LineCol Token]
 alexScanTokens input =
@@ -97,9 +116,66 @@ alexScanTokens input =
     defaultCode :: Int
     defaultCode = 0
 
-lex :: Position -> ByteString -> [LocatedBy Position Token]
-lex (Position fn line1 col1) =
-  map (bimap fixPos id) . alexScanTokens . mkAlexInput (LineCol line1 col1)
+data LineCol = LineCol {-# UNPACK #-} !Int {-# UNPACK #-} !Int
+
+columnsInTab :: Int
+columnsInTab = 8
+
+advanceLineCol :: Char -> LineCol -> LineCol
+advanceLineCol '\n' (LineCol line _)   = LineCol (line + 1) 0
+advanceLineCol '\t' (LineCol line col) = LineCol line (((col + columnsInTab - 1) `div` columnsInTab) * columnsInTab + 1)
+advanceLineCol _    (LineCol line col) = LineCol line (col + 1)
+
+data AlexInput = AlexInput
+  { aiInput     :: ByteString
+  , aiPrevChar  :: {-# UNPACK #-} !Char
+  , aiCurChar   :: {-# UNPACK #-} !Char
+  , aiBytesLeft :: {-# UNPACK #-} !Int64
+  , aiLineCol   :: !LineCol
+  }
+
+mkAlexInput :: LineCol -> ByteString -> AlexInput
+mkAlexInput initPos source = alexNextChar $ AlexInput
+  { aiInput     = source
+  , aiPrevChar  = '\n'
+  , aiCurChar   = '\n'
+  , aiBytesLeft = 0
+  , aiLineCol   = initPos
+  }
+
+alexNextChar :: AlexInput -> AlexInput
+alexNextChar input =
+  case UTF8.decode (aiInput input) of
+    Just (c, n) -> input
+      { aiPrevChar  = aiCurChar input
+      , aiCurChar   = c
+      , aiBytesLeft = n
+      }
+    Nothing     -> input
+      { aiPrevChar  = aiCurChar input
+      , aiCurChar   = '\n'
+      , aiBytesLeft = 0
+      }
+
+alexPropagatePos :: AlexInput -> AlexInput
+alexPropagatePos input =
+  input { aiLineCol = advanceLineCol (aiPrevChar input) (aiLineCol input) }
+
+-- Alex interface - functions usedby Alex
+alexInputPrevChar :: AlexInput -> Char
+alexInputPrevChar = aiPrevChar
+
+alexGetByte :: AlexInput -> Maybe (Word8, AlexInput)
+alexGetByte input
+  | aiBytesLeft input == 0 = go . alexPropagatePos . alexNextChar $ input
+  | otherwise = go input
   where
-    fixPos (LineCol l c) = Position fn l c
+    go :: AlexInput -> Maybe (Word8, AlexInput)
+    go input =
+      case BLW.uncons (aiInput input) of
+        Just (w, rest) -> Just (w, input
+          { aiBytesLeft = aiBytesLeft input - 1
+          , aiInput     = rest
+          })
+        Nothing -> Nothing
 }
