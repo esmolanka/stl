@@ -40,6 +40,7 @@ freeVars e = runReader (cata alg e) M.empty
         pure $ if n >= n' then S.singleton (x, n - n') else S.empty
       TLambda _ x _ b -> push x b
       TForall _ x _ b -> push x b
+      TExists _ x _ b -> push x b
       TMu _ x b -> push x b
       other -> fold <$> sequence other
 
@@ -58,6 +59,9 @@ shift d x e = runReader (cata alg e) 0
       TForall pos x' k b -> do
         b' <- if x == x' then local succ b else b
         return $ Fix $ TForall pos x' k b'
+      TExists pos x' k b -> do
+        b' <- if x == x' then local succ b else b
+        return $ Fix $ TExists pos x' k b'
       TMu pos x' b -> do
         b' <- if x == x' then local succ b else b
         return $ Fix $ TMu pos x' b'
@@ -91,6 +95,12 @@ subst x n0 sub0 expr = runReader (cata alg expr) (n0, sub0)
           then succIndex b
           else b
         return (Fix (TForall pos x' k b'))
+      TExists pos x' k b -> do
+        b' <- shifted x' $
+          if x == x'
+          then succIndex b
+          else b
+        return (Fix (TExists pos x' k b'))
       TMu pos x' b -> do
         b' <- shifted x' $
           if x == x'
@@ -118,6 +128,9 @@ substGlobal name sub0 expr = runReader (cata alg expr) sub0
       TForall pos x' k b -> do
         b' <- shifted x' b
         return (Fix (TForall pos x' k b'))
+      TExists pos x' k b -> do
+        b' <- shifted x' b
+        return (Fix (TExists pos x' k b'))
       TMu pos x' b -> do
         b' <- shifted x' b
         return (Fix (TMu pos x' b'))

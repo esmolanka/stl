@@ -68,6 +68,10 @@ pattern Forall :: Var -> Kind -> Type -> Type
 pattern Forall x k b <- Fix (TForall _ x k b)
   where Forall x k b = Fix (TForall dummyPos x k b)
 
+pattern Exists :: Var -> Kind -> Type -> Type
+pattern Exists x k b <- Fix (TExists _ x k b)
+  where Exists x k b = Fix (TExists dummyPos x k b)
+
 pattern Mu :: Var -> Type -> Type
 pattern Mu x b <- Fix (TMu _ x b)
   where Mu x b = Fix (TMu dummyPos x b)

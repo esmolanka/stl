@@ -94,6 +94,7 @@ data TypeF e
   | TApp      { _getPosition :: Position, _appFun :: e, _appArg :: e }
   | TLambda   { _getPosition :: Position, _lambdaName :: Var, _lambdaKind :: Kind, _lambdaBody :: e }
   | TForall   { _getPosition :: Position, _forallName :: Var, _forallKind :: Kind, _forallBody :: e }
+  | TExists   { _getPosition :: Position, _existsName :: Var, _existsKind :: Kind, _existsBody :: e }
   | TMu       { _getPosition :: Position, _muName :: Var, _muBody :: e }
   deriving (Eq, Ord, Functor, Foldable, Traversable, Generic)
 
@@ -140,6 +141,9 @@ ppType = ppType' 0
       TForall _ x k b ->
         let var = if k == Star then cpretty x else parens (cpretty x <+> colon <+> cpretty k)
         in parensIf (lvl > 0) $ aKeyword "∀" <+> var <> "." <+> ppType' 1 b
+      TExists _ x k b ->
+        let var = if k == Star then cpretty x else parens (cpretty x <+> colon <+> cpretty k)
+        in parensIf (lvl > 0) $ aKeyword "∃" <+> var <> "." <+> ppType' 1 b
       TMu _ x b -> parensIf (lvl > 0) $ aKeyword "μ" <+> cpretty x <> "." <+> ppType' 1 b
 
     ppType' :: Int -> Type -> Doc AnsiStyle

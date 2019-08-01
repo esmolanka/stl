@@ -150,17 +150,25 @@ subsumes sub sup = do
           imp <- newSkolem pos' x' k'
           sub `subsumes` subst x' 0 imp b'
 
-        (TMeta _ n _, [], _, _) -> do
-          subsumesMeta MetaToType n sup
+        (TExists pos x k b, [], _, _) -> do
+          imp <- newSkolem pos x k
+          subst x 0 imp b `subsumes` sup
 
-        (_, _, TMeta _ n' _, []) -> do
-          subsumesMeta TypeToMeta n' sub
+        (_, _, TExists pos' x' k' b', []) -> do
+          imp <- newMeta pos' k'
+          sub `subsumes` subst x' 0 imp b'
 
         (TMu _ x b, [], _, _) ->
           shift (-1) x (subst x 0 (shift 1 x sub) b) `subsumes` sup
 
         (_, _, TMu _ x' b', []) ->
           sub `subsumes` shift (-1) x' (subst x' 0 (shift 1 x' sup) b')
+
+        (TMeta _ n _, [], _, _) -> do
+          subsumesMeta MetaToType n sup
+
+        (_, _, TMeta _ n' _, []) -> do
+          subsumesMeta TypeToMeta n' sub
 
         (TLambda _ x k b, _, TLambda _ x' k' b', _) -> do
           unless (k == k') $

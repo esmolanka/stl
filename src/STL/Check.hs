@@ -194,13 +194,10 @@ inferKind = para alg
       TLambda _ x k (_, b) -> do
         b' <- extendCtx x k b
         pure (Arr k b')
-      TForall pos x k (termb, b) -> do
-        b' <- extendCtx x k b
-        termb' <- normalise lookupGlobal termb
-        let term = Fix (TMu pos x termb')
-        unless (b' == Star) $
-          throwError (KindMismatch pos term Star b')
-        pure Star
+      TForall _ x k (_, b) -> do
+        extendCtx x k b
+      TExists _ x k (_, b) -> do
+        extendCtx x k b
       TMu pos x (termb, b) -> do
         b' <- extendCtx x Star b
         termb' <- normalise lookupGlobal termb
