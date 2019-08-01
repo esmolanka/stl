@@ -69,6 +69,7 @@ data UnifyEnv = UnifyEnv
 data UnifyState = UnifyState
   { stFreshName :: Int
   , stMetas :: IntMap Type
+  , stAssumptions :: Set (Type, Type)
   }
 
 instance CPretty UnifyState where
@@ -120,89 +121,113 @@ writeMeta :: (MonadUnify m) => MetaVar -> Type -> m ()
 writeMeta (MetaVar name) ty =
   modify (\st -> st { stMetas = IM.insert name ty (stMetas st) })
 
+recordAssumption :: (MonadUnify m) => Type -> Type -> m ()
+recordAssumption sub sup =
+  modify (\st -> st { stAssumptions = S.insert (sub, sup) (stAssumptions st) })
+
+isSeenAssumption :: (MonadUnify m) => Type -> Type -> m Bool
+isSeenAssumption sub sup =
+  gets (S.member (sub, sup) . stAssumptions)
+
 subsumes :: forall m. (MonadUnify m) => Type -> Type -> m ()
-subsumes sub sup =
-  let (Fix tyConSub, argsSub) = tele sub
-      (Fix tyConSup, argsSup) = tele sup
-  in case (tyConSub, argsSub, tyConSup, argsSup) of
-       (TForall pos x k b, [], _, _) -> do
-         imp <- newMeta pos k
-         subst x 0 imp b `subsumes` sup
+subsumes sub sup = do
+  seen <- isSeenAssumption sub sup
+  if seen
+    then pure ()
+    else recordAssumption sub sup >> checkAssumption
+  where
+    (Fix tyConSub, argsSub) = tele sub
+    (Fix tyConSup, argsSup) = tele sup
 
-       (_, _, TForall pos' x' k' b', []) -> do
-         imp <- newSkolem pos' x' k'
-         sub `subsumes` subst x' 0 imp b'
+    checkAssumption :: m ()
+    checkAssumption =
+      case (tyConSub, argsSub, tyConSup, argsSup) of
+        (TForall pos x k b, [], _, _) -> do
+          imp <- newMeta pos k
+          subst x 0 imp b `subsumes` sup
 
-       (TMeta _ n _, [], _, _) -> do
-         subsumesMeta MetaToType n sup
+        (_, _, TForall pos' x' k' b', []) -> do
+          imp <- newSkolem pos' x' k'
+          sub `subsumes` subst x' 0 imp b'
 
-       (_, _, TMeta _ n' _, []) -> do
-         subsumesMeta TypeToMeta n' sub
+        (TMeta _ n _, [], _, _) -> do
+          subsumesMeta MetaToType n sup
 
-       (TRef _ x n, _, TRef _ x' n', _) -> do
-         mathces <- checkAlphaEq (x, n) (x', n')
-         unless mathces $
-           throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
-         argsSub `subsumesTele` argsSup
+        (_, _, TMeta _ n' _, []) -> do
+          subsumesMeta TypeToMeta n' sub
 
-       (TGlobal _ n, _, TGlobal _ n', _)
-         | n == n' -> argsSub `subsumesTele` argsSup
+        (TMu _ x b, [], _, _) ->
+          shift (-1) x (subst x 0 (shift 1 x sub) b) `subsumes` sup
 
-       (TArrow _, (a : bs), TArrow _, (a' : bs')) ->
-         a' `subsumes` a >>    -- Argument is contravariant
-         bs `subsumesTele` bs' -- Return type is covariant
+        (_, _, TMu _ x' b', []) ->
+          sub `subsumes` shift (-1) x' (subst x' 0 (shift 1 x' sup) b')
 
-       (TLambda _ x k b, _, TLambda _ x' k' b', _) -> do
-         unless (k == k') $
-           throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
-         pushAlphaEq x x' $
-           subsumes b b'
-         argsSub `subsumesTele` argsSup
+        (TLambda _ x k b, _, TLambda _ x' k' b', _) -> do
+          unless (k == k') $
+            throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
+          pushAlphaEq x x' $
+            subsumes b b'
+          argsSub `subsumesTele` argsSup
 
-       (TMu _ x b, [], TMu _ x' b', []) -> do
-         pushAlphaEq x x' $
-           subsumes b b'
+        (TRef _ x n, _, TRef _ x' n', _) -> do
+          mathces <- checkAlphaEq (x, n) (x', n')
+          unless mathces $
+            throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
+          argsSub `subsumesTele` argsSup
 
-       (TNil _, [], TNil _, []) ->
-         pure ()
+        (TGlobal _ n, _, TGlobal _ n', _)
+          | n == n' -> argsSub `subsumesTele` argsSup
 
-       (TNil pos, [], TExtend _ lbl', [_, f', _]) ->
-         untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
-         `subsumes`
-         sup
+        (TArrow _, (a : bs), TArrow _, (a' : bs')) ->
+          a' `subsumes` a >>    -- Argument is contravariant
+          bs `subsumesTele` bs' -- Return type is covariant
 
-       (TExtend _ lbl, [_, f, _], TNil pos', []) ->
-         sub
-         `subsumes`
-         untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
+        (TNil _, [], TNil _, []) ->
+          pure ()
 
-       (TSkolem pos _ _ _, [], TExtend _ lbl', [_, f', _]) ->
-         untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
-         `subsumes`
-         sup
+        (TNil pos, [], TExtend _ lbl', [_, f', _]) ->
+          untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
+          `subsumes`
+          sup
 
-       (TExtend _ lbl, [_, f, _], TSkolem pos' _ _ _, []) ->
-         sub
-         `subsumes`
-         untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
+        (TExtend _ lbl, [_, f, _], TNil pos', []) ->
+          sub
+          `subsumes`
+          untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
 
-       (TExtend _ lbl, [pty, fty, tail_], TExtend pos' lbl', [pty', fty', tail']) -> do
-         (pty'', fty'', tail'') <- rewriteRow TypeToMeta lbl pos' lbl' pty' fty' tail'
-         [pty, fty, tail_] `subsumesTele` [pty'', fty'', tail'']
+        (TSkolem pos _ _ _, [], TExtend _ lbl', [_, f', _]) ->
+          untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
+          `subsumes`
+          sup
 
-       (TSkolem _ n _ _, [], TSkolem _ n' _ _, [])
-         | n == n' -> pure ()
+        (TExtend _ lbl, [_, f, _], TSkolem pos' _ _ _, []) ->
+          sub
+          `subsumes`
+          untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
 
-       (TSkolem _ _ var _, [], _, _) ->
-         throwError $ NotPolymorphicEnough sup var
+        (TExtend _ lbl, [pty, fty, tail_], TExtend pos' lbl', [pty', fty', tail']) -> do
+          (pty'', fty'', tail'') <- rewriteRow TypeToMeta lbl pos' lbl' pty' fty' tail'
+          [pty, fty, tail_] `subsumesTele` [pty'', fty'', tail'']
 
-       (_, _, TSkolem _ _ var' _, []) ->
-         throwError $ NotPolymorphicEnough sub var'
+        (TAbsent _, [], TSkolem _ _ _ _, []) ->
+          pure ()
 
-       _ | tyConSub `eqTypeCon` tyConSup ->
-             subsumesTele argsSub argsSup
-         | otherwise ->
-             throwError $ IsNotSubtypeOf sub sup
+        (TSkolem _ _ _ _, [], TAbsent _, []) ->
+          pure ()
+
+        (TSkolem _ n _ _, [], TSkolem _ n' _ _, [])
+          | n == n' -> pure ()
+
+        (TSkolem _ _ var _, [], _, _) ->
+          throwError $ NotPolymorphicEnough sup var
+
+        (_, _, TSkolem _ _ var' _, []) ->
+          throwError $ NotPolymorphicEnough sub var'
+
+        _ | tyConSub `eqTypeCon` tyConSup ->
+              subsumesTele argsSub argsSup
+          | otherwise ->
+              throwError $ IsNotSubtypeOf sub sup
 
 data Direction = MetaToType | TypeToMeta
 
@@ -282,5 +307,5 @@ runSubsumption :: ExceptT e (StateT UnifyState (Reader UnifyEnv)) a -> (Either e
 runSubsumption k =
   runReader (runStateT (runExceptT k) initState) initEnv
   where
-    initState = UnifyState { stFreshName = 100, stMetas = mempty }
+    initState = UnifyState { stFreshName = 100, stMetas = mempty, stAssumptions = mempty }
     initEnv   = UnifyEnv []

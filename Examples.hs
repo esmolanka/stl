@@ -124,8 +124,10 @@ programA =
   Return
    (Global "List" :$ (Global "List" :$ Unit))
 
-mutuallyRecursive1 :: Type
-mutuallyRecursive1 =
+----------------------------------------------------------------------
+
+recOdd :: Type
+recOdd =
   Mu (Var "Odd") $
     Variant $
       Extend "OZero" Present Unit $
@@ -137,3 +139,28 @@ mutuallyRecursive1 =
               (Ref "Odd") $
             Nil) $
       Nil
+
+recEven :: Type
+recEven =
+  Mu "Even" $
+    Variant $
+      Extend "EZero" Present Unit $
+      Extend "ESucc" Present
+        (Mu (Var "Odd") $
+           Variant $
+             Extend "OZero" Present Unit $
+             Extend "OSucc" Present (Ref "Even") $
+             Nil) $
+        Nil
+
+evenRecOdd :: Type
+evenRecOdd =
+  Variant $
+    Extend "EZero" Present Unit $
+    Extend "ESucc" Present recOdd $
+    Nil
+
+checkRecOddEven :: IO ()
+checkRecOddEven = do
+  evenRecOdd <: recEven
+  evenRecOdd >: recEven

@@ -168,6 +168,12 @@ ppType = ppType' 0
 instance {-# OVERLAPPING #-} Show (Fix TypeF) where
   showsPrec n x = showParen (n > 1) $ shows (ppType x)
 
+instance {-# OVERLAPPING #-} Ord (Fix TypeF) where
+  Fix a `compare` Fix b = a `compare` b
+
+instance {-# OVERLAPPING #-} Eq (Fix TypeF) where
+  Fix a == Fix b = a == b
+
 ----------------------------------------------------------------------
 
 getPosition :: Type -> Position
