@@ -10,6 +10,8 @@ import Control.Monad.Reader
 import Control.Monad.Except
 
 import Data.Foldable (fold)
+import Data.Functor.Compose
+import Data.Functor.Identity
 import Data.Functor.Foldable (Fix(..), cata, para)
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -148,10 +150,16 @@ withGlobal name ty k cont = do
     Just (oldty, _) -> throwError $ GlobalAlreadyDefined (getPosition ty) name (getPosition oldty)
 
 runTC :: ExceptT Err (Reader Ctx) a -> a
-runTC k = case runReader (runExceptT k) (Ctx M.empty M.empty) of
-  Left err -> errorWithoutStackTrace ("\n" ++ show (cpretty err))
-  Right a  -> a
+runTC k =
+  case runIdentity . runTCT $ k of
+    Left err -> errorWithoutStackTrace ("\n" ++ show err)
+    Right a -> a
 
+
+runTCT :: (Monad m) => ExceptT Err (ReaderT Ctx m) a -> m (Either (Doc AnsiStyle) a)
+runTCT k =
+  either (Left . cpretty) Right <$>
+    runReaderT (runExceptT k) (Ctx M.empty M.empty)
 
 ----------------------------------------------------------------------
 -- Kind Inference
@@ -281,12 +289,12 @@ checkDefinitionTypeWellformedness pos name' ty = do
   when (containsMetasOrSkolems nodes) $
     throwError $ illegalError DefinitionContainsMetasOrSkolems
 
-checkProgram :: forall m a. (MonadTC m) => Program -> (Type -> m a) -> m a
-checkProgram program cont = cata alg program
+checkProgram :: forall m a. (MonadTC m) => InterleavedProgram (m ()) -> (Maybe Type -> m a) -> m a
+checkProgram program cont = cataCompose alg runActions program
   where
     alg :: ProgramF (m a) -> m a
     alg = \case
-      PLet pos (Definition name params ty) rest -> do
+      PLet pos (Definition _ name params ty) rest -> do
         checkDefinitionTypeWellformedness pos (Just name) ty
         let ty' =
               extendWithParameters pos params $
@@ -294,13 +302,26 @@ checkProgram program cont = cata alg program
         kind <- inferKind ty'
         withGlobal name ty' kind $ rest
 
-      PMutual _ _ _rest -> do
+      PMutual _ _ rest -> do
         -- TODO: Not supported
-        error "Mutual blocks are not supported"
+        rest
 
       PReturn pos ty -> do
         checkDefinitionTypeWellformedness pos Nothing ty
         kind <- inferKind ty
         unless (kind == Star) $
           throwError $ KindMismatch pos ty Star kind
-        cont ty
+        cont (Just ty)
+
+      PNil ->
+        cont Nothing
+
+    runActions :: ColistF (m ()) (m a) -> m a
+    runActions = \case
+      Now a -> a
+      Later action k -> action >> runActions k
+
+----------------------------------------------------------------------
+
+cataCompose :: (Functor f, Functor g) => (g a -> b) -> (f b -> a) -> Fix (Compose f g) -> a
+cataCompose g f = cata (f . fmap g . getCompose)

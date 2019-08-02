@@ -77,8 +77,8 @@ pattern Mu x b <- Fix (TMu _ x b)
   where Mu x b = Fix (TMu dummyPos x b)
 
 pattern Let :: Text -> [(Var, Kind)] -> Type -> Program -> Program
-pattern Let name params ty cont <- Fix (PLet _ (Definition (GlobalName name) params ty) cont)
-  where Let name params ty cont = Fix (PLet dummyPos (Definition (GlobalName name) params ty) cont)
+pattern Let name params ty cont <- Fix (PLet _ (Definition _ (GlobalName name) params ty) cont)
+  where Let name params ty cont = Fix (PLet dummyPos (Definition dummyPos (GlobalName name) params ty) cont)
 
 pattern Return :: Type -> Program
 pattern Return ty <- Fix (PReturn _ ty)

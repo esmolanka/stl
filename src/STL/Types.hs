@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module STL.Types
   ( module STL.Types
@@ -17,7 +18,8 @@ import Control.Category ((>>>))
 import Control.Monad.Reader
 
 import Data.Char (isUpper)
-import Data.Functor.Foldable (Fix(..), para)
+import Data.Functor.Compose
+import Data.Functor.Foldable (Fix(..), cata, para)
 import Data.List (foldl')
 import Data.String
 import Data.Text (Text)
@@ -43,9 +45,9 @@ instance CPretty Kind where
 
       ppKind' :: Bool -> Kind -> Doc a
       ppKind' nested = \case
-        Star -> "Star"
+        Star -> "Type"
         Row -> "Row"
-        Presence -> "Prs"
+        Presence -> "#"
         Arr f a -> parensIf nested $
           ppKind' True f <+> "->" <+> ppKind' False a
 
@@ -201,13 +203,14 @@ untele f args =
 ----------------------------------------------------------------------
 
 data Definition = Definition
-  { defName   :: GlobalName
-  , defParams :: [(Var, Kind)]
-  , defType   :: Type
+  { _defPos    :: Position
+  , _defName   :: GlobalName
+  , _defParams :: [(Var, Kind)]
+  , _defType   :: Type
   } deriving (Generic)
 
 instance CPretty Definition where
-  cpretty (Definition name params ty) =
+  cpretty (Definition _ name params ty) =
     hsep $ [ aKeyword "type", cpretty name ]
         ++ map ppParam params
         ++ [ "=", cpretty ty ]
@@ -217,13 +220,28 @@ instance CPretty Definition where
         then cpretty var
         else parens (cpretty var <+> colon <+> cpretty kind)
 
+data ColistF a e
+  = Later a (ColistF a e)
+  | Now e
+  deriving (Functor, Foldable, Traversable, Generic)
+
 data ProgramF e
   = PLet    Position Definition e
   | PMutual Position [Definition] e
   | PReturn Position Type
+  | PNil
   deriving (Functor, Foldable, Traversable, Generic)
 
 type Program = Fix ProgramF
+
+type InterleavedProgram a = Fix (Compose (ColistF a) ProgramF)
+
+purifyProgram :: forall a b. InterleavedProgram a -> InterleavedProgram b
+purifyProgram = cata (\(Compose p) -> Fix $ Compose (chase p))
+  where
+    chase :: ColistF a e -> ColistF b e
+    chase (Now p) = Now p
+    chase (Later _ p) = chase p
 
 instance CPretty (ProgramF Program) where
   cpretty = \case
@@ -237,6 +255,7 @@ instance CPretty (ProgramF Program) where
            ]
     PReturn _ ty ->
       cpretty ty
+    PNil -> mempty
 
 instance CPretty (Fix ProgramF) where
   cpretty (Fix a) = cpretty a
