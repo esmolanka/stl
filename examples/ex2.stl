@@ -1,0 +1,46 @@
+
+module Example2
+
+#eval Unit
+
+type Service a =
+     { foo : Unit
+     , bar : a
+     } ->
+     Unit ->
+     { output1+ : Unit
+     , output2+ : a
+     }
+
+type Client a =
+  { foo : Unit
+  }
+ -> Unit
+ -> { output : Unit
+    }
+
+#check Service Unit <: Client Unit
+
+type ConsList a =
+  < Nil : Unit
+  , Cons : {head : a, tail : ConsList}
+  >
+
+type Fix (f : Type -> Type) = f Fix
+type PairHT a b = {head : a, tail : b}
+type SumNC a b = <Nil : a, Cons : b>
+type Compose (f : Type -> Type) (g : Type -> Type) (a : Type) = f (g a)
+
+#check
+    forall a. ConsList a
+    <:
+    forall a. Fix (Compose (SumNC Unit) (PairHT a))
+
+#check
+    forall a. ConsList a
+    <:
+    forall a. <Nil : Unit, Cons : Fix (Compose (PairHT a) (SumNC Unit))>
+
+
+return
+  { call : forall a. Service a }

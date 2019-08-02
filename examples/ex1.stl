@@ -30,4 +30,4 @@ mutual (a : Type)
   forall a. Maybe a <: Maybe Unit
 
 return
-  Maybe (Pair Odd Even)
+  Maybe (Pair Unit Void)
