@@ -22,7 +22,8 @@ data Token
   | TokReserved    { getReserved     :: !Text }   -- Unit, String, List
   | TokConstructor { getConstructor  :: !Text }   -- Maybe, Just, Nothing
   | TokVariable    { getVariable     :: !Text }   -- a, b, head, tail
-  | TokUnknown     { getUnknown      :: !Char }   -- for unknown lexemes
+  | TokUnknown     { getUnknown      :: !Text }   -- for unknown lexemes
+  | TokEOF
     deriving (Show, Eq)
 
 instance Pretty Token where
@@ -33,7 +34,8 @@ instance Pretty Token where
     TokReserved x    -> "reserved identifier" <+> squotes (pretty x)
     TokConstructor x -> "identifier" <+> squotes (pretty x)
     TokVariable x    -> "identifier" <+> squotes (pretty x)
-    TokUnknown x     -> "character" <+> pretty  (show x)
+    TokUnknown x     -> "sequence" <+> pretty x <> "..."
+    TokEOF           -> "end of file"
 
 data LocatedBy p a = L !p !a
   deriving (Show, Eq, Functor)

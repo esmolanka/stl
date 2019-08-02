@@ -24,9 +24,9 @@ import STL.Syntax.Token
 import STL.Syntax.Types
 }
 
-%name pModule    Module
-%name pStatement Statement
-%name pType      Type
+%name pModule    Module_
+%name pStatement Statement_
+%name pType      Type_
 
 %error     { parseError }
 %tokentype { LocatedBy Position Token }
@@ -81,6 +81,8 @@ import STL.Syntax.Types
   CONSTRUCTOR    { L _ (TokConstructor _) }
   VARIABLE       { L _ (TokVariable    _) }
 
+  EOF            { L _ TokEOF }
+
 %left ':'
 %right '->'
 
@@ -88,6 +90,9 @@ import STL.Syntax.Types
 
 ----------------------------------------------------------------------
 -- Module
+
+Module_ :: { Module }
+  : Module EOF                { $1 }
 
 Module :: { Module }
   : ModuleHeader
@@ -119,6 +124,9 @@ ReturnType :: { Maybe Type }
 ----------------------------------------------------------------------
 -- Statement
 
+Statement_ :: { Statement }
+  : Statement EOF               { $1 }
+
 Statement :: { Statement }
   : "type" CONSTRUCTOR
       list(Bindings) '='
@@ -138,6 +146,9 @@ MutualClause :: { MutualClause }
 
 ----------------------------------------------------------------------
 -- Type
+
+Type_ :: { Type }
+  : Type EOF                             { $1 }
 
 Type :: { Type }
   : AppType                              { $1 }

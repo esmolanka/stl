@@ -68,8 +68,6 @@ $whitespace+       ;
 @constr            { TokConstructor `via` decode }
 @variable          { TokVariable `via` decode }
 
-.                  { TokUnknown `via` BL.head    }
-
 {
 ----------------------------------------------------------------------
 -- Actions
@@ -103,15 +101,16 @@ type AlexAction = ByteString -> Token
 alexScanTokens :: AlexInput -> [LocatedBy (LineCol, Int) Token]
 alexScanTokens input =
   case alexScan input defaultCode of
-    AlexEOF -> []
-    AlexError (AlexInput {aiInput, aiLineCol = LineCol line col}) ->
-      error $ "Lexical error at line " ++ show line ++ " column " ++ show col ++
-        ". Remaining input: " ++ show (UTF8.take 200 aiInput)
-    AlexSkip input _ -> alexScanTokens input
+    AlexEOF ->
+      [L (aiLineCol input, 1) TokEOF]
+    AlexError (AlexInput {aiInput, aiLineCol}) ->
+      let rest = T.takeWhile (/= '\n') $ decode $ UTF8.take 100 aiInput
+      in [L (aiLineCol, T.length rest) (TokUnknown rest)]
+    AlexSkip input _ ->
+      alexScanTokens input
     AlexToken input' tokLen action ->
       let inputText = UTF8.take (fromIntegral tokLen) (aiInput input)
       in L (aiLineCol input, tokLen) (action inputText) : alexScanTokens input'
-
   where
     defaultCode :: Int
     defaultCode = 0
