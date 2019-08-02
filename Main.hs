@@ -32,7 +32,7 @@ check pos sub sup = do
 
   if k == k'
     then do
-      let (res, state) = runSubsumption (subsumes sub' sup')
+      let (res, state) = runSubsumption (sub' `subsumedBy` sup')
       liftIO $ putDocLn $ nest 2 $ vsep
         [ pretty pos <> colon <+> "checking subsumption"
         , cpretty sub'

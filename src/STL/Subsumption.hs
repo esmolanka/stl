@@ -37,7 +37,7 @@ instance CPretty UnifyErr where
       nest 2 $ vsep
         [ "Cannot unify types."
         , indent 2 $ cpretty a
-        , "Does not subsume:"
+        , "Is not subsumed by:"
         , indent 2 $ cpretty b
         ]
     ArgumentCountMismatch n m ->
@@ -129,8 +129,8 @@ isSeenAssumption :: (MonadUnify m) => Type -> Type -> m Bool
 isSeenAssumption sub sup =
   gets (S.member (sub, sup) . stAssumptions)
 
-subsumes :: forall m. (MonadUnify m) => Type -> Type -> m ()
-subsumes sub sup = do
+subsumedBy :: forall m. (MonadUnify m) => Type -> Type -> m ()
+subsumedBy sub sup = do
   seen <- isSeenAssumption sub sup
   if seen
     then pure ()
@@ -144,78 +144,78 @@ subsumes sub sup = do
       case (tyConSub, argsSub, tyConSup, argsSup) of
         (TForall pos x k b, [], _, _) -> do
           imp <- newMeta pos k
-          subst x 0 imp b `subsumes` sup
+          subst x 0 imp b `subsumedBy` sup
 
         (_, _, TForall pos' x' k' b', []) -> do
           imp <- newSkolem pos' x' k'
-          sub `subsumes` subst x' 0 imp b'
+          sub `subsumedBy` subst x' 0 imp b'
 
         (TExists pos x k b, [], _, _) -> do
           imp <- newSkolem pos x k
-          subst x 0 imp b `subsumes` sup
+          subst x 0 imp b `subsumedBy` sup
 
         (_, _, TExists pos' x' k' b', []) -> do
           imp <- newMeta pos' k'
-          sub `subsumes` subst x' 0 imp b'
+          sub `subsumedBy` subst x' 0 imp b'
 
         (TMu _ x b, [], _, _) ->
-          shift (-1) x (subst x 0 (shift 1 x sub) b) `subsumes` sup
+          shift (-1) x (subst x 0 (shift 1 x sub) b) `subsumedBy` sup
 
         (_, _, TMu _ x' b', []) ->
-          sub `subsumes` shift (-1) x' (subst x' 0 (shift 1 x' sup) b')
+          sub `subsumedBy` shift (-1) x' (subst x' 0 (shift 1 x' sup) b')
 
         (TMeta _ n _, [], _, _) -> do
-          subsumesMeta MetaToType n sup
+          subsumedByMeta MetaToType n sup
 
         (_, _, TMeta _ n' _, []) -> do
-          subsumesMeta TypeToMeta n' sub
+          subsumedByMeta TypeToMeta n' sub
 
         (TLambda _ x k b, _, TLambda _ x' k' b', _) -> do
           unless (k == k') $
             throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
           pushAlphaEq x x' $
-            subsumes b b'
-          argsSub `subsumesTele` argsSup
+            subsumedBy b b'
+          argsSub `subsumedByTele` argsSup
 
         (TRef _ x n, _, TRef _ x' n', _) -> do
           mathces <- checkAlphaEq (x, n) (x', n')
           unless mathces $
             throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
-          argsSub `subsumesTele` argsSup
+          argsSub `subsumedByTele` argsSup
 
         (TGlobal _ n, _, TGlobal _ n', _)
-          | n == n' -> argsSub `subsumesTele` argsSup
+          | n == n' -> argsSub `subsumedByTele` argsSup
 
         (TArrow _, (a : bs), TArrow _, (a' : bs')) ->
-          a' `subsumes` a >>    -- Argument is contravariant
-          bs `subsumesTele` bs' -- Return type is covariant
+          a' `subsumedBy` a >>    -- Argument is contravariant
+          bs `subsumedByTele` bs' -- Return type is covariant
 
         (TNil _, [], TNil _, []) ->
           pure ()
 
         (TNil pos, [], TExtend _ lbl', [_, f', _]) ->
           untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
-          `subsumes`
+          `subsumedBy`
           sup
 
         (TExtend _ lbl, [_, f, _], TNil pos', []) ->
           sub
-          `subsumes`
+          `subsumedBy`
           untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
 
         (TSkolem pos _ _ _, [], TExtend _ lbl', [_, f', _]) ->
           untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
-          `subsumes`
+          `subsumedBy`
           sup
 
         (TExtend _ lbl, [_, f, _], TSkolem pos' _ _ _, []) ->
           sub
-          `subsumes`
+          `subsumedBy`
           untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
 
         (TExtend _ lbl, [pty, fty, tail_], TExtend pos' lbl', [pty', fty', tail']) -> do
           (pty'', fty'', tail'') <- rewriteRow TypeToMeta lbl pos' lbl' pty' fty' tail'
-          [pty, fty, tail_] `subsumesTele` [pty'', fty'', tail'']
+          [pty, fty, tail_] `subsumedByTele` [pty'', fty'', tail'']
 
         (TAbsent _, [], TSkolem _ _ _ _, []) ->
           pure ()
@@ -233,14 +233,14 @@ subsumes sub sup = do
           throwError $ NotPolymorphicEnough sub var'
 
         _ | tyConSub `eqTypeCon` tyConSup ->
-              subsumesTele argsSub argsSup
+              subsumedByTele argsSub argsSup
           | otherwise ->
               throwError $ IsNotSubtypeOf sub sup
 
 data Direction = MetaToType | TypeToMeta
 
-subsumesMeta :: forall m. (MonadUnify m) => Direction -> MetaVar -> Type -> m ()
-subsumesMeta dir n other = do
+subsumedByMeta :: forall m. (MonadUnify m) => Direction -> MetaVar -> Type -> m ()
+subsumedByMeta dir n other = do
   mty <- lookupMeta n
   case mty of
     Nothing ->
@@ -253,8 +253,8 @@ subsumesMeta dir n other = do
         writeMeta n other
     Just ty ->
       case dir of
-        MetaToType -> ty `subsumes` other
-        TypeToMeta -> other `subsumes` ty
+        MetaToType -> ty `subsumedBy` other
+        TypeToMeta -> other `subsumedBy` ty
 
 rewriteRow :: (MonadUnify m) => Direction -> Label -> Position -> Label -> Type -> Type -> Type -> m (Type, Type, Type)
 rewriteRow dir newLabel pos label pty fty tail_
@@ -265,7 +265,7 @@ rewriteRow dir newLabel pos label pty fty tail_
           beta <- newMeta pos Row
           gamma <- newMeta pos Star
           theta <- newMeta pos Presence
-          subsumesMeta dir alpha (untele (Fix (TExtend pos' newLabel)) [theta, gamma, beta])
+          subsumedByMeta dir alpha (untele (Fix (TExtend pos' newLabel)) [theta, gamma, beta])
           return (theta, gamma, untele (Fix (TExtend pos label)) [pty, fty, beta])
         (Fix (TExtend pos' label'), [pty', fty', tail']) -> do
           (pty'', fty'', tail'') <- rewriteRow dir newLabel pos' label' pty' fty' tail'
@@ -279,13 +279,13 @@ rewriteRow dir newLabel pos label pty fty tail_
         _other ->
           error $ "Unexpected type: " ++ show tail_
 
-subsumesTele :: forall m. (MonadUnify m) => [Type] -> [Type] -> m ()
-subsumesTele subs sups = do
+subsumedByTele :: forall m. (MonadUnify m) => [Type] -> [Type] -> m ()
+subsumedByTele subs sups = do
   let countSubs = length subs
       countSups = length sups
   unless (countSubs == countSups) $
     throwError $ ArgumentCountMismatch countSubs countSups
-  zipWithM_ subsumes subs sups
+  zipWithM_ subsumedBy subs sups
 
 eqTypeCon :: TypeF Type -> TypeF Type -> Bool
 eqTypeCon a b =

@@ -15,7 +15,7 @@ import STL.Pretty hiding (list)
 (<:) sub sup =
   let (res, state) =
         inferKindClosed sub == inferKindClosed sup `seq`
-        runSubsumption (subsumes sub sup)
+        runSubsumption (sub `subsumedBy` sup)
   in putDocLn $ vsep
      [ cpretty sub
      , indent 2 "<:"
