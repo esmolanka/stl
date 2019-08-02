@@ -21,7 +21,7 @@ instance Semigroup Position where
     Position fn l c l' c'
 
 dummyPos :: Position
-dummyPos = Position "<no location information>" 1 0 1 0
+dummyPos = Position "<no location information>" 1 1 1 1
 
 instance Pretty Position where
   pretty (Position fn lin col lin' col') =

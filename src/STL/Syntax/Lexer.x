@@ -122,7 +122,7 @@ columnsInTab :: Int
 columnsInTab = 8
 
 advanceLineCol :: Char -> LineCol -> LineCol
-advanceLineCol '\n' (LineCol line _)   = LineCol (line + 1) 0
+advanceLineCol '\n' (LineCol line _)   = LineCol (line + 1) 1
 advanceLineCol '\t' (LineCol line col) = LineCol line (((col + columnsInTab - 1) `div` columnsInTab) * columnsInTab + 1)
 advanceLineCol _    (LineCol line col) = LineCol line (col + 1)
 
