@@ -27,13 +27,13 @@ data Token
 
 instance Pretty Token where
   pretty = \case
-    TokParen x       -> "paren" <+> pretty  (show x)
-    TokPunctuation x -> "punctuation" <+> parens  (pretty x)
+    TokParen x       -> "paren" <+> pretty (show x)
+    TokPunctuation x -> "punctuation" <+> squotes (pretty x)
     TokKeyword x     -> "keyword" <+> squotes (pretty x)
     TokReserved x    -> "reserved identifier" <+> squotes (pretty x)
     TokConstructor x -> "identifier" <+> squotes (pretty x)
     TokVariable x    -> "identifier" <+> squotes (pretty x)
-    TokUnknown x     -> "unknown" <+> pretty  (show x)
+    TokUnknown x     -> "character" <+> pretty  (show x)
 
 data LocatedBy p a = L !p !a
   deriving (Show, Eq, Functor)

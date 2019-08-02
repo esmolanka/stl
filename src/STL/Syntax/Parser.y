@@ -271,7 +271,5 @@ parseError toks = case toks of
   [] ->
     Left "Unexpected end of file"
   (L pos tok : _) ->
-    Left $ show $
-      pretty pos <> colon <+> "Unexpected" <+> pretty tok
-
+    Left $ show $ pretty pos <> colon <+> "error: unexpected" <+> pretty tok
 }

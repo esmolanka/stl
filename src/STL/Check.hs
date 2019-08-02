@@ -40,10 +40,14 @@ data IllegalDefinitionReason
 instance CPretty Err where
   cpretty = \case
     VariableNotFound pos x n ->
-      pretty pos <> ": Undefined variable" <+> aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x) <> "."
+      nest 4 $ vsep
+        [ pretty pos <> ": error:"
+        , "Undefined variable" <+> aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x) <> "."
+        ]
     KindMismatch pos t k k' ->
       nest 4 $ vsep
-        [ pretty pos <> ": Kind mismatch while checking type:"
+        [ pretty pos <> ": error:"
+        , "Kind mismatch while checking type:"
         , indent 4 (cpretty t)
         , "Expected kind:"
         , indent 4 (cpretty k)
@@ -52,21 +56,27 @@ instance CPretty Err where
         ]
     ArrowExpected pos t k ->
       nest 4 $ vsep
-        [ pretty pos <> ": Type application to a non-arrow kinded type:"
+        [ pretty pos <> ": error:"
+        , "Type application to a non-arrow kinded type:"
         , indent 4 (cpretty t)
         , "Actual kind:"
         , indent 4 (cpretty k)
         ]
     GlobalNotFound pos name ->
-      pretty pos <> ": Undefined global definition" <+> cpretty name <> "."
+      nest 4 $ vsep
+        [ pretty pos <> ": error:"
+        , "Undefined global definition" <+> cpretty name <> "."
+        ]
     GlobalAlreadyDefined pos name oldpos ->
       nest 4 $ vsep
-        [ pretty pos <> ": Duplicate global definition" <+> cpretty name <+> ". It has already been defined at:"
+        [ pretty pos <> ": error:"
+        , "Duplicate global definition" <+> cpretty name <+> ". It has already been defined at:"
         , pretty oldpos
         ]
     IllegalDefinition pos name t reason ->
       nest 4 $ vsep
-        [ pretty pos <> ": Illegal global definition" <+> cpretty name <+> parens (pretty reason) <> colon
+        [ pretty pos <> ": error:"
+        , "Illegal global definition" <+> cpretty name <+> parens (pretty reason) <> colon
         , indent 4 (cpretty t)
         ]
 
@@ -187,7 +197,7 @@ inferKind = para alg
             a' <- a
             aterm' <- normalise lookupGlobal aterm
             unless (a' == a'') $
-              throwError (KindMismatch pos (Fix (TApp pos fterm' aterm')) a'' a')
+              throwError (KindMismatch (getPosition aterm) (Fix (TApp pos fterm' aterm')) a'' a')
             pure b''
           _other ->
             throwError (ArrowExpected pos (Fix (TApp pos fterm' aterm)) f')
@@ -208,7 +218,7 @@ inferKind = para alg
 
 inferKindClosed :: Type -> Kind
 inferKindClosed ty =
-  either (errorWithoutStackTrace . ("\n" ++) . show . cpretty) id $
+  either (errorWithoutStackTrace . show . cpretty) id $
     runReader (runExceptT (inferKind ty)) (Ctx M.empty M.empty)
 
 ----------------------------------------------------------------------
