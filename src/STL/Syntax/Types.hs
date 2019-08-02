@@ -27,7 +27,6 @@ data Kind
   = Star
   | Nat
   | Row
-  | Presence
   | Arr Kind Kind
   deriving (Show, Eq, Ord)
 

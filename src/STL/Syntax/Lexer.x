@@ -50,7 +50,7 @@ $upper      = [A-Z]
 
 @reserved   = "Unit" | "Void" | "Integer" | "Double" | "String"
             | "List" | "Dictionary" | "Natural" | "Array"
-            | "Type" | "Row" | "Presence" | "Nat"
+            | "Type" | "Row" | "Nat"
 
 $identrest  = [$alpha $digit _]
 @constr     = [$upper] [$identrest]*

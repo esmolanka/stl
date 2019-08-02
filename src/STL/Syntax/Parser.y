@@ -49,7 +49,7 @@ import STL.Syntax.Types
   ','            { L _ (TokPunctuation ","   ) }
   '.'            { L _ (TokPunctuation "."   ) }
   '+'            { L _ (TokPunctuation "+"   ) }
-  '<:'           { L _ (TokPunctuation "<:"   ) }
+  '<:'           { L _ (TokPunctuation "<:"  ) }
 
   -- Keywords
   "forall"       { L _ (TokKeyword "forall")   }
@@ -76,7 +76,6 @@ import STL.Syntax.Types
   -- Kinds
   "Type"         { L _ (TokReserved "Type")     }
   "Row"          { L _ (TokReserved "Row")      }
-  "Presence"     { L _ (TokReserved "Presence") }
   "Nat"          { L _ (TokReserved "Nat")      }
 
   CONSTRUCTOR    { L _ (TokConstructor _) }
@@ -143,9 +142,14 @@ MutualClause :: { MutualClause }
 Type :: { Type }
   : AppType                              { $1 }
   | AppType '->' sepBy1(Type,'->')       { mkArrow ($1 : $3) }
-  | "forall" list1(Bindings) '.' Type    { Fix $ TForall (position $1) (concat $2) $4 }
-  | "exists" list1(Bindings) '.' Type    { Fix $ TExists (position $1) (concat $2) $4 }
+  | "forall" list1(Bindings) '.' Type    { Fix $ TForall (position $1 <> typePos $4) (concat $2) $4 }
+  | "exists" list1(Bindings) '.' Type    { Fix $ TExists (position $1 <> typePos $4) (concat $2) $4 }
+
+AppType :: { Type }
+  : list1(AtomType)   { mkApplication $1 }
+  | '{' '}'                              { Fix $ TRecord (position $1 <> position $2) (RNil (position $2)) }
   | '{' RecordRow '}'                    { Fix $ TRecord (position $1 <> position $3) ($2 (position $3)) }
+  | '<' '>'                              { Fix $ TVariant (position $1 <> position $2) (RNil (position $2)) }
   | '<' VariantRow '>'                   { Fix $ TVariant (position $1 <> position $3) ($2 (position $3)) }
 
 Bindings :: { [Binding] }
@@ -158,6 +162,7 @@ Bindings :: { [Binding] }
 RecordRow :: { Position -> Row Type }
   : sepBy1(RecRowExt, ',')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
   | sepBy1(RecRowExt, ',') '|' AppType   { \_ -> foldr ($) (RExplicit (position $2) $3) $1 }
+  | '|' AppType                          { \_ -> RExplicit (position $1) $2 }
 
 RecRowExt :: { Row Type -> Row Type }
   : VARIABLE ':' Type                    { RExtend (position $1 <> typePos $3)
@@ -181,9 +186,6 @@ VarRowExt :: { Row Type -> Row Type }
                                              (Label $ getConstructor $ extract $1)
                                              (PVariable (position $1))
                                              $3 }
-
-AppType :: { Type }
-  : list1(AtomType)   { mkApplication $1 }
 
 AtomType :: { Type }
   : BaseType          { Fix $ T (position $1) (extract $1) }
@@ -216,7 +218,6 @@ Kind :: { Kind }
 AtomKind :: { Kind }
   : "Type"        { Star }
   | "Row"         { Row }
-  | "Presence"    { Presence }
   | "Nat"         { Nat }
   | '(' Kind ')'  { $2 }
 
