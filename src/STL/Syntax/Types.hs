@@ -41,7 +41,7 @@ data BaseType
   | TDictionary -- Star -> Star
   | TArray      -- Star -> Nat -> Star
   | TNatural    -- Nat -> Star
-  | TPresent    -- Precense
+  | TPresent    -- Presence
   | TAbsent     -- Presence
   deriving (Show, Eq, Ord)
 
@@ -56,6 +56,7 @@ data TypeF e
   | TRef      { _typePos :: Position, _refName :: Var }
   | TGlobal   { _typePos :: Position, _globalQualifiers :: Maybe ModuleName, _globalName :: GlobalName }
   | TForall   { _typePos :: Position, _forallBindings :: [Binding], _forallBody :: e }
+  | TExists   { _typePos :: Position, _existsBindings :: [Binding], _existsBody :: e }
   | TArrow    { _typePos :: Position, _arrA :: e, _arrB :: e, _arrRest :: [e] }
   | TApp      { _typePos :: Position, _appF :: e, _appA :: e, _appRest :: [e] }
   | TRecord   { _typePos :: Position, _recordRow :: Row e  }
@@ -64,19 +65,32 @@ data TypeF e
 
 type Type = Fix TypeF
 
-getPosition :: Type -> Position
-getPosition (Fix t) = _typePos t
+typePos :: Type -> Position
+typePos (Fix t) = _typePos t
+
+data Presence
+  = PPresent  { _presencePos :: Position }
+  | PVariable { _presencePos :: Position }
+  deriving (Show, Eq, Ord)
 
 data Row t
-  = RExtend   { _rowPos :: Position, _extLabel :: Label, _extPresence :: t, _extType :: t, _extCont :: Row t }
+  = RExtend   { _rowPos :: Position, _extLabel :: Label, _extPresence :: Presence, _extType :: t, _extCont :: Row t }
+  | RExplicit { _rowPos :: Position, _extTail :: t }
   | RNil      { _rowPos :: Position }
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 instance {-# OVERLAPPING #-} Show (Fix TypeF) where
   showsPrec n (Fix t) = showsPrec n t
 
+data MutualClause = MutualClause
+  { _mutPos  :: Position
+  , _mutName :: GlobalName
+  , _mutBody :: Type
+  } deriving (Show)
+
 data Statement
-  = Define    { _stmtPos :: Position, _defnName :: GlobalName, _defnParams :: [Binding] , _defnBody :: Type }
+  = Typedef   { _stmtPos :: Position, _defnName :: GlobalName, _defnParams :: [Binding] , _defnBody :: Type }
+  | Mutualdef { _stmtPos :: Position, _mutParams :: [Binding], _mutClauses :: [MutualClause] }
   | Normalise { _stmtPos :: Position, _normaliseBody :: Type }
   | Subsume   { _stmpPos :: Position, _subType :: Type, _superType :: Type }
   deriving (Show)
@@ -85,7 +99,7 @@ data Import = Import
   { _importPos    :: Position
   , _importName   :: ModuleName
   , _importArgs   :: [Type]
-  , _importRename :: ModuleName
+  , _importRename :: Maybe ModuleName
   } deriving (Show)
 
 data Module = Module
@@ -93,5 +107,5 @@ data Module = Module
   , _modParams     :: [Binding]
   , _modImport     :: [Import]
   , _modStatements :: [Statement]
-  , _modReturnType :: Type
+  , _modReturnType :: Maybe Type
   } deriving (Show)

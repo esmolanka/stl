@@ -9,6 +9,8 @@
 
 module STL.Syntax.Parser
   ( pType
+  , pStatement
+  , pModule
   ) where
 
 import Data.Functor.Foldable (Fix(..))
@@ -22,8 +24,8 @@ import STL.Syntax.Token
 import STL.Syntax.Types
 }
 
--- %name pModule    Module
--- %name pStatement Statement
+%name pModule    Module
+%name pStatement Statement
 %name pType      Type
 
 %error     { parseError }
@@ -31,8 +33,6 @@ import STL.Syntax.Types
 %monad     { Either String }
 
 %token
-  NL             { L _ TokNewline        }
-
   '('            { L _ (TokParen '('   ) }
   ')'            { L _ (TokParen ')'   ) }
   '{'            { L _ (TokParen '{'   ) }
@@ -48,31 +48,36 @@ import STL.Syntax.Types
   '|'            { L _ (TokPunctuation "|"   ) }
   ','            { L _ (TokPunctuation ","   ) }
   '.'            { L _ (TokPunctuation "."   ) }
+  '+'            { L _ (TokPunctuation "+"   ) }
+  '<:'           { L _ (TokPunctuation "<:"   ) }
 
   -- Keywords
-  "forall"       { L _ (TokKeyword "forall") }
-  "type"         { L _ (TokKeyword "type")   }
-  "module"       { L _ (TokKeyword "module") }
-  "import"       { L _ (TokKeyword "import") }
-  "#eval"        { L _ (TokKeyword "#eval")  }
-  "#check"       { L _ (TokKeyword "#check") }
+  "forall"       { L _ (TokKeyword "forall")   }
+  "exists"       { L _ (TokKeyword "exists")   }
+  "type"         { L _ (TokKeyword "type")     }
+  "mutual"       { L _ (TokKeyword "mutual")   }
+  "return"       { L _ (TokKeyword "return")   }
+  "module"       { L _ (TokKeyword "module")   }
+  "import"       { L _ (TokKeyword "import")   }
+  "#eval"        { L _ (TokKeyword "#eval")    }
+  "#check"       { L _ (TokKeyword "#check")   }
 
   -- Base types
-  "Unit"         { L _ (TokReserved "Unit") }
-  "Void"         { L _ (TokReserved "Void") }
-  "Integer"      { L _ (TokReserved "Integer") }
-  "Double"       { L _ (TokReserved "Double") }
-  "String"       { L _ (TokReserved "String") }
-  "List"         { L _ (TokReserved "List") }
+  "Unit"         { L _ (TokReserved "Unit")       }
+  "Void"         { L _ (TokReserved "Void")       }
+  "Integer"      { L _ (TokReserved "Integer")    }
+  "Double"       { L _ (TokReserved "Double")     }
+  "String"       { L _ (TokReserved "String")     }
+  "List"         { L _ (TokReserved "List")       }
   "Dictionary"   { L _ (TokReserved "Dictionary") }
-  "Natural"      { L _ (TokReserved "Natural") }
-  "Array"        { L _ (TokReserved "Array") }
+  "Natural"      { L _ (TokReserved "Natural")    }
+  "Array"        { L _ (TokReserved "Array")      }
 
   -- Kinds
-  "Type"         { L _ (TokReserved "Type") }
-  "Row"          { L _ (TokReserved "Row") }
+  "Type"         { L _ (TokReserved "Type")     }
+  "Row"          { L _ (TokReserved "Row")      }
   "Presence"     { L _ (TokReserved "Presence") }
-  "Nat"          { L _ (TokReserved "Nat") }
+  "Nat"          { L _ (TokReserved "Nat")      }
 
   CONSTRUCTOR    { L _ (TokConstructor _) }
   VARIABLE       { L _ (TokVariable    _) }
@@ -82,25 +87,66 @@ import STL.Syntax.Types
 
 %%
 
--- Program
+----------------------------------------------------------------------
+-- Module
 
--- Module :: { Module }
---   : list(Statement)                      { $1 }
+Module :: { Module }
+  : ModuleHeader
+    list(ImportStatement)
+    list(Statement)
+    ReturnType                { let (name, bindings) = $1
+                                in Module name bindings $2 $3 $4 }
 
+ModuleHeader :: { (ModuleName, [Binding]) }
+  : {- empty -}               { ( ModuleName "Main", [] ) }
+  | "module" CONSTRUCTOR
+      list(Bindings)          { ( (ModuleName $ getConstructor $ extract $2)
+                                , concat $3
+                                ) }
+
+ImportStatement :: { Import }
+  : "import" CONSTRUCTOR      { Import (position $2)
+                                  (ModuleName $ getConstructor $ extract $2)
+                                  [] Nothing }
+  | "import" CONSTRUCTOR '='
+      CONSTRUCTOR
+      list(AtomType)          { Import (position $2)
+                                  (ModuleName $ getConstructor $ extract $4)
+                                  $5 (Just (ModuleName $ getConstructor $ extract $2)) }
+
+ReturnType :: { Maybe Type }
+  : {- -}                     { Nothing }
+  | "return" Type             { Just $2 }
+----------------------------------------------------------------------
 -- Statement
 
--- Statement :: { Statement }
---   : NL "import" ident                     { Load $ mkFileName $ getIdent $ extract $3 }
---   | NL ident '=' Type                     { Definition (Ident $ getIdent $ extract $2) $4 }
---   | NL "#check" Type                      { Check $3 }
---   | NL "#eval" Type                       { Eval $3 }
+Statement :: { Statement }
+  : "type" CONSTRUCTOR
+      list(Bindings) '='
+      Type                      { Typedef (position $1)
+                                   (GlobalName $ getConstructor $ extract $2)
+                                   (concat $3)
+                                   $5 }
+  | "mutual" list(Bindings)
+      list1(MutualClause)       { Mutualdef (position $1) (concat $2) $3  }
+  | "#eval" Type                { Normalise (position $1 <> typePos $2) $2 }
+  | "#check" Type '<:' Type     { Subsume (position $1 <> typePos $4) $2 $4 }
 
+MutualClause :: { MutualClause }
+  : '|' CONSTRUCTOR '=' Type    { MutualClause (position $2)
+                                    (GlobalName $ getConstructor $ extract $2)
+                                    $4 }
+
+----------------------------------------------------------------------
 -- Type
 
 Type :: { Type }
   : AppType                              { $1 }
-  | AppType '->' sepBy1(Type,'->')       { mkArrow (position $2) ($1 : $3) }
+  | AppType '->' sepBy1(Type,'->')       { mkArrow ($1 : $3) }
   | "forall" list1(Bindings) '.' Type    { Fix $ TForall (position $1) (concat $2) $4 }
+  | "exists" list1(Bindings) '.' Type    { Fix $ TExists (position $1) (concat $2) $4 }
+  | '{' RecordRow '}'                    { Fix $ TRecord (position $1 <> position $3) ($2 (position $3)) }
+  | '<' VariantRow '>'                   { Fix $ TVariant (position $1 <> position $3) ($2 (position $3)) }
 
 Bindings :: { [Binding] }
   : VARIABLE                             { [Binding (position $1) (Var $ getVariable $ extract $1) Nothing] }
@@ -109,6 +155,33 @@ Bindings :: { [Binding] }
                                                     (Var $ getVariable $ extract idn)
                                                     (Just $4)) $2}
 
+RecordRow :: { Position -> Row Type }
+  : sepBy1(RecRowExt, ',')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
+  | sepBy1(RecRowExt, ',') '|' AppType   { \_ -> foldr ($) (RExplicit (position $2) $3) $1 }
+
+RecRowExt :: { Row Type -> Row Type }
+  : VARIABLE ':' Type                    { RExtend (position $1 <> typePos $3)
+                                             (Label $ getVariable $ extract $1)
+                                             (PVariable (position $1))
+                                             $3 }
+  | VARIABLE '+' ':' Type                { RExtend (position $1 <> typePos $4)
+                                             (Label $ getVariable $ extract $1)
+                                             (PPresent (position $3))
+                                             $4 }
+
+VariantRow :: { Position -> Row Type }
+  : sepBy1(VarRowExt, ',')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
+
+VarRowExt :: { Row Type -> Row Type }
+  : CONSTRUCTOR                          { RExtend (position $1)
+                                             (Label $ getConstructor $ extract $1)
+                                             (PVariable (position $1))
+                                             (Fix (T (position $1) TUnit)) }
+  | CONSTRUCTOR ':' Type                 { RExtend (position $1 <> typePos $3)
+                                             (Label $ getConstructor $ extract $1)
+                                             (PVariable (position $1))
+                                             $3 }
+
 AppType :: { Type }
   : list1(AtomType)   { mkApplication $1 }
 
@@ -116,6 +189,10 @@ AtomType :: { Type }
   : BaseType          { Fix $ T (position $1) (extract $1) }
   | VARIABLE          { Fix $ TRef (position $1) (Var $ getVariable $ extract $1) }
   | CONSTRUCTOR       { Fix $ TGlobal (position $1) Nothing (GlobalName $ getConstructor $ extract $1) }
+  | CONSTRUCTOR '.'
+    CONSTRUCTOR       { Fix $ TGlobal (position $1)
+                        (Just $ ModuleName $ getConstructor $ extract $3)
+                        (GlobalName $ getConstructor $ extract $1) }
   | '(' Type ')'      { $2 }
 
 BaseType :: { Located BaseType }
@@ -175,12 +252,12 @@ sepBy2(p, q)
 {
 --
 
-mkArrow :: Position -> [Type] -> Type
-mkArrow pos (a : b : rest) = Fix $ TArrow pos a b rest
-mkArrow pos _ = error "Unexpected input on mkArrow"
+mkArrow :: [Type] -> Type
+mkArrow ts@(a : b : rest) = Fix $ TArrow (foldr1 (<>) $ map typePos ts) a b rest
+mkArrow _ = error "Unexpected input on mkArrow"
 
 mkApplication :: [Type] -> Type
-mkApplication (a : b : rest) = Fix $ TApp (getPosition a) a b rest
+mkApplication ts@(a : b : rest) = Fix $ TApp (foldr1 (<>) $ map typePos ts) a b rest
 mkApplication (a : []) = a
 mkApplication _ = error "Unexpected input on mkApplication"
 
@@ -192,9 +269,9 @@ type Located = LocatedBy Position
 parseError :: [LocatedBy Position Token] -> Either String b
 parseError toks = case toks of
   [] ->
-    Left "EOF: Unexpected end of file"
+    Left "Unexpected end of file"
   (L pos tok : _) ->
     Left $ show $
-      pretty pos <> colon <+> "Unexpected token:" <+> pretty tok
+      pretty pos <> colon <+> "Unexpected" <+> pretty tok
 
 }

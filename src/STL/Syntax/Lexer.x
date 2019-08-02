@@ -41,10 +41,12 @@ $upper      = [A-Z]
 
 @paren      = [\(\)\[\]\<\>\{\}]
 
-@punct      = "=" | ":" | "->" | "|" | "." | "," | "<:"
+@punct      = "=" | ":" | "->" | "|" | "." | "," | "<:" | "+"
 
-@keyword    = "forall" | "exists" | "required"
-@nlkeywords = "type" | "return" | "module" | "import" | "#eval" | "#check"
+@keyword    = "forall" | "exists"
+            | "type" | "mutual" | "return"
+            | "module" | "import"
+            | "#eval" | "#check"
 
 @reserved   = "Unit" | "Void" | "Integer" | "Double" | "String"
             | "List" | "Dictionary" | "Natural" | "Array"
@@ -62,7 +64,6 @@ $whitespace+       ;
 @paren             { TokParen `via` BL.head }
 @punct             { TokPunctuation `via` decode }
 @keyword           { TokKeyword `via` decode }
-[\n] ^ @nlkeywords { TokKeyword `via` decode }
 @reserved          { TokReserved `via` decode }
 @constr            { TokConstructor `via` decode }
 @variable          { TokVariable `via` decode }

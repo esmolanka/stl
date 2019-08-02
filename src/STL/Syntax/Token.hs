@@ -16,8 +16,7 @@ import Data.Text (Text)
 import Data.Text.Prettyprint.Doc
 
 data Token
-  = TokNewline                                    -- indicator of a new line
-  | TokParen       { getParen        :: !Char }   -- [, ], (, ), {, }, <, >
+  = TokParen       { getParen        :: !Char }   -- [, ], (, ), {, }, <, >
   | TokPunctuation { getPunctuation  :: !Text }   -- ':', '->', '|', ',', '.'
   | TokKeyword     { getKeyword      :: !Text }   -- forall, type, mutual
   | TokReserved    { getReserved     :: !Text }   -- Unit, String, List
@@ -28,7 +27,6 @@ data Token
 
 instance Pretty Token where
   pretty = \case
-    TokNewline       -> "newline"
     TokParen x       -> "paren" <+> pretty  (show x)
     TokPunctuation x -> "punctuation" <+> parens  (pretty x)
     TokKeyword x     -> "keyword" <+> squotes (pretty x)

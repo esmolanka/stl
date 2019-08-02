@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   build-tools:         alex, happy
-  hs-source-dirs:      src, .
+  hs-source-dirs:      src
   ghc-options:         -Wall -fno-warn-name-shadowing -fno-warn-unused-do-bind
   exposed-modules:
     STL
@@ -26,6 +26,7 @@ library
     STL.Subsumption
     STL.Types
 
+    STL.Syntax
     STL.Syntax.Position
     STL.Syntax.Lexer
     STL.Syntax.Parser
