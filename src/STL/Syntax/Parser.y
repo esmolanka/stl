@@ -184,6 +184,7 @@ RecRowExt :: { Row Type -> Row Type }
                                              (Label $ getVariable $ extract $1)
                                              (PPresent (position $3))
                                              $4 }
+  | CONSTRUCTOR                          {% otherError (position $1) "labels in records must start with a lower-case letter or an underscore" }
 
 VariantRow :: { Position -> Row Type }
   : sepBy1(VarRowExt, ',')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
@@ -197,6 +198,7 @@ VarRowExt :: { Row Type -> Row Type }
                                              (Label $ getConstructor $ extract $1)
                                              (PVariable (position $1))
                                              $3 }
+  | VARIABLE                             {% otherError (position $1) "labels in variants must start with an upper-case letter" }
 
 AtomType :: { Type }
   : BaseType          { Fix $ T (position $1) (extract $1) }
@@ -284,4 +286,9 @@ parseError toks = case toks of
     Left "Unexpected end of file"
   (L pos tok : _) ->
     Left $ show $ pretty pos <> colon <+> "error: unexpected" <+> pretty tok
+
+otherError :: Position -> String -> Either String b
+otherError pos msg =
+  Left $ show $ pretty pos <> colon <+> "error:" <+> pretty msg
+
 }
