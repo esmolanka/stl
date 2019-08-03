@@ -2,6 +2,7 @@
 
 module STL.DSL where
 
+import Data.Functor.Compose
 import Data.Functor.Foldable (Fix(..))
 import Data.Text (Text)
 import STL.Types
@@ -76,10 +77,10 @@ pattern Mu :: Var -> Type -> Type
 pattern Mu x b <- Fix (TMu _ x b)
   where Mu x b = Fix (TMu dummyPos x b)
 
-pattern Let :: Text -> [(Var, Kind)] -> Type -> Program -> Program
-pattern Let name params ty cont <- Fix (PLet _ (Definition _ (GlobalName name) params ty) cont)
-  where Let name params ty cont = Fix (PLet dummyPos (Definition dummyPos (GlobalName name) params ty) cont)
+pattern Let :: Text -> [(Var, Kind)] -> Type -> Program a -> Program a
+pattern Let name params ty cont <- Fix (Compose (Now (PLet _ (Definition _ (GlobalName name) params ty) cont)))
+  where Let name params ty cont = Fix (Compose (Now (PLet dummyPos (Definition dummyPos (GlobalName name) params ty) cont)))
 
-pattern Return :: Type -> Program
-pattern Return ty <- Fix (PReturn _ ty)
-  where Return ty = Fix (PReturn dummyPos ty)
+pattern Return :: Type -> Program a
+pattern Return ty <- Fix (Compose (Now (PReturn _ ty)))
+  where Return ty = Fix (Compose (Now (PReturn dummyPos ty)))

@@ -1,5 +1,7 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module STL.Elab where
@@ -27,7 +29,6 @@ dsGlobalName = coerce
 
 dsLabel :: Label -> Core.Label
 dsLabel = coerce
-
 
 dsKind :: Position -> Kind -> Core.Kind
 dsKind pos = \case
@@ -112,11 +113,19 @@ dsRow t =
           [ prs', ty, cont']
 
 
-dsStatements :: forall a. (Position -> Core.Type -> a) -> (Position -> Core.Type -> Core.Type -> a) -> [Statement] -> Core.InterleavedProgram a -> Core.InterleavedProgram a
-dsStatements normalise check = flip (foldr (dsStatement normalise check))
+----------------------------------------------------------------------
 
-dsStatement :: forall a. (Position -> Core.Type -> a) -> (Position -> Core.Type -> Core.Type -> a) -> Statement -> Core.InterleavedProgram a -> Core.InterleavedProgram a
-dsStatement normalise check stmt cont =
+data Handlers a = Handlers
+  { hNormalise :: Position -> Core.Type -> a
+  , hCheck     :: Position -> Core.Type -> Core.Type -> a
+  , hImport    :: forall b. Position -> Core.Program b -> Core.Program a
+  }
+
+dsStatements :: forall a. Handlers a -> [Statement] -> Core.Program a -> Core.Program a
+dsStatements handlers = flip (foldr (dsStatement handlers))
+
+dsStatement :: forall a. Handlers a -> Statement -> Core.Program a -> Core.Program a
+dsStatement Handlers{hNormalise, hCheck} stmt cont =
   case stmt of
     Typedef pos name params body ->
       let defn = Core.Definition
@@ -138,12 +147,16 @@ dsStatement normalise check stmt cont =
 
     Normalise pos ty ->
       let Fix (Compose kont) = cont
-      in Fix (Compose (Core.Later (normalise pos (dsType ty)) kont))
+      in Fix (Compose (Core.Later (hNormalise pos (dsType ty)) kont))
 
     Subsume pos sub super ->
       let Fix (Compose kont) = cont
-      in Fix (Compose (Core.Later (check pos (dsType sub) (dsType super)) kont))
+      in Fix (Compose (Core.Later (hCheck pos (dsType sub) (dsType super)) kont))
 
-dsReturn :: Maybe Type -> Core.InterleavedProgram a
+dsReturn :: Maybe Type -> Core.Program a
 dsReturn ty =
   Fix (Compose (Core.Now (maybe Core.PNil (\t -> Core.PReturn (typePos t) (dsType t)) ty)))
+
+dsModule :: forall a. Handlers a -> Module -> Core.Program a
+dsModule handlers (Module _name _params _imports statements rettype) =
+  dsStatements handlers statements (dsReturn rettype)

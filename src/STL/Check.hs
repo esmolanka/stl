@@ -289,7 +289,7 @@ checkDefinitionTypeWellformedness pos name' ty = do
   when (containsMetasOrSkolems nodes) $
     throwError $ illegalError DefinitionContainsMetasOrSkolems
 
-checkProgram :: forall m a. (MonadTC m) => InterleavedProgram (m ()) -> (Maybe Type -> m a) -> m a
+checkProgram :: forall m a. (MonadTC m) => Program (m ()) -> (Maybe Type -> m a) -> m a
 checkProgram program cont = cataCompose alg runActions program
   where
     alg :: ProgramF (m a) -> m a

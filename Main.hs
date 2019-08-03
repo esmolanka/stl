@@ -15,10 +15,10 @@ import qualified Data.ByteString.Lazy.UTF8 as UTF8
 
 import STL
 import STL.Check
-import STL.Elab (dsType, dsStatements, dsReturn)
+import STL.Elab (dsType, dsModule, Handlers(..))
 import STL.Pretty hiding (list)
 import STL.Subsumption
-import STL.Syntax (parseStatement, parseModule, typePos, Statement(..), Module(..))
+import STL.Syntax (parseStatement, parseModule, typePos, Statement(..))
 
 ----------------------------------------------------------------------
 -- Utils
@@ -72,10 +72,8 @@ main = do
       str <- BL.readFile fn
       case parseModule fn str of
         Left err -> putStrLn err
-        Right (Module _ _ _ statements mret) ->
-          let program =
-                dsStatements eval check statements $
-                  dsReturn mret
+        Right modul ->
+          let program = dsModule (Handlers eval check (\_ k -> purifyProgram k)) modul
               checking = checkProgram program $ \case
                 Just ty -> eval (getPosition ty) ty
                 Nothing -> pure ()

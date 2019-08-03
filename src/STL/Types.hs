@@ -232,18 +232,16 @@ data ProgramF e
   | PNil
   deriving (Functor, Foldable, Traversable, Generic)
 
-type Program = Fix ProgramF
+type Program a = Fix (Compose (ColistF a) ProgramF)
 
-type InterleavedProgram a = Fix (Compose (ColistF a) ProgramF)
-
-purifyProgram :: forall a b. InterleavedProgram a -> InterleavedProgram b
+purifyProgram :: forall a b. Program a -> Program b
 purifyProgram = cata (\(Compose p) -> Fix $ Compose (chase p))
   where
     chase :: ColistF a e -> ColistF b e
     chase (Now p) = Now p
     chase (Later _ p) = chase p
 
-instance CPretty (ProgramF Program) where
+instance CPretty (ProgramF (Program a)) where
   cpretty = \case
     PLet _ def rest ->
       vsep [ cpretty def <> line, cpretty rest ]
@@ -257,5 +255,10 @@ instance CPretty (ProgramF Program) where
       cpretty ty
     PNil -> mempty
 
-instance CPretty (Fix ProgramF) where
+instance CPretty (Compose (ColistF a) ProgramF (Program a)) where
+  cpretty = \case
+    Compose (Now a) -> cpretty a
+    Compose (Later _ a) -> cpretty (Compose a)
+
+instance CPretty (Program a) where
   cpretty (Fix a) = cpretty a
