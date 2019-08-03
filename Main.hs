@@ -34,7 +34,7 @@ check pos sub sup = do
     then do
       let (res, state) = runSubsumption (sub' `subsumedBy` sup')
       liftIO $ putDocLn $ nest 2 $ vsep
-        [ pretty pos <> colon <+> "checking subsumption"
+        [ pretty pos <> colon <+> either (const "error: subsumption:") (const "subsumption:") res
         , cpretty sub'
         , indent 2 "<:"
         , cpretty sup'
@@ -46,11 +46,7 @@ check pos sub sup = do
         ]
     else
       liftIO $ putDocLn $ nest 2 $ vsep
-        [ pretty pos <> colon <+> "checking subsumption"
-        , cpretty sub'
-        , indent 2 "<:"
-        , cpretty sup'
-        , mempty
+        [ pretty pos <> colon <+> "error:"
         , "Kind mismatch:" <+> cpretty k <+> "/=" <+> cpretty k'
         , mempty
         ]
@@ -61,7 +57,7 @@ eval pos ty = do
   ty' <- normalise lookupGlobal ty
   k'  <- inferKind ty'
   liftIO $ putDocLn $ nest 2 $ vsep
-     [ pretty pos <> colon <+> "normalisation"
+     [ pretty pos <> colon <+> "normalisation:"
      , cpretty ty'
      , ":" <+> cpretty k' <+>
          if k /= k' then "/=" <+> cpretty k <+> "!!!" else mempty

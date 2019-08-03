@@ -67,12 +67,12 @@ instance CPretty Err where
     GlobalNotFound pos name ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Undefined global definition" <+> cpretty name <> "."
+        , "Undefined type" <+> cpretty name <> "."
         ]
     GlobalAlreadyDefined pos name oldpos ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Duplicate global definition" <+> cpretty name <+> ". It has already been defined at:"
+        , "Duplicate type definition" <+> cpretty name <> ". It has already been defined at:"
         , pretty oldpos
         ]
     IllegalDefinition pos name t reason ->
