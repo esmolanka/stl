@@ -4,20 +4,18 @@ module Example2
 #eval Unit
 
 type Service a =
-     { foo : Unit
-     , bar : a
-     } ->
-     Unit ->
-     { output1+ : Unit
-     , output2+ : a
-     }
+  { foo : Unit
+  , bar : a
+  } ->
+  { output1+ : Unit
+  , output2+ : a
+  }
 
 type Client a =
   { foo : Unit
+  } ->
+  { output : a
   }
- -> Unit
- -> { output : Unit
-    }
 
 #check Service Unit <: Client Unit
 
@@ -32,15 +30,20 @@ type SumNC a b = <Nil : a, Cons : b>
 type Compose (f : Type -> Type) (g : Type -> Type) (a : Type) = f (g a)
 
 #check
-    forall a. ConsList a
-    <:
-    forall a. Fix (Compose (SumNC Unit) (PairHT a))
+  forall a. ConsList (a -> a)
+  <:
+  forall a. Fix (Compose (SumNC Unit) (PairHT a))
 
 #check
-    forall a. ConsList a
-    <:
-    forall a. <Nil : Unit, Cons : Fix (Compose (PairHT a) (SumNC Unit))>
+  forall a. Fix (Compose (SumNC Unit) (PairHT a))
+  <:
+  forall a. ConsList (a -> a)
 
+#check
+  forall a. ConsList a
+  <:
+  forall a. <Nil : Unit, Cons : Fix (Compose (PairHT a) (SumNC Unit))>
 
 return
-  { call : forall a. Service a }
+  { call : forall a. Service a
+  }
