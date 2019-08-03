@@ -89,6 +89,17 @@ main = do
           in runTCT checking >>= either putDocLn pure
 
     [] -> do
+      putDocLn $ vsep
+        [ "Welcome to STL Repl"
+        , mempty
+        , "Supported syntax:"
+        , indent 2 $ vsep
+          [ aKeyword "type" <+> aConstructor "Name" <+> parens (aVariable "a" <+> ":" <+> aKind "Type") <+> "=" <+> aVariable "t"
+          , aKeyword "#eval" <+> aVariable "t"
+          , aKeyword "#check" <+> aVariable "s" <+> "<:" <+> aVariable "t"
+          ]
+        , mempty
+        ]
       repl ">>> " $ \str -> do
         case parseStatement "<repl>" (UTF8.fromString str) of
           Left err -> putStrLn err
