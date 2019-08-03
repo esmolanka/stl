@@ -10,15 +10,17 @@ import System.Environment
 import Control.Arrow ((&&&))
 import Control.Monad.IO.Class
 
+import Data.Functor.Foldable (Fix(..))
+
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
 
 import STL
 import STL.Check
-import STL.Elab (dsType, dsModule, Handlers(..))
+import STL.Elab (dsStatement, dsReturn, dsGlobalName, dsModule, Handlers(..))
 import STL.Pretty hiding (list)
 import STL.Subsumption
-import STL.Syntax (parseStatement, parseModule, typePos, Statement(..))
+import STL.Syntax (parseStatement, parseModule, Statement(..))
 
 ----------------------------------------------------------------------
 -- Utils
@@ -64,6 +66,13 @@ eval pos ty = do
      , mempty
      ]
 
+mainHandlers :: (MonadTC m, MonadIO m) => Handlers (m ())
+mainHandlers =
+  Handlers
+    eval
+    check
+    (\_ k -> purifyProgram k)
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -73,7 +82,7 @@ main = do
       case parseModule fn str of
         Left err -> putStrLn err
         Right modul ->
-          let program = dsModule (Handlers eval check (\_ k -> purifyProgram k)) modul
+          let program = dsModule mainHandlers modul
               checking = checkProgram program $ \case
                 Just ty -> eval (getPosition ty) ty
                 Nothing -> pure ()
@@ -83,12 +92,14 @@ main = do
       repl ">>> " $ \str -> do
         case parseStatement "<repl>" (UTF8.fromString str) of
           Left err -> putStrLn err
-          Right (Normalise _ t) ->
-            runTCT (eval (typePos t) (dsType t)) >>= either putDocLn pure
-          Right (Subsume _ s t) ->
-            runTCT (check (typePos s <> typePos t) (dsType s) (dsType t)) >>= either putDocLn pure
-          Right _ ->
-            putStrLn "Statement not implemented"
+          Right stmt ->
+            let checking =
+                  checkProgram (dsStatement mainHandlers stmt (dsReturn Nothing)) $ \_ ->
+                  case stmt of
+                    (Typedef pos name _ _) -> eval pos (Fix (TGlobal pos (dsGlobalName name)))
+                    _                      -> pure ()
+            in runTCT checking >>= either putDocLn pure
+
 
 
 ----------------------------------------------------------------------
