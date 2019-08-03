@@ -23,12 +23,25 @@ import STL.Types
 import STL.Eval
 
 ----------------------------------------------------------------------
+-- Kind inference types
+
+data KindExpectation
+  = NoExpectation
+  | ExpectArrow Kind KindExpectation
+  | ExpectExactly Kind
+
+instance CPretty KindExpectation where
+  cpretty = \case
+    NoExpectation -> aVariable "κ"
+    ExpectArrow k ex -> ppKind True k <+> aKind "->" <+> cpretty ex
+    ExpectExactly k -> cpretty k
+
+----------------------------------------------------------------------
 -- Errors
 
 data Err
   = VariableNotFound Position Var Int
-  | KindMismatch Position Type Kind Kind
-  | ArrowExpected Position Type Kind
+  | KindMismatch Position Type KindExpectation Kind
     -- Globals
   | GlobalNotFound Position GlobalName
   | GlobalAlreadyDefined Position GlobalName Position
@@ -55,14 +68,6 @@ instance CPretty Err where
         , indent 4 (cpretty k)
         , "Actual kind:"
         , indent 4 (cpretty k')
-        ]
-    ArrowExpected pos t k ->
-      nest 4 $ vsep
-        [ pretty pos <> ": error:"
-        , "Type application to a non-arrow kinded type:"
-        , indent 4 (cpretty t)
-        , "Actual kind:"
-        , indent 4 (cpretty k)
         ]
     GlobalNotFound pos name ->
       nest 4 $ vsep
@@ -97,6 +102,7 @@ instance Pretty IllegalDefinitionReason where
 data Ctx = Ctx
   { ctxGamma   :: Map Var [Kind]
   , ctxGlobals :: Map GlobalName (Type, Kind)
+  , ctxKindAnn :: KindExpectation
   }
 
 instance CPretty Ctx where
@@ -149,6 +155,41 @@ withGlobal name ty k cont = do
     Nothing -> local (\ctx -> ctx { ctxGlobals = M.insert name (ty, k) (ctxGlobals ctx) } ) cont
     Just (oldty, _) -> throwError $ GlobalAlreadyDefined (getPosition ty) name (getPosition oldty)
 
+expectAny :: forall m a. (MonadTC m) => m a -> m a
+expectAny = local (\ctx -> ctx { ctxKindAnn = NoExpectation })
+
+expectArrowPush :: forall m a. (MonadTC m) => Kind -> m a -> m a
+expectArrowPush arg = local (\ctx -> ctx { ctxKindAnn = ExpectArrow arg (ctxKindAnn ctx) })
+
+expectArrowPop :: forall m a. (MonadTC m) => m a -> m a
+expectArrowPop = local
+  (\ctx -> ctx { ctxKindAnn = case ctxKindAnn ctx of
+                                NoExpectation -> NoExpectation
+                                ExpectArrow _ ex -> ex
+                                ExpectExactly (Arr _ b) -> ExpectExactly b
+                                ExpectExactly _ -> NoExpectation })
+
+expectExactly :: forall m a. (MonadTC m) => Kind -> m a -> m a
+expectExactly k = local (\ctx -> ctx { ctxKindAnn = ExpectExactly k })
+
+is :: forall m. (MonadTC m) => Type -> Kind -> m Kind
+is typ kind = do
+  expectation <- asks ctxKindAnn
+  unless (matchExpectation kind expectation) $
+    throwError $ KindMismatch (getPosition typ) typ expectation kind
+  pure kind
+  where
+    matchExpectation :: Kind -> KindExpectation -> Bool
+    matchExpectation k = \case
+      NoExpectation -> True
+      ExpectExactly k' -> k == k'
+      ExpectArrow arg' restExpectation ->
+        case k of
+          Arr arg restKind ->
+            arg == arg' &&
+              matchExpectation restKind restExpectation
+          _other -> False
+
 runTC :: ExceptT Err (Reader Ctx) a -> a
 runTC k =
   case runIdentity . runTCT $ k of
@@ -159,7 +200,7 @@ runTC k =
 runTCT :: (Monad m) => ExceptT Err (ReaderT Ctx m) a -> m (Either (Doc AnsiStyle) a)
 runTCT k =
   either (Left . cpretty) Right <$>
-    runReaderT (runExceptT k) (Ctx M.empty M.empty)
+    runReaderT (runExceptT k) (Ctx M.empty M.empty NoExpectation)
 
 ----------------------------------------------------------------------
 -- Kind Inference
@@ -168,66 +209,56 @@ inferKind :: forall m. (MonadTC m) => Type -> m Kind
 inferKind = para alg
   where
     alg :: TypeF (Type, m Kind) -> m Kind
-    alg = \case
+    alg layer = let this = Fix (fmap fst layer) in case (fmap snd layer) of
       TRef pos x n ->
         lookupCtx x n >>=
-        maybe (throwError $ VariableNotFound pos x n) pure
+        maybe (throwError $ VariableNotFound pos x n) (this `is`)
       TGlobal pos name ->
         lookupGlobal name >>=
-        maybe (throwError $ GlobalNotFound pos name) (pure . snd)
+        maybe (throwError $ GlobalNotFound pos name) ((this `is`) . snd)
       TSkolem _ _ _ k ->
-        pure k
+        this `is` k
       TMeta _ _ k ->
-        pure k
+        this `is` k
       TUnit _ ->
-        pure Star
+        this `is` Star
       TVoid _ ->
-        pure Star
+        this `is` Star
       TArrow _ ->
-        pure (Arr Star (Arr Star Star))
+        this `is` Arr Star (Arr Star Star)
       TRecord _ ->
-        pure (Arr Row Star)
+        this `is` Arr Row Star
       TVariant _ ->
-        pure (Arr Row Star)
+        this `is` Arr Row Star
       TPresent _ ->
-        pure Presence
+        this `is` Presence
       TAbsent _ ->
-        pure Presence
+        this `is` Presence
       TExtend _ _ ->
-        pure (Arr Presence (Arr Star (Arr Row Row)))
+        this `is` Arr Presence (Arr Star (Arr Row Row))
       TNil _ ->
-        pure Row
-      TApp pos (fterm, f) (aterm, a) -> do
-        f' <- f
-        fterm' <- normalise lookupGlobal fterm
+        this `is` Row
+      TApp pos f a -> do
+        a' <- expectAny a
+        f' <- expectArrowPush a' f
         case f' of
-          Arr a'' b'' -> do
-            a' <- a
-            aterm' <- normalise lookupGlobal aterm
-            unless (a' == a'') $
-              throwError (KindMismatch (getPosition aterm) (Fix (TApp pos fterm' aterm')) a'' a')
-            pure b''
-          _other ->
-            throwError (ArrowExpected pos (Fix (TApp pos fterm' aterm)) f')
-      TLambda _ x k (_, b) -> do
-        b' <- extendCtx x k b
-        pure (Arr k b')
-      TForall _ x k (_, b) -> do
+          Arr _ b' -> this `is` b'
+          _other -> error $ show $ pretty pos <> colon <+> "internal error: unexpected non-arrow kind"
+      TLambda _ x k b -> do
+        b' <- expectArrowPop (extendCtx x k b)
+        this `is` Arr k b'
+      TForall _ x k b ->
         extendCtx x k b
-      TExists _ x k (_, b) -> do
+      TExists _ x k b ->
         extendCtx x k b
-      TMu pos x (termb, b) -> do
-        b' <- extendCtx x Star b
-        termb' <- normalise lookupGlobal termb
-        let term = Fix (TMu pos x termb')
-        unless (b' == Star) $
-          throwError (KindMismatch pos term Star b')
-        pure Star
+      TMu _ x b -> do
+        _ <- expectExactly Star (extendCtx x Star b)
+        this `is` Star
 
 inferKindClosed :: Type -> Kind
 inferKindClosed ty =
   either (errorWithoutStackTrace . show . cpretty) id $
-    runReader (runExceptT (inferKind ty)) (Ctx M.empty M.empty)
+    runReader (runExceptT (inferKind ty)) (Ctx M.empty M.empty NoExpectation)
 
 ----------------------------------------------------------------------
 -- Type check program
@@ -299,7 +330,7 @@ checkProgram program cont = cataCompose alg runActions program
         let ty' =
               extendWithParameters pos params $
               handleSelfReference name ty
-        kind <- inferKind ty'
+        kind <- expectAny (inferKind ty')
         withGlobal name ty' kind $ rest
 
       PMutual _ _ rest -> do
@@ -308,9 +339,7 @@ checkProgram program cont = cataCompose alg runActions program
 
       PReturn pos ty -> do
         checkDefinitionTypeWellformedness pos Nothing ty
-        kind <- inferKind ty
-        unless (kind == Star) $
-          throwError $ KindMismatch pos ty Star kind
+        _ <- expectExactly Star (inferKind ty)
         cont (Just ty)
 
       PNil ->

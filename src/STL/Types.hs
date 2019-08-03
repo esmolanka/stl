@@ -37,19 +37,19 @@ data Kind
   deriving (Show, Eq, Ord, Generic)
 
 instance CPretty Kind where
-  cpretty = aKind . ppKind' False
-    where
-      parensIf :: Bool -> Doc a -> Doc a
-      parensIf True = parens
-      parensIf False = id
+  cpretty = ppKind False
 
-      ppKind' :: Bool -> Kind -> Doc a
-      ppKind' nested = \case
-        Star -> "Type"
-        Row -> "Row"
-        Presence -> "#"
-        Arr f a -> parensIf nested $
-          ppKind' True f <+> "->" <+> ppKind' False a
+ppKind :: Bool -> Kind -> Doc AnsiStyle
+ppKind nested = \case
+  Star -> aKind "Type"
+  Row -> aKind "Row"
+  Presence -> aKind "#"
+  Arr f a -> parensIf nested $
+    ppKind True f <+> aKind "->" <+> ppKind False a
+  where
+    parensIf :: Bool -> Doc a -> Doc a
+    parensIf True = parens
+    parensIf False = id
 
 newtype Var = Var Text
   deriving (Show, Eq, Ord, IsString)
@@ -150,7 +150,7 @@ ppType = ppType' 0
 
     ppType' :: Int -> Type -> Doc AnsiStyle
     ppType' lvl = tele >>> \case
-      (Fix (TArrow _), [a, b]) -> parensIf (lvl > 0) $ ppType' 1 a <+> "->" <+> ppType' 0 b
+      (Fix (TArrow _), [a, b]) -> parensIf (lvl > 0) $ ppType' 1 a <+> aConstructor "->" <+> ppType' 0 b
       (Fix (TRecord _), [Fix (TNil _)]) -> braces mempty
       (Fix (TVariant _), [Fix (TNil _)]) -> angles mempty
       (Fix (TRecord _), [row]) -> group $ braces $ ppType' 0 row

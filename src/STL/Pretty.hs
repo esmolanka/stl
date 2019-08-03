@@ -27,7 +27,7 @@ aKeyword :: Doc AnsiStyle -> Doc AnsiStyle
 aKeyword = annotate (colorDull Blue <> bold)
 
 aConstructor :: Doc AnsiStyle -> Doc AnsiStyle
-aConstructor = annotate (color Blue)
+aConstructor = annotate (colorDull Yellow)
 
 aVariable :: Doc AnsiStyle -> Doc AnsiStyle
 aVariable = annotate (colorDull Magenta)
