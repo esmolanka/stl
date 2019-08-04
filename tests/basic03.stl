@@ -1,0 +1,7 @@
+
+type Foo = Unit
+type Bar = Foo
+
+#check Bar <: Foo
+#check Foo <: Bar
+ 

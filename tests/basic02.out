@@ -1,0 +1,30 @@
+tests/basic02.stl:2:1-2:14:
+  Normalised:
+    ∃ (ρ : Row). (∃ (ω : #). (∃ (ω : #). {fst^ω : Unit, snd^ω/1 : Void | ρ}))
+  Kind:
+    Type
+tests/basic02.stl:5:1-5:10:
+  Normalised:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Inl^ω : Unit, Inr^ω/1 : Void | ρ>))
+  Kind:
+    Type
+tests/basic02.stl:11:1-11:20:
+  Normalised:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Left^ω : ∃ (ρ : Row). (∃ (ω : #). (∃ (ω : #). {fst^ω : Unit, snd^ω/1 : Void | ρ})), Right^ω/1 : ∃ (ρ : Row). (∃ (ω : #). (∃ (ω : #). {fst^ω : Unit, snd^ω/1 : Void | ρ})) | ρ>))
+  Kind:
+    Type
+tests/basic02.stl:17:1-17:28:
+  Normalised:
+    ∃ (ρ : Row). (∃ (ω : #). (∃ (ω : #). {first^ω : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Inl^ω : Unit, Inr^ω/1 : Void | ρ>)), second^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Inl^ω : Unit, Inr^ω/1 : Void | ρ>)) | ρ}))
+  Kind:
+    Type
+tests/basic02.stl:23:1-23:20:
+  Normalised:
+    ∃ (ρ : Row). {first : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Inl^ω : Unit, Inr^ω/1 : Void | ρ>)), second : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Inl^ω : Unit, Inr^ω/1 : Void | ρ>)) | ρ}
+  Kind:
+    Type
+tests/basic02.stl:29:1-29:25:
+  Normalised:
+    ∃ (ρ : Row). {choice : Unit -> Void -> ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Inl^ω : Unit, Inr^ω/1 : Void | ρ>)), product : Unit -> Void -> ∃ (ρ : Row). (∃ (ω : #). (∃ (ω : #). {fst^ω : Unit, snd^ω/1 : Void | ρ})) | ρ}
+  Kind:
+    Type

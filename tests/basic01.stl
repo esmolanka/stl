@@ -1,0 +1,23 @@
+#eval Unit
+
+#eval Void
+
+#eval Unit -> Unit
+
+#eval forall a. a -> a
+
+#eval (forall a. a) -> (forall b. b)
+
+#eval {}
+
+#eval { foo : Unit }
+
+#eval { foo+ : Unit }
+
+#eval forall (r : Row). { foo+ : Unit | r}
+
+#eval exists (r : Row). { foo+ : Unit | r}
+
+#eval <>
+
+#eval < Foo : Unit >

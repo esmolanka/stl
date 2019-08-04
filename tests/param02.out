@@ -1,0 +1,30 @@
+tests/param02.stl:12:1-12:28:
+  Normalised:
+    λ (f : Type -> Type). (∃ (ρ : Row). (∃ (ω : #). (∃ (ω : #). {first^ω : f Unit, second^ω/1 : f Unit | ρ})))
+  Kind:
+    (Type -> Type) -> Type
+tests/param02.stl:13:1-13:34:
+  Normalised:
+    ∃ (ρ : Row). (∃ (ω : #). (∃ (ω : #). {first^ω : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nothing^ω : Unit, Just^ω/1 : Unit | ρ>)), second^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nothing^ω : Unit, Just^ω/1 : Unit | ρ>)) | ρ}))
+  Kind:
+    Type
+tests/param02.stl:19:1-19:29:
+  Normalised:
+    λ (g : (Type -> Type) -> Type). (∃ (ρ : Row). (∃ (ω : #). {use^ω : g (λ a. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nothing^ω : Unit, Just^ω/1 : a | ρ>)))) | ρ}))
+  Kind:
+    ((Type -> Type) -> Type) -> Type
+tests/param02.stl:20:1-20:51:
+  Normalised:
+    ∃ (ρ : Row). (∃ (ω : #). {use^ω : ∃ (ρ : Row). (∃ (ω : #). (∃ (ω : #). {first^ω : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nothing^ω : Unit, Just^ω/1 : Unit | ρ>)), second^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nothing^ω : Unit, Just^ω/1 : Unit | ρ>)) | ρ})) | ρ})
+  Kind:
+    Type
+tests/param02.stl:24:1-24:15:
+  Normalised:
+    λ (r : Row). {r}
+  Kind:
+    Row -> Type
+tests/param02.stl:25:1-25:35:
+  Normalised:
+    ∀ (r : Row). {r}
+  Kind:
+    Type

@@ -1,0 +1,2 @@
+tests/error05.stl:2:23-2:24: error:
+    Parameter 'a' must not be used in a function argument.

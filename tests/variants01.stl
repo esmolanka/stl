@@ -1,0 +1,19 @@
+
+-- Empty variants unify
+#check <> <: <>
+
+-- Extra cases on the RHS unify with the polymoprphic tail on the LHS
+#check <> <: <Foo : Unit>
+
+-- Extra cases on the RHS _do_not_unify_ with absent fields on the LHS
+#check <Foo : Unit> <: <>
+
+-- Case order does not matter
+#check <Foo : Unit, Bar : Void> <: <Bar : Void, Foo : Unit>
+
+-- For extra cases, too
+#check <Foo : Unit, Bar : Unit> <: <Baz : Unit, Bar : Unit, Foo : Unit>
+
+-- Matching cases' types must unify
+#check <Foo : Unit, Bar : Void> <: <Bar : Unit, Foo : Unit>
+#check <Foo : Unit, Bar : {foo : Unit}> <: <Bar : {bar : Unit}, Foo : Unit>

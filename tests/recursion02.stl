@@ -1,0 +1,19 @@
+
+type ConsList a = <Nil : Unit, Cons : {head+ : a, tail+ : ConsList}>
+
+type Fix (f : Type -> Type) = f Fix
+#eval Fix
+
+type NilConsSum a b = < Nil : a, Cons : b >
+#eval NilConsSum
+
+type HeadTailProduct a b = { head+ : a, tail+ : b }
+#eval HeadTailProduct
+
+type Compose (f : Type -> Type) (g : Type -> Type) (a : Type) = f (g a)
+
+type ConsList2 a = Fix (Compose (NilConsSum Unit) (HeadTailProduct a))
+#eval ConsList2
+
+#check forall a. ConsList a <: forall a. ConsList2 a
+#check forall a. ConsList2 a <: forall a. ConsList a

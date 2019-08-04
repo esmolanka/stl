@@ -1,0 +1,5 @@
+
+type Foo = Unit
+
+type Foo = <Other>
+

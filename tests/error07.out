@@ -1,0 +1,3 @@
+tests/error07.stl:4:6-4:9: error:
+    Duplicate type definition 'Foo'. It has been already defined at:
+    tests/error07.stl:2:12-2:16

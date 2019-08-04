@@ -1,0 +1,25 @@
+
+type Maybe (a : Type) =
+  < Nothing
+  , Just : a
+  >
+
+
+type ParametrisedByFunctor (f : Type -> Type) =
+  { first  : f Unit
+  , second : f Unit
+  }
+#eval ParametrisedByFunctor
+#eval ParametrisedByFunctor Maybe
+
+
+type ParametrisedByFunctor2 (g : (Type -> Type) -> Type) =
+  { use : g Maybe
+  }
+#eval ParametrisedByFunctor2
+#eval ParametrisedByFunctor2 ParametrisedByFunctor
+
+
+type RecordOf (r : Row) = { | r }
+#eval RecordOf
+#eval forall (r : Row). RecordOf r

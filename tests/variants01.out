@@ -1,0 +1,56 @@
+tests/variants01.stl:3:1-3:16:
+  Subtype:
+    ∀ (ρ : Row). <ρ>
+  Supertype:
+    ∀ (ρ : Row). <ρ>
+  Result:
+    OK
+tests/variants01.stl:6:1-6:26:
+  Subtype:
+    ∀ (ρ : Row). <ρ>
+  Supertype:
+    ∀ (ρ : Row). (∃ (ω : #). <Foo^ω : Unit | ρ>)
+  Result:
+    OK
+tests/variants01.stl:9:1-9:26:
+  Subtype:
+    ∀ (ρ : Row). (∃ (ω : #). <Foo^ω : Unit | ρ>)
+  Supertype:
+    ∀ (ρ : Row). <ρ>
+  Result:
+    FAIL
+    Type is not polymorphic enough.
+      Rigid variable ω does not unify with:
+        ▫︎
+tests/variants01.stl:12:1-12:60:
+  Subtype:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Foo^ω : Unit, Bar^ω/1 : Void | ρ>))
+  Supertype:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Bar^ω : Void, Foo^ω/1 : Unit | ρ>))
+  Result:
+    OK
+tests/variants01.stl:15:1-15:72:
+  Subtype:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Foo^ω : Unit, Bar^ω/1 : Unit | ρ>))
+  Supertype:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Baz^ω : Unit, Bar^ω/1 : Unit, Foo^ω/2 : Unit | ρ>)))
+  Result:
+    OK
+tests/variants01.stl:18:1-18:60:
+  Subtype:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Foo^ω : Unit, Bar^ω/1 : Void | ρ>))
+  Supertype:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Bar^ω : Unit, Foo^ω/1 : Unit | ρ>))
+  Result:
+    FAIL
+    Cannot unify types.
+        Void
+      Is not subsumed by:
+        Unit
+tests/variants01.stl:19:1-19:76:
+  Subtype:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Foo^ω : Unit, Bar^ω/1 : ∃ (ρ : Row). (∃ (ω : #). {foo^ω : Unit | ρ}) | ρ>))
+  Supertype:
+    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Bar^ω : ∃ (ρ : Row). (∃ (ω : #). {bar^ω : Unit | ρ}), Foo^ω/1 : Unit | ρ>))
+  Result:
+    OK
