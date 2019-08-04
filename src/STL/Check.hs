@@ -57,7 +57,7 @@ instance CPretty Err where
     VariableNotFound pos x n ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Undefined variable" <+> aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x) <> "."
+        , "Undefined variable" <+> squotes (aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x)) <> "."
         ]
     KindMismatch pos t k k' ->
       nest 4 $ vsep
@@ -72,18 +72,18 @@ instance CPretty Err where
     GlobalNotFound pos name ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Undefined type" <+> cpretty name <> "."
+        , "Undefined type" <+> squotes (cpretty name) <> "."
         ]
     GlobalAlreadyDefined pos name oldpos ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Duplicate type definition" <+> cpretty name <> ". It has already been defined at:"
+        , "Duplicate type definition" <+> squotes (cpretty name) <> ". It has already been defined at:"
         , pretty oldpos
         ]
     IllegalDefinition pos name t reason ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Illegal global definition" <+> cpretty name <+> parens (pretty reason) <> colon
+        , "Illegal global definition" <+> squotes (cpretty name) <+> parens (pretty reason) <> colon
         , indent 4 (cpretty t)
         ]
 
@@ -218,7 +218,7 @@ inferKind = para alg
         maybe (throwError $ GlobalNotFound pos name) ((this `is`) . snd)
       TSkolem _ _ _ k ->
         this `is` k
-      TMeta _ _ k ->
+      TMeta _ _ _ k ->
         this `is` k
       TUnit _ ->
         this `is` Star
@@ -287,7 +287,7 @@ containsNodes = getAnys . cata alg
     alg = \case
       TLambda _ _ _ _ -> mempty { containsLambdas = Any True }
       TMu _ _ _       -> mempty { containsMus = Any True }
-      TMeta _ _ _     -> mempty { containsMetasOrSkolems = Any True }
+      TMeta _ _ _ _   -> mempty { containsMetasOrSkolems = Any True }
       TSkolem _ _ _ _ -> mempty { containsMetasOrSkolems = Any True }
       other -> fold other
 

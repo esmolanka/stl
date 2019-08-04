@@ -24,7 +24,7 @@ freeMeta name = getAny . cata alg
   where
     alg :: TypeF Any -> Any
     alg = \case
-      TMeta _ n _ | n == name -> Any True
+      TMeta _ n _ _ | n == name -> Any True
       other -> fold other
 
 freeVars :: Type -> Set (Var, Int)

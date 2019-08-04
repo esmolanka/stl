@@ -67,15 +67,15 @@ data UnifyEnv = UnifyEnv
   }
 
 data UnifyState = UnifyState
-  { stFreshName :: Int
-  , stMetas :: IntMap Type
+  { stFreshName   :: Int
+  , stMetas       :: IntMap (Position, Var, Type)
   , stAssumptions :: Set (Type, Type)
   }
 
 instance CPretty UnifyState where
   cpretty st =
     PP.list $
-      map (\(name, ty) -> "?" <> pretty name <+> "->" <+> cpretty ty) $
+      map (\(name, (_, hint, ty)) -> "?" <> cpretty hint <> brackets (pretty name) <+> "->" <+> cpretty ty) $
         IM.toList (stMetas st)
 
 type MonadUnify m =
@@ -101,11 +101,11 @@ checkAlphaEq (x, n) (y, m) = go 0 0 <$> asks envVarMap
       [] ->
         x == y && n' == m'
 
-newMeta :: (MonadUnify m) => Position -> Kind -> m Type
-newMeta pos kind = do
+newMeta :: (MonadUnify m) => Position -> Var -> Kind -> m Type
+newMeta pos hint kind = do
   modify (\st -> st { stFreshName = succ (stFreshName st) })
   n <- gets stFreshName
-  pure (Fix (TMeta pos (MetaVar n) kind))
+  pure (Fix (TMeta pos (MetaVar n) hint kind))
 
 newSkolem :: (MonadUnify m) => Position -> Var -> Kind -> m Type
 newSkolem pos hint kind = do
@@ -115,11 +115,11 @@ newSkolem pos hint kind = do
 
 lookupMeta :: (MonadUnify m) => MetaVar -> m (Maybe Type)
 lookupMeta (MetaVar name) =
-  gets (IM.lookup name . stMetas)
+  fmap (\(_, _, t) -> t) <$> gets (IM.lookup name . stMetas)
 
-writeMeta :: (MonadUnify m) => MetaVar -> Type -> m ()
-writeMeta (MetaVar name) ty =
-  modify (\st -> st { stMetas = IM.insert name ty (stMetas st) })
+writeMeta :: (MonadUnify m) => MetaVar -> Position -> Var -> Type -> m ()
+writeMeta (MetaVar name) pos hint ty =
+  modify (\st -> st { stMetas = IM.insert name (pos, hint, ty) (stMetas st) })
 
 recordAssumption :: (MonadUnify m) => Type -> Type -> m ()
 recordAssumption sub sup =
@@ -143,7 +143,7 @@ subsumedBy sub sup = do
     checkAssumption =
       case (tyConSub, argsSub, tyConSup, argsSup) of
         (TForall pos x k b, [], _, _) -> do
-          imp <- newMeta pos k
+          imp <- newMeta pos x k
           subst x 0 imp b `subsumedBy` sup
 
         (_, _, TForall pos' x' k' b', []) -> do
@@ -155,7 +155,7 @@ subsumedBy sub sup = do
           subst x 0 imp b `subsumedBy` sup
 
         (_, _, TExists pos' x' k' b', []) -> do
-          imp <- newMeta pos' k'
+          imp <- newMeta pos' x' k'
           sub `subsumedBy` subst x' 0 imp b'
 
         (TMu _ x b, [], _, _) ->
@@ -164,11 +164,11 @@ subsumedBy sub sup = do
         (_, _, TMu _ x' b', []) ->
           sub `subsumedBy` shift (-1) x' (subst x' 0 (shift 1 x' sup) b')
 
-        (TMeta _ n _, [], _, _) -> do
-          subsumedByMeta MetaToType n sup
+        (TMeta pos n hint _, [], _, _) -> do
+          subsumedByMeta MetaToType pos hint n sup
 
-        (_, _, TMeta _ n' _, []) -> do
-          subsumedByMeta TypeToMeta n' sub
+        (_, _, TMeta pos' n' hint' _, []) -> do
+          subsumedByMeta TypeToMeta pos' hint' n' sub
 
         (TLambda _ x k b, _, TLambda _ x' k' b', _) -> do
           unless (k == k') $
@@ -186,9 +186,9 @@ subsumedBy sub sup = do
         (TGlobal _ n, _, TGlobal _ n', _)
           | n == n' -> argsSub `subsumedByTele` argsSup
 
-        (TArrow _, (a : bs), TArrow _, (a' : bs')) ->
-          a' `subsumedBy` a >>    -- Argument is contravariant
-          bs `subsumedByTele` bs' -- Return type is covariant
+        (TArrow _, [a, b], TArrow _, [a', b']) ->
+          a' `subsumedBy` a >>  -- Argument is contravariant
+          b  `subsumedBy` b'    -- Return type is covariant
 
         (TNil _, [], TNil _, []) ->
           pure ()
@@ -239,8 +239,8 @@ subsumedBy sub sup = do
 
 data Direction = MetaToType | TypeToMeta
 
-subsumedByMeta :: forall m. (MonadUnify m) => Direction -> MetaVar -> Type -> m ()
-subsumedByMeta dir n other = do
+subsumedByMeta :: forall m. (MonadUnify m) => Direction -> Position -> Var -> MetaVar -> Type -> m ()
+subsumedByMeta dir pos hint n other = do
   mty <- lookupMeta n
   case mty of
     Nothing ->
@@ -250,7 +250,7 @@ subsumedByMeta dir n other = do
         let vars = freeVars other
         unless (S.null vars) $
           throwError $ CannotEscapeBindings vars
-        writeMeta n other
+        writeMeta n pos hint other
     Just ty ->
       case dir of
         MetaToType -> ty `subsumedBy` other
@@ -261,20 +261,20 @@ rewriteRow dir newLabel pos label pty fty tail_
   | newLabel == label = return (pty, fty, tail_)
   | otherwise =
       case tele tail_ of
-        (Fix (TMeta pos' alpha _), []) -> do
-          beta <- newMeta pos Row
-          gamma <- newMeta pos Star
-          theta <- newMeta pos Presence
-          subsumedByMeta dir alpha (untele (Fix (TExtend pos' newLabel)) [theta, gamma, beta])
+        (Fix (TMeta pos' alpha _ _), []) -> do
+          beta <- newMeta pos "β" Row
+          gamma <- newMeta pos "γ" Star
+          theta <- newMeta pos "θ" Presence
+          subsumedByMeta dir pos "α" alpha (untele (Fix (TExtend pos' newLabel)) [theta, gamma, beta])
           return (theta, gamma, untele (Fix (TExtend pos label)) [pty, fty, beta])
         (Fix (TExtend pos' label'), [pty', fty', tail']) -> do
           (pty'', fty'', tail'') <- rewriteRow dir newLabel pos' label' pty' fty' tail'
           return (pty'', fty'', untele (Fix (TExtend pos label)) [pty, fty, tail''])
         (Fix (TNil pos'), []) -> do
-          gamma <- newMeta pos' Star
+          gamma <- newMeta pos' "γ" Star
           return (Fix (TAbsent pos'), gamma, untele (Fix (TExtend pos label)) [pty, fty, Fix (TNil pos')])
         (Fix (TSkolem pos' _ _ _), []) -> do
-          gamma <- newMeta pos' Star
+          gamma <- newMeta pos' "γ" Star
           return (Fix (TAbsent pos'), gamma, untele (Fix (TExtend pos label)) [pty, fty, Fix (TNil pos')])
         _other ->
           error $ "Unexpected type: " ++ show tail_
@@ -304,7 +304,7 @@ eqTypeCon a b =
 
     -- Non-trivial, therefore never equal
     (TRef _ _ _      , TRef _ _ _      ) -> False
-    (TMeta _ _ _     , TMeta _ _ _     ) -> False
+    (TMeta _ _ _ _   , TMeta _ _ _ _   ) -> False
     (TLambda _ _ _ _ , TLambda _ _ _ _ ) -> False
     (TForall _ _ _ _ , TForall _ _ _ _ ) -> False
     (TMu _ _ _       , TMu _ _ _       ) -> False

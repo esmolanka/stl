@@ -83,7 +83,7 @@ data TypeF e
   = TRef      { _getPosition :: Position, _refName :: Var, _refIndex :: Int }
   | TGlobal   { _getPosition :: Position, _globalName :: GlobalName }
   | TSkolem   { _getPosition :: Position, _skolemName :: Skolem, _skolemHint :: Var, _skolemKind :: Kind }
-  | TMeta     { _getPosition :: Position, _metaName :: MetaVar, _metaKind :: Kind }
+  | TMeta     { _getPosition :: Position, _metaName :: MetaVar, _metaHint :: Var, _metaKind :: Kind }
   | TUnit     { _getPosition :: Position }
   | TVoid     { _getPosition :: Position }
   | TArrow    { _getPosition :: Position }
@@ -122,11 +122,8 @@ ppType = ppType' 0
     ppTypeCon lvl = \case
       TRef _ x n -> aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x)
       TGlobal _ name -> cpretty name
-      TSkolem _ (Skolem name) hint _ -> cpretty hint <> brackets (pretty name)
-      TMeta _ (MetaVar name) k ->
-        if k == Star
-        then "?" <> pretty name
-        else parens ("?" <> pretty name <+> colon <+> cpretty k)
+      TSkolem _ (Skolem name) hint _ -> "!" <> cpretty hint <> brackets (pretty name)
+      TMeta _ (MetaVar name) hint _ -> "?" <> cpretty hint <> brackets (pretty name)
       TUnit _ -> aConstructor "Unit"
       TVoid _ -> aConstructor "Void"
       TArrow _ -> aConstructor "(->)"
