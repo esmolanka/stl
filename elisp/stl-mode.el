@@ -99,7 +99,7 @@
      (0 font-lock-type-face))
     ;; (,(rx (eval `(or ,@stl-keyword-operators))) .
     ;;  (0 font-lock-operator-face))
-    (,(rx symbol-start "type" (1+ space) (group (1+ word)) symbol-end) .
+    (,(rx symbol-start "type" (1+ space) (group (1+ (or word "_"))) symbol-end) .
      (1 font-lock-type-face))
     ))
 
