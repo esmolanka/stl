@@ -1,19 +1,20 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Main where
+module Main (main, runModule) where
 
 import System.Console.Haskeline
 import System.Environment
+import System.Exit
 
 import Control.Arrow ((&&&))
-import Control.Monad.IO.Class
-
-import Data.Functor.Foldable (Fix(..))
+import Control.Monad.Except
+import Control.Monad.Reader
 
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
+import Data.Functor.Foldable (Fix(..))
 
 import STL
 import STL.Check
@@ -25,68 +26,62 @@ import STL.Syntax (parseStatement, parseModule, Statement(..))
 ----------------------------------------------------------------------
 -- Utils
 
+output :: (MonadIO m) => Doc AnsiStyle -> m ()
+output doc = liftIO $ putDocLn doc
+
 check :: (MonadTC m, MonadIO m) => Position -> Type -> Type -> m ()
 check pos sub sup = do
   k <- inferKind sub
-  k' <- inferKind sup
+  void $ expectExactly k $ inferKind sup
   sub' <- normalise lookupGlobal sub
   sup' <- normalise lookupGlobal sup
-
-  if k == k'
-    then do
-      let (res, state) = runSubsumption (sub' `subsumedBy` sup')
-      liftIO $ putDocLn $ nest 2 $ vsep
-        [ pretty pos <> colon <+> either (const "error: subsumption:") (const "subsumption:") res
-        , cpretty sub'
-        , indent 2 "<:"
-        , cpretty sup'
-        , mempty
-        , either cpretty (\_ -> "OK") $ res
-        , mempty
-        , "State:" <+> align (cpretty state)
-        , mempty
-        ]
-    else
-      liftIO $ putDocLn $ nest 2 $ vsep
-        [ pretty pos <> colon <+> "error:"
-        , "Kind mismatch:" <+> cpretty k <+> "/=" <+> cpretty k'
-        , mempty
-        ]
+  let (res, state) = runSubsumption (sub' `subsumedBy` sup')
+  output $ nest 2 $ vsep
+    [ pretty pos <> colon <+> either (const "error: subsumption:") (const "subsumption:") res
+    , cpretty sub'
+    , indent 2 "<:"
+    , cpretty sup'
+    , mempty
+    , either cpretty (\_ -> "OK") $ res
+    , mempty
+    , "State:" <+> align (cpretty state)
+    , mempty
+    ]
 
 eval :: (MonadTC m, MonadIO m) => Position -> Type -> m ()
 eval pos ty = do
   k   <- inferKind ty
   ty' <- normalise lookupGlobal ty
-  k'  <- inferKind ty'
-  liftIO $ putDocLn $ nest 2 $ vsep
-     [ pretty pos <> colon <+> "normalisation:"
-     , cpretty ty'
-     , ":" <+> cpretty k' <+>
-         if k /= k' then "/=" <+> cpretty k <+> "!!!" else mempty
-     , mempty
-     ]
+  void $ expectExactly k $ inferKind ty'
+  output $ nest 2 $ vsep
+    [ pretty pos <> colon <+> "normalisation:"
+    , cpretty ty'
+    , ":" <+> cpretty k
+    , mempty
+    ]
 
 mainHandlers :: (MonadTC m, MonadIO m) => Handlers (m ())
-mainHandlers =
-  Handlers
-    eval
-    check
-    (\_ k -> purifyProgram k)
+mainHandlers = Handlers eval check (\_ k -> purifyProgram k)
+
+runModule :: (MonadIO m) => Handlers (ExceptT Err (ReaderT Ctx m) ()) -> FilePath -> m (Either (Doc AnsiStyle) ())
+runModule handlers fn = do
+  str <- liftIO $ BL.readFile fn
+  case parseModule fn str of
+    Left err -> pure (Left (pretty err))
+    Right modul ->
+      let program = dsModule handlers modul
+          checking = checkProgram program $ \case
+            Just ty -> eval (getPosition ty) ty
+            Nothing -> pure ()
+      in runTCT checking
+
 
 main :: IO ()
 main = do
   args <- getArgs
   case args of
-    (fn : _) -> do
-      str <- BL.readFile fn
-      case parseModule fn str of
-        Left err -> putStrLn err
-        Right modul ->
-          let program = dsModule mainHandlers modul
-              checking = checkProgram program $ \case
-                Just ty -> eval (getPosition ty) ty
-                Nothing -> pure ()
-          in runTCT checking >>= either putDocLn pure
+    (fn : _) ->
+      runModule mainHandlers fn >>= either (\err -> putDocLn err >> exitFailure) pure
 
     [] -> do
       putDocLn $ vsep
@@ -110,8 +105,6 @@ main = do
                     (Typedef pos name _ _) -> eval pos (Fix (TGlobal pos (dsGlobalName name)))
                     _                      -> pure ()
             in runTCT checking >>= either putDocLn pure
-
-
 
 ----------------------------------------------------------------------
 -- Simplistic repl machinery
