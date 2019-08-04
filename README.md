@@ -15,7 +15,6 @@ experience that utilises row-types and higher rank polymorphism.
 
 ## What is still missing
 
-* Base types (strings, ints, doubles)
 * Mutually recursive types
 * Comprehensible error messages from the subsumption checker
 * Module system with exports, imports, etc.
