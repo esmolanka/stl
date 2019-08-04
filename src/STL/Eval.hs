@@ -145,7 +145,7 @@ normalise resolveGlobal = cata alg
         definition <- resolveGlobal name
         case definition of
           Nothing -> pure (Fix (TGlobal pos name))
-          Just (term, _) -> pure term
+          Just (term, _) -> normalise resolveGlobal term
       TApp pos f a -> do
         f' <- f
         a' <- a
