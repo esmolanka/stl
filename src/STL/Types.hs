@@ -58,7 +58,7 @@ instance CPretty Var where
   cpretty (Var name) = aVariable (pretty name)
 
 ppVar :: Var -> Int -> Doc AnsiStyle
-ppVar x n = squotes (aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x))
+ppVar x n = aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x)
 
 newtype Label = Label Text
   deriving (Show, Eq, Ord, IsString)

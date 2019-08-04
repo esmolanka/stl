@@ -37,14 +37,9 @@ instance CPretty KindExpectation where
     ExpectExactly k -> cpretty k
 
 data Polarity
-  = Negative
+  = Not Polarity
   | Positive
     deriving (Eq, Ord)
-
-instance Semigroup Polarity where
-  a <> b
-    | a == b = Positive
-    | otherwise = Negative
 
 data Flavour
   = Universal
@@ -80,15 +75,15 @@ instance CPretty Err where
     VariableNotFound pos x n ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Undefined variable" <+> ppVar x n <> "."
+        , "Undefined variable" <+> squotes (ppVar x n) <> "."
         ]
     IllegalNegativePolarity pos x n flavour ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
         , case flavour of
-            Parameter -> "Parameter" <+> ppVar x n <+> "must not be used in a function argument."
-            Recursion -> "Recursive reference" <+> ppVar x n <+> "must not occur in a function argument."
-            _other    -> "Positive variable" <+> ppVar x n <+> "must not be used in a function argument."
+            Parameter -> "Parameter" <+> squotes (ppVar x n) <+> "must not be used in a function argument."
+            Recursion -> "Recursive reference" <+> squotes (ppVar x n) <+> "must not occur in a function argument."
+            _other    -> "Strictly positive variable" <+> squotes (ppVar x n) <+> "must not be used in a function argument."
         ]
     KindMismatch pos t k k' ->
       nest 4 $ vsep
@@ -152,13 +147,13 @@ instance CPretty Ctx where
 
       ppVarInfo :: Polarity -> (Var, (Int, VarInfo)) -> Doc AnsiStyle
       ppVarInfo pol (x, (n, (VarInfo kind _ vpol))) =
-        aVariable (cpretty x <> "/" <> pretty n) <+> ppPolarity ((pol <>) <$> vpol) <+> "->" <+> cpretty kind
+        ppVar x n <+> ppPolarity pol vpol <+> "->" <+> cpretty kind
 
-      ppPolarity :: Maybe Polarity -> Doc AnsiStyle
-      ppPolarity = \case
-        Nothing       -> "?"
-        Just Positive -> "+"
-        Just Negative -> "-"
+      ppPolarity :: Polarity -> Maybe Polarity -> Doc AnsiStyle
+      ppPolarity pol = \case
+        Nothing   -> "?"
+        Just pol' | pol == pol' -> "+"
+                  | otherwise   -> "~"
 
       ppGlobals :: Map GlobalName (Type, Kind) -> Doc AnsiStyle
       ppGlobals globals = vsep $ map ppDefinition (M.toList globals)
@@ -177,9 +172,8 @@ type MonadTC m =
 
 lookupCtx :: forall m. (MonadTC m) => Var -> Int -> m (Maybe VarInfo)
 lookupCtx x n = asks $ \ctx ->
-  fmap (\info -> info { varPolarity = fmap (<> ctxPolarity ctx) (varPolarity info) }) .
-    listToMaybe . snd . splitAt n .
-      M.findWithDefault [] x . ctxGamma $ ctx
+  listToMaybe . snd . splitAt n .
+    M.findWithDefault [] x . ctxGamma $ ctx
 
 extendCtx :: forall m a. (MonadTC m) => Var -> Flavour -> Kind -> m a -> m a
 extendCtx x flavour kind cont = flip local cont $ \ctx ->
@@ -240,7 +234,10 @@ is typ kind = do
           _other -> False
 
 flippedPolarity :: forall m a. (MonadTC m) => m a -> m a
-flippedPolarity = local (\ctx -> ctx { ctxPolarity = Negative <> ctxPolarity ctx })
+flippedPolarity = local (\ctx -> ctx { ctxPolarity = Not (ctxPolarity ctx) })
+
+checkPolarity :: forall m. (MonadTC m) => Polarity -> m Bool
+checkPolarity pol = asks ((pol ==) . ctxPolarity)
 
 runTC :: ExceptT Err (Reader Ctx) a -> a
 runTC k =
@@ -265,7 +262,11 @@ inferKind = para alg
       TRef pos x n ->
         lookupCtx x n >>= \case
           Nothing -> throwError $ VariableNotFound pos x n
-          Just (VarInfo _ flavour (Just Negative)) -> throwError $ IllegalNegativePolarity pos x n flavour
+          Just (VarInfo kind flavour (Just pol)) -> do
+            ok <- checkPolarity pol
+            unless ok $
+              throwError $ IllegalNegativePolarity pos x n flavour
+            this `is` kind
           Just (VarInfo kind _ _) -> this `is` kind
       TGlobal pos name ->
         lookupGlobal name >>=
