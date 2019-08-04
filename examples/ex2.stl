@@ -5,7 +5,7 @@ module Example2
 
 type Service a =
   { foo : Unit
-  , bar : a
+  , bar : Unit
   } ->
   { output1+ : Unit
   , output2+ : a
