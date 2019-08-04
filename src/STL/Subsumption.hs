@@ -133,8 +133,15 @@ subsumedBy :: forall m. (MonadUnify m) => Type -> Type -> m ()
 subsumedBy sub sup = do
   seen <- isSeenAssumption sub sup
   if seen
-    then pure ()
-    else recordAssumption sub sup >> checkAssumption
+    then
+      -- If the assumption is already seen and the unification did not
+      -- fail, then the assumption was correct. Therefore, nothing
+      -- left to do.
+      pure ()
+    else
+      -- First assume that these types unify for the sake of Mu-types
+      -- unification and then check if it is the case.
+      recordAssumption sub sup >> checkAssumption
   where
     (Fix tyConSub, argsSub) = tele sub
     (Fix tyConSup, argsSup) = tele sup
@@ -183,8 +190,11 @@ subsumedBy sub sup = do
             throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
           argsSub `subsumedByTele` argsSup
 
-        (TGlobal _ n, _, TGlobal _ n', _)
-          | n == n' -> argsSub `subsumedByTele` argsSup
+        (TGlobal _ n, _, TGlobal _ n', _) | n == n' ->
+          -- Type definitions' parameters are checked by the kind
+          -- checker to be strictly positive, therefore can be treated
+          -- as covariant.
+          argsSub `subsumedByTele` argsSup
 
         (TArrow _, [a, b], TArrow _, [a', b']) ->
           a' `subsumedBy` a >>  -- Argument is contravariant
@@ -216,12 +226,6 @@ subsumedBy sub sup = do
         (TExtend _ lbl, [pty, fty, tail_], TExtend pos' lbl', [pty', fty', tail']) -> do
           (pty'', fty'', tail'') <- rewriteRow TypeToMeta lbl pos' lbl' pty' fty' tail'
           [pty, fty, tail_] `subsumedByTele` [pty'', fty'', tail'']
-
-        (TAbsent _, [], TSkolem _ _ _ _, []) ->
-          pure ()
-
-        (TSkolem _ _ _ _, [], TAbsent _, []) ->
-          pure ()
 
         (TSkolem _ n _ _, [], TSkolem _ n' _ _, [])
           | n == n' -> pure ()
