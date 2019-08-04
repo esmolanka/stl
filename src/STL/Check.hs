@@ -8,6 +8,7 @@ module STL.Check where
 
 import Control.Monad.Reader
 import Control.Monad.Except
+import Control.Monad.State
 
 import Data.Foldable (fold)
 import Data.Functor.Compose
@@ -27,14 +28,23 @@ import STL.Eval
 
 data KindExpectation
   = NoExpectation
-  | ExpectArrow Kind KindExpectation
+  | ExpectArrow KindExpectation KindExpectation
   | ExpectExactly Kind
 
 instance CPretty KindExpectation where
-  cpretty = \case
-    NoExpectation -> aVariable "κ"
-    ExpectArrow k ex -> ppKind True k <+> aKind "->" <+> cpretty ex
-    ExpectExactly k -> cpretty k
+  cpretty expectation = evalState (ppKindExpectation False expectation) 1
+    where
+      ppKindExpectation :: Bool -> KindExpectation -> State Int (Doc AnsiStyle)
+      ppKindExpectation nested = \case
+        NoExpectation -> do
+          n <- get
+          modify succ
+          pure (aVariable ("κ" <> ppSubscript n))
+        ExpectArrow a b -> do
+          a' <- ppKindExpectation False a
+          b' <- ppKindExpectation False b
+          pure (a' <+> aKind "->" <+> b')
+        ExpectExactly k -> pure (ppKind nested k)
 
 data Polarity
   = Not Polarity
@@ -57,7 +67,7 @@ data VarInfo = VarInfo
 -- Errors
 
 data Err
-  = VariableNotFound Position Var Int
+  = VariableNotFound Position Var Int KindExpectation
   | IllegalNegativePolarity Position Var Int Flavour
   | KindMismatch Position Type KindExpectation Kind
     -- Globals
@@ -72,18 +82,25 @@ data IllegalDefinitionReason
 
 instance CPretty Err where
   cpretty = \case
-    VariableNotFound pos x n ->
+    VariableNotFound pos x n expectation ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Undefined variable" <+> squotes (ppVar x n) <> "."
+        , case expectation of
+            NoExpectation ->
+              "Undefined variable" <+> squotes (ppVar x n) <> "."
+            _other ->
+              "Undefined variable" <+> squotes (ppVar x n) <+> "of kind" <+> cpretty expectation <> "."
         ]
     IllegalNegativePolarity pos x n flavour ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
         , case flavour of
-            Parameter -> "Parameter" <+> squotes (ppVar x n) <+> "must not be used in a function argument."
-            Recursion -> "Recursive reference" <+> squotes (ppVar x n) <+> "must not occur in a function argument."
-            _other    -> "Strictly positive variable" <+> squotes (ppVar x n) <+> "must not be used in a function argument."
+            Parameter ->
+              "Parameter" <+> squotes (ppVar x n) <+> "must not be used in a function argument."
+            Recursion ->
+              "Recursive reference" <+> squotes (ppVar x n) <+> "must not occur in a function argument."
+            _other ->
+              "Strictly positive variable" <+> squotes (ppVar x n) <+> "must not be used in a function argument."
         ]
     KindMismatch pos t k k' ->
       nest 4 $ vsep
@@ -103,7 +120,7 @@ instance CPretty Err where
     GlobalAlreadyDefined pos name oldpos ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Duplicate type definition" <+> squotes (cpretty name) <> ". It has already been defined at:"
+        , "Duplicate type definition" <+> squotes (cpretty name) <> ". It has been already defined at:"
         , pretty oldpos
         ]
     IllegalDefinition pos name t reason ->
@@ -163,12 +180,14 @@ instance CPretty Ctx where
         aKeyword "type" <+> parens (cpretty name <+> colon <+> cpretty k) <+> "=" <+> cpretty ty
 
 ----------------------------------------------------------------------
--- Typechecking Monad
+-- Kind checking monad
 
 type MonadTC m =
   ( MonadError Err m
   , MonadReader Ctx m
   )
+
+-- Variables
 
 lookupCtx :: forall m. (MonadTC m) => Var -> Int -> m (Maybe VarInfo)
 lookupCtx x n = asks $ \ctx ->
@@ -187,22 +206,29 @@ extendCtx x flavour kind cont = flip local cont $ \ctx ->
 
   in ctx { ctxGamma = M.alter (maybe (Just [info]) (Just . (info :))) x (ctxGamma ctx) }
 
+-- Globals
+
 lookupGlobal :: forall m. (MonadTC m) => GlobalName -> m (Maybe (Type, Kind))
 lookupGlobal name = asks $
   M.lookup name . ctxGlobals
 
-withGlobal :: forall m a. (MonadTC m) => GlobalName -> Type -> Kind -> m a -> m a
-withGlobal name ty k cont = do
+withGlobal :: forall m a. (MonadTC m) => Position -> GlobalName -> Type -> Kind -> m a -> m a
+withGlobal pos name ty k cont = do
   oldg <- lookupGlobal name
   case oldg of
     Nothing -> local (\ctx -> ctx { ctxGlobals = M.insert name (ty, k) (ctxGlobals ctx) } ) cont
-    Just (oldty, _) -> throwError $ GlobalAlreadyDefined (getPosition ty) name (getPosition oldty)
+    Just (oldty, _) -> throwError $ GlobalAlreadyDefined pos name (getPosition oldty)
+
+-- Bidirectional kind checking
 
 expectAny :: forall m a. (MonadTC m) => m a -> m a
 expectAny = local (\ctx -> ctx { ctxKindAnn = NoExpectation })
 
 expectArrowPush :: forall m a. (MonadTC m) => Kind -> m a -> m a
-expectArrowPush arg = local (\ctx -> ctx { ctxKindAnn = ExpectArrow arg (ctxKindAnn ctx) })
+expectArrowPush arg = local (\ctx -> ctx { ctxKindAnn = ExpectArrow (ExpectExactly arg) (ctxKindAnn ctx) })
+
+expectArrowPushAny :: forall m a. (MonadTC m) => m a -> m a
+expectArrowPushAny = local (\ctx -> ctx { ctxKindAnn = ExpectArrow NoExpectation (ctxKindAnn ctx) })
 
 expectArrowPop :: forall m a. (MonadTC m) => m a -> m a
 expectArrowPop = local
@@ -226,12 +252,17 @@ is typ kind = do
     matchExpectation k = \case
       NoExpectation -> True
       ExpectExactly k' -> k == k'
-      ExpectArrow arg' restExpectation ->
+      ExpectArrow argExp restExpectation ->
         case k of
           Arr arg restKind ->
-            arg == arg' &&
+            matchExpectation arg argExp &&
               matchExpectation restKind restExpectation
           _other -> False
+
+getExpectation :: forall m. (MonadTC m) => m KindExpectation
+getExpectation = asks ctxKindAnn
+
+-- Strict positivity checking
 
 flippedPolarity :: forall m a. (MonadTC m) => m a -> m a
 flippedPolarity = local (\ctx -> ctx { ctxPolarity = Not (ctxPolarity ctx) })
@@ -239,12 +270,18 @@ flippedPolarity = local (\ctx -> ctx { ctxPolarity = Not (ctxPolarity ctx) })
 checkPolarity :: forall m. (MonadTC m) => Polarity -> m Bool
 checkPolarity pol = asks ((pol ==) . ctxPolarity)
 
+-- Backtracking
+
+try :: forall m a. (MonadTC m) => m a -> m (Maybe a)
+try k = fmap Just k `catchError` (\_ -> pure Nothing)
+
+-- Run TC monad
+
 runTC :: ExceptT Err (Reader Ctx) a -> a
 runTC k =
   case runIdentity . runTCT $ k of
     Left err -> errorWithoutStackTrace ("\n" ++ show err)
     Right a -> a
-
 
 runTCT :: (Monad m) => ExceptT Err (ReaderT Ctx m) a -> m (Either (Doc AnsiStyle) a)
 runTCT k =
@@ -252,7 +289,7 @@ runTCT k =
     runReaderT (runExceptT k) (Ctx M.empty M.empty NoExpectation Positive)
 
 ----------------------------------------------------------------------
--- Kind Inference
+-- Kind check type terms
 
 inferKind :: forall m. (MonadTC m) => Type -> m Kind
 inferKind = para alg
@@ -261,7 +298,9 @@ inferKind = para alg
     alg layer = let this = Fix (fmap fst layer) in case (fmap snd layer) of
       TRef pos x n ->
         lookupCtx x n >>= \case
-          Nothing -> throwError $ VariableNotFound pos x n
+          Nothing -> do
+            expectation <- getExpectation
+            throwError $ VariableNotFound pos x n expectation
           Just (VarInfo kind flavour (Just pol)) -> do
             ok <- checkPolarity pol
             unless ok $
@@ -294,12 +333,18 @@ inferKind = para alg
       TNil _ ->
         this `is` Row
       TApp pos f a -> do
-        a' <- case this of
-                Fix (TApp _ (Fix (TArrow _)) _) -> flippedPolarity (expectAny a)
-                _other                          -> expectAny a
-        f' <- expectArrowPush a' f
+        let checkArg =
+              case this of
+                Fix (TApp _ (Fix (TArrow _)) _) -> flippedPolarity a
+                _other                          -> a
+        ma' <- try $ expectAny $ checkArg
+        f' <- maybe expectArrowPushAny expectArrowPush ma' $ f
         case f' of
-          Arr _ b' -> this `is` b'
+          Arr a' b' -> do
+            case ma' of
+              Just _ -> pure ()
+              Nothing -> void (expectExactly a' checkArg)
+            this `is` b'
           _other -> error $ show $ pretty pos <> colon <+> "internal error: unexpected non-arrow kind"
       TLambda _ x k b -> do
         b' <- expectArrowPop (extendCtx x Parameter k b)
@@ -318,7 +363,7 @@ inferKindClosed ty =
     runReader (runExceptT (inferKind ty)) (Ctx M.empty M.empty NoExpectation Positive)
 
 ----------------------------------------------------------------------
--- Type check program
+-- Kind check programs
 
 data ContainsNodes m = ContainsNodes
   { containsLambdas :: m
@@ -388,7 +433,7 @@ checkProgram program cont = cataCompose alg runActions program
               extendWithParameters pos params $
               handleSelfReference name ty
         kind <- expectAny (inferKind ty')
-        withGlobal name ty' kind $ rest
+        withGlobal pos name ty' kind rest
 
       PMutual _ _ rest -> do
         -- TODO: Not supported

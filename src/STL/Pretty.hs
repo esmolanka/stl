@@ -4,10 +4,12 @@ module STL.Pretty
   ( module Data.Text.Prettyprint.Doc
   , AnsiStyle, aKind, aKeyword, aConstructor, aVariable, aLabel
   , CPretty(..), putDocLn
+  , ppSubscript
   ) where
 
 import System.Console.ANSI (hSupportsANSI)
 import System.IO (stdout)
+import Data.Char
 import Data.Text.Prettyprint.Doc
 import Data.Text.Prettyprint.Doc.Render.Terminal
 
@@ -31,6 +33,17 @@ aConstructor = annotate (colorDull Yellow)
 
 aVariable :: Doc AnsiStyle -> Doc AnsiStyle
 aVariable = annotate (colorDull Magenta)
+
+ppSubscript :: Int -> Doc a
+ppSubscript = pretty . mkSubscript . show
+  where
+    mkSubscript :: String -> String
+    mkSubscript =
+      map $ \c ->
+        let code = ord c in
+        if code >= 48 && code <= 57
+        then chr (code - 48 + 8320)
+        else c
 
 putDocLn :: Doc AnsiStyle -> IO ()
 putDocLn doc = do

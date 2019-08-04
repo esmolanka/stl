@@ -130,7 +130,7 @@ Statement_ :: { Statement }
 Statement :: { Statement }
   : "type" CONSTRUCTOR
       list(Bindings) '='
-      Type                      { Typedef (position $1)
+      Type                      { Typedef (position $2)
                                    (GlobalName $ getConstructor $ extract $2)
                                    (concat $3)
                                    $5 }
