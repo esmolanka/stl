@@ -20,12 +20,12 @@ pattern Global x <- Fix (TGlobal _ (GlobalName x))
   where Global x = Fix (TGlobal dummyPos (GlobalName x))
 
 pattern Unit :: Type
-pattern Unit <- Fix (TUnit _)
-  where Unit = Fix (TUnit dummyPos)
+pattern Unit <- Fix (TBase _ TUnit)
+  where Unit = Fix (TBase dummyPos TUnit)
 
 pattern Void :: Type
-pattern Void <- Fix (TVoid _)
-  where Void = Fix (TVoid dummyPos)
+pattern Void <- Fix (TBase _ TVoid)
+  where Void = Fix (TBase dummyPos TVoid)
 
 pattern (:~>) :: Type -> Type -> Type
 pattern (:~>) a b <- Fix (TArrow _) :$ a :$ b

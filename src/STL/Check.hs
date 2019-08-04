@@ -314,16 +314,16 @@ inferKind = para alg
         this `is` k
       TMeta _ _ _ k ->
         this `is` k
-      TUnit _ ->
-        this `is` Star
-      TVoid _ ->
-        this `is` Star
+      TBase _ base ->
+        this `is` baseKind base
       TArrow _ ->
         this `is` Arr Star (Arr Star Star)
       TRecord _ ->
         this `is` Arr Row Star
       TVariant _ ->
         this `is` Arr Row Star
+      TArray _ ->
+        this `is` Arr Star (Arr Nat Star)
       TPresent _ ->
         this `is` Presence
       TAbsent _ ->
@@ -356,6 +356,19 @@ inferKind = para alg
       TMu _ x b -> do
         _ <- expectExactly Star (extendCtx x Recursion Star b)
         this `is` Star
+
+baseKind :: BaseType -> Kind
+baseKind = \case
+  TUnit   -> Star
+  TVoid   -> Star
+  TBool   -> Star
+  TInt    -> Star
+  TFloat  -> Star
+  TString -> Star
+  TList   -> Arr Star Star
+  TDict   -> Arr Star Star
+  TNat    -> Arr Nat Star
+
 
 inferKindClosed :: Type -> Kind
 inferKindClosed ty =

@@ -294,25 +294,12 @@ subsumedByTele subs sups = do
 eqTypeCon :: TypeF Type -> TypeF Type -> Bool
 eqTypeCon a b =
   case (a, b) of
-    -- Trivial
-    (TUnit _         , TUnit _         ) -> True
-    (TVoid _         , TVoid _         ) -> True
+    (TBase _ ta      , TBase _ tb      ) -> ta == tb
     (TArrow _        , TArrow _        ) -> True
     (TRecord _       , TRecord _       ) -> True
     (TVariant _      , TVariant _      ) -> True
     (TPresent _      , TPresent _      ) -> True
     (TAbsent _       , TAbsent _       ) -> True
-
-    (TExtend _ la    , TExtend _ lb    ) -> la == lb
-    (TNil _          , TNil _          ) -> True
-
-    -- Non-trivial, therefore never equal
-    (TRef _ _ _      , TRef _ _ _      ) -> False
-    (TMeta _ _ _ _   , TMeta _ _ _ _   ) -> False
-    (TLambda _ _ _ _ , TLambda _ _ _ _ ) -> False
-    (TForall _ _ _ _ , TForall _ _ _ _ ) -> False
-    (TMu _ _ _       , TMu _ _ _       ) -> False
-    (TApp _ _ _      , TApp _ _ _      ) -> False
     (_               , _               ) -> False
 
 runSubsumption :: ExceptT e (StateT UnifyState (Reader UnifyEnv)) a -> (Either e a, UnifyState)

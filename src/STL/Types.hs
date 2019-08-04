@@ -33,6 +33,7 @@ data Kind
   = Star
   | Row
   | Presence
+  | Nat
   | Arr Kind Kind
   deriving (Show, Eq, Ord, Generic)
 
@@ -44,6 +45,7 @@ ppKind nested = \case
   Star -> aKind "Type"
   Row -> aKind "Row"
   Presence -> aKind "#"
+  Nat -> aKind "Nat"
   Arr f a -> parensIf nested $
     ppKind True f <+> aKind "->" <+> ppKind False a
   where
@@ -82,16 +84,40 @@ instance CPretty GlobalName where
         Nothing -> "$"
         Just (n, _) -> if isUpper n then pretty name else "$" <> pretty name
 
+data BaseType
+  = TUnit
+  | TVoid
+  | TBool
+  | TInt
+  | TFloat
+  | TString
+  | TList
+  | TDict
+  | TNat
+  deriving (Eq, Ord, Generic)
+
+instance CPretty BaseType where
+  cpretty = \case
+    TUnit   -> aConstructor "Unit"
+    TVoid   -> aConstructor "Void"
+    TBool   -> aConstructor "Bool"
+    TInt    -> aConstructor "Int"
+    TFloat  -> aConstructor "Float"
+    TString -> aConstructor "String"
+    TList   -> aConstructor "List"
+    TDict   -> aConstructor "Dict"
+    TNat    -> aConstructor "Nat"
+
 data TypeF e
   = TRef      { _getPosition :: Position, _refName :: Var, _refIndex :: Int }
   | TGlobal   { _getPosition :: Position, _globalName :: GlobalName }
   | TSkolem   { _getPosition :: Position, _skolemName :: Skolem, _skolemHint :: Var, _skolemKind :: Kind }
   | TMeta     { _getPosition :: Position, _metaName :: MetaVar, _metaHint :: Var, _metaKind :: Kind }
-  | TUnit     { _getPosition :: Position }
-  | TVoid     { _getPosition :: Position }
+  | TBase     { _getPosition :: Position, _baseType :: BaseType }
   | TArrow    { _getPosition :: Position }
   | TRecord   { _getPosition :: Position }
   | TVariant  { _getPosition :: Position }
+  | TArray    { _getPosition :: Position }
   | TPresent  { _getPosition :: Position }
   | TAbsent   { _getPosition :: Position }
   | TExtend   { _getPosition :: Position, _extLabel :: Label }
@@ -127,11 +153,11 @@ ppType = ppType' 0
       TGlobal _ name -> cpretty name
       TSkolem _ (Skolem name) hint _ -> "!" <> cpretty hint <> brackets (pretty name)
       TMeta _ (MetaVar name) hint _ -> "?" <> cpretty hint <> brackets (pretty name)
-      TUnit _ -> aConstructor "Unit"
-      TVoid _ -> aConstructor "Void"
+      TBase _ base -> cpretty base
       TArrow _ -> aConstructor "(->)"
       TRecord _ -> aConstructor "Record"
       TVariant _ -> aConstructor "Variant"
+      TArray _ -> aConstructor "Array"
       TPresent _ -> aConstructor "▪︎"
       TAbsent _ -> aConstructor "▫︎"
       TExtend _ lbl -> aConstructor "Extend" <+> cpretty lbl
@@ -155,6 +181,7 @@ ppType = ppType' 0
       (Fix (TVariant _), [Fix (TNil _)]) -> angles mempty
       (Fix (TRecord _), [row]) -> group $ braces $ ppType' 0 row
       (Fix (TVariant _), [row]) -> group $ angles $ ppType' 0 row
+      (Fix (TArray _), [el, sz]) -> ppType' 2 el <> brackets (ppType' 1 sz)
       (Fix (TExtend _ (Label lbl)), [presence, ty, row]) ->
         let fieldName =
               case presence of

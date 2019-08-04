@@ -33,7 +33,7 @@ dsLabel = coerce
 dsKind :: Position -> Kind -> Core.Kind
 dsKind pos = \case
   Star -> Core.Star
-  Nat -> error $ show $ pretty pos <> colon <+> "Nat kind is not yet supported"
+  Nat -> Core.Nat
   Row -> Core.Row
   Arr a b -> Core.Arr (dsKind pos a) (dsKind pos b)
 
@@ -46,9 +46,14 @@ dsType = cata alg
     alg :: TypeF Core.Type -> Core.Type
     alg = \case
       T pos bt -> case bt of
-        TUnit -> Fix (Core.TUnit pos)
-        TVoid -> Fix (Core.TVoid pos)
-        _other -> error $ show $ pretty pos <> colon <+> "Base types are not yet supported"
+        TUnit   -> Fix (Core.TBase pos Core.TUnit)
+        TVoid   -> Fix (Core.TBase pos Core.TVoid)
+        TInt    -> Fix (Core.TBase pos Core.TInt)
+        TFloat  -> Fix (Core.TBase pos Core.TFloat)
+        TString -> Fix (Core.TBase pos Core.TString)
+        TList   -> Fix (Core.TBase pos Core.TList)
+        TDict   -> Fix (Core.TBase pos Core.TDict)
+        TNat    -> Fix (Core.TBase pos Core.TNat)
       TRef pos x ->
         Fix (Core.TRef pos (dsVar x) 0)
       TGlobal pos Nothing name ->
@@ -73,7 +78,8 @@ dsType = cata alg
             withP k = foldr (\x -> Fix . Core.TExists pos x Core.Presence) k pvars
             withR k = foldr (\x -> Fix . Core.TForall pos x Core.Row) k rvars
         in withR $ withP $ Core.untele (Fix (Core.TVariant pos)) [row']
-
+      TArray pos el sz ->
+        Core.untele (Fix (Core.TArray pos)) [el, sz]
 
 dsRow :: Row Core.Type -> (Core.Type, ([Core.Var], [Core.Var]))
 dsRow t =

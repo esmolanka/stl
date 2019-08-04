@@ -48,10 +48,6 @@ $upper      = [A-Z]
             | "module" | "import"
             | "#eval" | "#check"
 
-@reserved   = "Unit" | "Void" | "Integer" | "Double" | "String"
-            | "List" | "Dictionary" | "Natural" | "Array"
-            | "Type" | "Row" | "Nat"
-
 $identrest  = [$alpha $digit _]
 @constr     = [$upper] [$identrest]*
 @variable   = [$lower _] [$identrest]*
@@ -64,7 +60,6 @@ $whitespace+       ;
 @paren             { TokParen `via` BL.head }
 @punct             { TokPunctuation `via` decode }
 @keyword           { TokKeyword `via` decode }
-@reserved          { TokReserved `via` decode }
 @constr            { TokConstructor `via` decode }
 @variable          { TokVariable `via` decode }
 

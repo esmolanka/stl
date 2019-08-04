@@ -33,15 +33,12 @@ data Kind
 data BaseType
   = TUnit       -- Star
   | TVoid       -- Star
-  | TInteger    -- Star
-  | TDouble     -- Star
+  | TInt        -- Star
+  | TFloat      -- Star
   | TString     -- Star
   | TList       -- Star -> Star
-  | TDictionary -- Star -> Star
-  | TArray      -- Star -> Nat -> Star
-  | TNatural    -- Nat -> Star
-  | TPresent    -- Presence
-  | TAbsent     -- Presence
+  | TDict       -- Star -> Star
+  | TNat        -- Nat -> Star
   deriving (Show, Eq, Ord)
 
 data Binding = Binding
@@ -60,6 +57,7 @@ data TypeF e
   | TApp      { _typePos :: Position, _appF :: e, _appA :: e, _appRest :: [e] }
   | TRecord   { _typePos :: Position, _recordRow :: Row e  }
   | TVariant  { _typePos :: Position, _variantRow :: Row e }
+  | TArray    { _typePos :: Position, _arrayElem :: e, _arraySize :: e }
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 type Type = Fix TypeF

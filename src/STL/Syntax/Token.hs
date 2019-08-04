@@ -19,7 +19,6 @@ data Token
   = TokParen       { getParen        :: !Char }   -- [, ], (, ), {, }, <, >
   | TokPunctuation { getPunctuation  :: !Text }   -- ':', '->', '|', ',', '.'
   | TokKeyword     { getKeyword      :: !Text }   -- forall, type, mutual
-  | TokReserved    { getReserved     :: !Text }   -- Unit, String, List
   | TokConstructor { getConstructor  :: !Text }   -- Maybe, Just, Nothing
   | TokVariable    { getVariable     :: !Text }   -- a, b, head, tail
   | TokUnknown     { getUnknown      :: !Text }   -- for unknown lexemes
@@ -31,7 +30,6 @@ instance Pretty Token where
     TokParen x       -> "paren" <+> pretty (show x)
     TokPunctuation x -> "punctuation" <+> squotes (pretty x)
     TokKeyword x     -> "keyword" <+> squotes (pretty x)
-    TokReserved x    -> "reserved identifier" <+> squotes (pretty x)
     TokConstructor x -> "identifier" <+> squotes (pretty x)
     TokVariable x    -> "identifier" <+> squotes (pretty x)
     TokUnknown x     -> "sequence" <+> pretty x <> "..."

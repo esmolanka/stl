@@ -62,21 +62,18 @@ import STL.Syntax.Types
   "#eval"        { L _ (TokKeyword "#eval")    }
   "#check"       { L _ (TokKeyword "#check")   }
 
-  -- Base types
-  "Unit"         { L _ (TokReserved "Unit")       }
-  "Void"         { L _ (TokReserved "Void")       }
-  "Integer"      { L _ (TokReserved "Integer")    }
-  "Double"       { L _ (TokReserved "Double")     }
-  "String"       { L _ (TokReserved "String")     }
-  "List"         { L _ (TokReserved "List")       }
-  "Dictionary"   { L _ (TokReserved "Dictionary") }
-  "Natural"      { L _ (TokReserved "Natural")    }
-  "Array"        { L _ (TokReserved "Array")      }
+  -- "Unit"         { L _ (TokConstructor "Unit")   }
+  -- "Void"         { L _ (TokConstructor "Void")   }
+  -- "Int"          { L _ (TokConstructor "Int")    }
+  -- "Float"        { L _ (TokConstructor "Float")  }
+  -- "String"       { L _ (TokConstructor "String") }
+  -- "List"         { L _ (TokConstructor "List")   }
+  -- "Dict"         { L _ (TokConstructor "Dict")   }
 
-  -- Kinds
-  "Type"         { L _ (TokReserved "Type")     }
-  "Row"          { L _ (TokReserved "Row")      }
-  "Nat"          { L _ (TokReserved "Nat")      }
+
+  -- "Type"         { L _ (TokConstructor "Type")   }
+  -- "Row"          { L _ (TokConstructor "Row")    }
+  -- "Nat"          { L _ (TokConstructor "Nat")    }
 
   CONSTRUCTOR    { L _ (TokConstructor _) }
   VARIABLE       { L _ (TokVariable    _) }
@@ -156,19 +153,30 @@ Type :: { Type }
   | "forall" list1(Bindings) '.' Type    { Fix $ TForall (position $1 <> typePos $4) (concat $2) $4 }
   | "exists" list1(Bindings) '.' Type    { Fix $ TExists (position $1 <> typePos $4) (concat $2) $4 }
 
-AppType :: { Type }
-  : list1(AtomType)   { mkApplication $1 }
-  | '{' '}'                              { Fix $ TRecord (position $1 <> position $2) (RNil (position $2)) }
-  | '{' RecordRow '}'                    { Fix $ TRecord (position $1 <> position $3) ($2 (position $3)) }
-  | '<' '>'                              { Fix $ TVariant (position $1 <> position $2) (RNil (position $2)) }
-  | '<' VariantRow '>'                   { Fix $ TVariant (position $1 <> position $3) ($2 (position $3)) }
-
 Bindings :: { [Binding] }
   : VARIABLE                             { [Binding (position $1) (Var $ getVariable $ extract $1) Nothing] }
   | '(' sepBy1(VARIABLE, ',')
     ':' Kind ')'                         { map (\idn -> Binding (position idn)
                                                     (Var $ getVariable $ extract idn)
                                                     (Just $4)) $2}
+
+AppType :: { Type }
+  : list1(AtomType)   { mkApplication $1 }
+
+AtomType :: { Type }
+  : AtomType
+    '[' AtomType ']'  { Fix $ TArray (typePos $1 <> position $4) $1 $3 }
+  | VARIABLE          { Fix $ TRef (position $1) (Var $ getVariable $ extract $1) }
+  | CONSTRUCTOR       { mkConstructor (position $1) (getConstructor $ extract $1) }
+  | CONSTRUCTOR '.'
+    CONSTRUCTOR       { Fix $ TGlobal (position $1)
+                        (Just $ ModuleName $ getConstructor $ extract $3)
+                        (GlobalName $ getConstructor $ extract $1) }
+  | '(' Type ')'      { $2 }
+  | '{' '}'                              { Fix $ TRecord (position $1 <> position $2) (RNil (position $2)) }
+  | '{' RecordRow '}'                    { Fix $ TRecord (position $1 <> position $3) ($2 (position $3)) }
+  | '<' '>'                              { Fix $ TVariant (position $1 <> position $2) (RNil (position $2)) }
+  | '<' VariantRow '>'                   { Fix $ TVariant (position $1 <> position $3) ($2 (position $3)) }
 
 RecordRow :: { Position -> Row Type }
   : sepBy1(RecRowExt, ',')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
@@ -200,27 +208,6 @@ VarRowExt :: { Row Type -> Row Type }
                                              $3 }
   | VARIABLE                             {% otherError (position $1) "labels in variants must start with an upper-case letter" }
 
-AtomType :: { Type }
-  : BaseType          { Fix $ T (position $1) (extract $1) }
-  | VARIABLE          { Fix $ TRef (position $1) (Var $ getVariable $ extract $1) }
-  | CONSTRUCTOR       { Fix $ TGlobal (position $1) Nothing (GlobalName $ getConstructor $ extract $1) }
-  | CONSTRUCTOR '.'
-    CONSTRUCTOR       { Fix $ TGlobal (position $1)
-                        (Just $ ModuleName $ getConstructor $ extract $3)
-                        (GlobalName $ getConstructor $ extract $1) }
-  | '(' Type ')'      { $2 }
-
-BaseType :: { Located BaseType }
-  : "Unit"            { TUnit       @@ $1 }
-  | "Void"            { TVoid       @@ $1 }
-  | "Integer"         { TInteger    @@ $1 }
-  | "Double"          { TDouble     @@ $1 }
-  | "String"          { TString     @@ $1 }
-  | "List"            { TList       @@ $1 }
-  | "Dictionary"      { TDictionary @@ $1 }
-  | "Natural"         { TNatural    @@ $1 }
-  | "Array"           { TArray      @@ $1 }
-
 ----------------------------------------------------------------------
 -- Kind
 
@@ -229,9 +216,7 @@ Kind :: { Kind }
   | AtomKind '->' Kind   { Arr $1 $3 }
 
 AtomKind :: { Kind }
-  : "Type"        { Star }
-  | "Row"         { Row }
-  | "Nat"         { Nat }
+  : CONSTRUCTOR   {% mkKind (position $1) (getConstructor $ extract $1) }
   | '(' Kind ')'  { $2 }
 
 ----------------------------------------------------------------------
@@ -275,6 +260,25 @@ mkApplication ts@(a : b : rest) = Fix $ TApp (foldr1 (<>) $ map typePos ts) a b 
 mkApplication (a : []) = a
 mkApplication _ = error "Unexpected input on mkApplication"
 
+mkConstructor :: Position -> T.Text -> Type
+mkConstructor pos ctor = case ctor of
+  "Unit"   -> Fix (T pos TUnit)
+  "Void"   -> Fix (T pos TVoid)
+  "Int"    -> Fix (T pos TInt)
+  "Float"  -> Fix (T pos TFloat)
+  "String" -> Fix (T pos TString)
+  "List"   -> Fix (T pos TList)
+  "Dict"   -> Fix (T pos TDict)
+  "Nat"    -> Fix (T pos TNat)
+  other    -> Fix $ TGlobal pos Nothing (GlobalName ctor)
+
+mkKind :: Position -> T.Text -> Either String Kind
+mkKind pos ctor = case ctor of
+  "Type" -> pure Star
+  "Row"  -> pure Row
+  "Nat"  -> pure Nat
+  _other -> otherError pos ("unknown kind" <+> pretty ctor)
+
 mkFileName :: T.Text -> FilePath
 mkFileName t = T.unpack t ++ ".stl"
 
@@ -287,8 +291,8 @@ parseError toks = case toks of
   (L pos tok : _) ->
     Left $ show $ pretty pos <> colon <+> "error: unexpected" <+> pretty tok
 
-otherError :: Position -> String -> Either String b
+otherError :: Position -> Doc a -> Either String b
 otherError pos msg =
-  Left $ show $ pretty pos <> colon <+> "error:" <+> pretty msg
+  Left $ show $ pretty pos <> colon <+> "error:" <+> msg
 
 }
