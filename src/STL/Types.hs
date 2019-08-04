@@ -57,6 +57,9 @@ newtype Var = Var Text
 instance CPretty Var where
   cpretty (Var name) = aVariable (pretty name)
 
+ppVar :: Var -> Int -> Doc AnsiStyle
+ppVar x n = squotes (aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x))
+
 newtype Label = Label Text
   deriving (Show, Eq, Ord, IsString)
 
@@ -120,7 +123,7 @@ ppType = ppType' 0
 
     ppTypeCon :: Int -> TypeF Type -> Doc AnsiStyle
     ppTypeCon lvl = \case
-      TRef _ x n -> aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x)
+      TRef _ x n -> ppVar x n
       TGlobal _ name -> cpretty name
       TSkolem _ (Skolem name) hint _ -> "!" <> cpretty hint <> brackets (pretty name)
       TMeta _ (MetaVar name) hint _ -> "?" <> cpretty hint <> brackets (pretty name)

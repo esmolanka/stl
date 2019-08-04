@@ -6,7 +6,6 @@
 
 module STL.Check where
 
-import Control.Arrow (second)
 import Control.Monad.Reader
 import Control.Monad.Except
 
@@ -47,12 +46,24 @@ instance Semigroup Polarity where
     | a == b = Positive
     | otherwise = Negative
 
+data Flavour
+  = Universal
+  | Existential
+  | Parameter
+  | Recursion
+
+data VarInfo = VarInfo
+  { varKind     :: Kind
+  , varFlavour  :: Flavour
+  , varPolarity :: Maybe Polarity
+  }
+
 ----------------------------------------------------------------------
 -- Errors
 
 data Err
   = VariableNotFound Position Var Int
-  | IllegalNegativePolarity Position Var Int
+  | IllegalNegativePolarity Position Var Int Flavour
   | KindMismatch Position Type KindExpectation Kind
     -- Globals
   | GlobalNotFound Position GlobalName
@@ -69,12 +80,15 @@ instance CPretty Err where
     VariableNotFound pos x n ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Undefined variable" <+> squotes (aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x)) <> "."
+        , "Undefined variable" <+> ppVar x n <> "."
         ]
-    IllegalNegativePolarity pos x n ->
+    IllegalNegativePolarity pos x n flavour ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , "Positive variable" <+> squotes (aVariable (if n > 0 then cpretty x <> "/" <> pretty n else cpretty x)) <+> "used in a negative context."
+        , case flavour of
+            Parameter -> "Parameter" <+> ppVar x n <+> "must not be used in a function argument."
+            Recursion -> "Recursive reference" <+> ppVar x n <+> "must not occur in a function argument."
+            _other    -> "Positive variable" <+> ppVar x n <+> "must not be used in a function argument."
         ]
     KindMismatch pos t k k' ->
       nest 4 $ vsep
@@ -117,7 +131,7 @@ instance Pretty IllegalDefinitionReason where
 -- Context
 
 data Ctx = Ctx
-  { ctxGamma    :: Map Var [(Kind, Maybe Polarity)]
+  { ctxGamma    :: Map Var [VarInfo]
   , ctxGlobals  :: Map GlobalName (Type, Kind)
   , ctxKindAnn  :: KindExpectation
   , ctxPolarity :: Polarity
@@ -131,14 +145,14 @@ instance CPretty Ctx where
     , indent 2 (ppGlobals (ctxGlobals ctx))
     ]
     where
-      ppLocals :: Polarity -> Map Var [(Kind, Maybe Polarity)] -> Doc AnsiStyle
+      ppLocals :: Polarity -> Map Var [VarInfo] -> Doc AnsiStyle
       ppLocals pol gamma =
         let vars = concatMap (\(var, kinds) -> (,) <$> pure var <*> zip [0..] kinds) $ M.toList gamma
-        in vsep $ map (ppVar pol) vars
+        in vsep $ map (ppVarInfo pol) vars
 
-      ppVar :: Polarity -> (Var, (Int, (Kind, Maybe Polarity))) -> Doc AnsiStyle
-      ppVar pol (x, (n, (k, vpol))) =
-        aVariable (cpretty x <> "/" <> pretty n) <+> ppPolarity ((pol <>) <$> vpol) <+> "->" <+> cpretty k
+      ppVarInfo :: Polarity -> (Var, (Int, VarInfo)) -> Doc AnsiStyle
+      ppVarInfo pol (x, (n, (VarInfo kind _ vpol))) =
+        aVariable (cpretty x <> "/" <> pretty n) <+> ppPolarity ((pol <>) <$> vpol) <+> "->" <+> cpretty kind
 
       ppPolarity :: Maybe Polarity -> Doc AnsiStyle
       ppPolarity = \case
@@ -161,21 +175,23 @@ type MonadTC m =
   , MonadReader Ctx m
   )
 
-lookupCtx :: forall m. (MonadTC m) => Var -> Int -> m (Maybe (Kind, Maybe Polarity))
+lookupCtx :: forall m. (MonadTC m) => Var -> Int -> m (Maybe VarInfo)
 lookupCtx x n = asks $ \ctx ->
-  fmap (second (fmap (<> ctxPolarity ctx))) .
+  fmap (\info -> info { varPolarity = fmap (<> ctxPolarity ctx) (varPolarity info) }) .
     listToMaybe . snd . splitAt n .
       M.findWithDefault [] x . ctxGamma $ ctx
 
-extendPositiveCtx :: forall m a. (MonadTC m) => Var -> Kind -> m a -> m a
-extendPositiveCtx x k cont = flip local cont $ \ctx ->
-  let el = (k, Just (ctxPolarity ctx))
-  in ctx { ctxGamma = M.alter (maybe (Just [el]) (Just . (el :))) x (ctxGamma ctx) }
+extendCtx :: forall m a. (MonadTC m) => Var -> Flavour -> Kind -> m a -> m a
+extendCtx x flavour kind cont = flip local cont $ \ctx ->
+  let info = VarInfo
+        kind
+        flavour
+        (case flavour of
+           Parameter -> Just (ctxPolarity ctx)
+           Recursion -> Just (ctxPolarity ctx)
+           _other    -> Nothing)
 
-extendCtx :: forall m a. (MonadTC m) => Var -> Kind -> m a -> m a
-extendCtx x k cont = flip local cont $ \ctx ->
-  let el = (k, Nothing)
-  in ctx { ctxGamma = M.alter (maybe (Just [el]) (Just . (el :))) x (ctxGamma ctx) }
+  in ctx { ctxGamma = M.alter (maybe (Just [info]) (Just . (info :))) x (ctxGamma ctx) }
 
 lookupGlobal :: forall m. (MonadTC m) => GlobalName -> m (Maybe (Type, Kind))
 lookupGlobal name = asks $
@@ -249,8 +265,8 @@ inferKind = para alg
       TRef pos x n ->
         lookupCtx x n >>= \case
           Nothing -> throwError $ VariableNotFound pos x n
-          Just (_, Just Negative) -> throwError $  IllegalNegativePolarity pos x n
-          Just (k, _) -> this `is` k
+          Just (VarInfo _ flavour (Just Negative)) -> throwError $ IllegalNegativePolarity pos x n flavour
+          Just (VarInfo kind _ _) -> this `is` kind
       TGlobal pos name ->
         lookupGlobal name >>=
         maybe (throwError $ GlobalNotFound pos name) ((this `is`) . snd)
@@ -285,14 +301,14 @@ inferKind = para alg
           Arr _ b' -> this `is` b'
           _other -> error $ show $ pretty pos <> colon <+> "internal error: unexpected non-arrow kind"
       TLambda _ x k b -> do
-        b' <- expectArrowPop (extendPositiveCtx x k b)
+        b' <- expectArrowPop (extendCtx x Parameter k b)
         this `is` Arr k b'
       TForall _ x k b ->
-        extendCtx x k b
+        extendCtx x Universal k b
       TExists _ x k b ->
-        extendCtx x k b
+        extendCtx x Existential k b
       TMu _ x b -> do
-        _ <- expectExactly Star (extendPositiveCtx x Star b)
+        _ <- expectExactly Star (extendCtx x Recursion Star b)
         this `is` Star
 
 inferKindClosed :: Type -> Kind
