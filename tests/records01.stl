@@ -3,26 +3,26 @@
 #check {} <: {}
 
 -- Any extra fields on the LHS unify with the polymoprphic tail on the RHS
+#check {foo? : Unit} <: {}
 #check {foo : Unit} <: {}
-#check {foo+ : Unit} <: {}
 
 -- Optional fields on the RHS unify with implicit 'Absent' fields on
 -- the LHS
-#check {} <: {foo : Unit}
+#check {} <: {foo? : Unit}
 -- 'Present' fields on the RHS _do_not_ unify with implicit 'Absent'
 -- fields on the LHS
-#check {} <: {foo+ : Unit}
+#check {} <: {foo : Unit}
 
 -- Field order does not matter
 #check {foo : Unit, bar : Void} <: {bar : Void, foo : Unit}
-#check {foo+ : Unit, bar+ : Unit} <: {bar+ : Unit, foo+ : Unit}
+#check {foo? : Unit, bar? : Unit} <: {bar? : Unit, foo? : Unit}
 
 -- For extra fields, too
-#check {foo+ : Unit, baz : Unit, bar+ : Unit} <: {bar+ : Unit, foo+ : Unit}
-#check {foo+ : Unit, bar+ : Unit} <: {bar+ : Unit, baz : Unit, foo+ : Unit}
+#check {foo? : Unit, baz : Unit, bar? : Unit} <: {bar? : Unit, foo? : Unit}
+#check {foo? : Unit, bar? : Unit} <: {bar? : Unit, baz? : Unit, foo? : Unit}
 
 -- Matching fields' types must unify
 #check {foo : Unit, bar : Void} <: {bar : Unit, foo : Unit}
-#check {foo+ : Unit, bar+ : Void} <: {bar+ : Unit, foo+ : Unit}
-#check {foo+ : Unit, bar+ : {baz : Unit}} <: {bar+ : {quux : Unit}, foo+ : Unit}
+#check {foo? : Unit, bar? : Void} <: {bar? : Unit, foo? : Unit}
+#check {foo : Unit, bar : {baz? : Unit}} <: {bar : {quux? : Unit}, foo : Unit}
 

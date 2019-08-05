@@ -18,7 +18,7 @@ type Either a b =
 type These a b =
   < This  : a
   , That  : b
-  , These : {this+ : a, that+ : b}
+  , These : {this : a, that : b}
   >
 #eval These
 #eval These Unit

@@ -1,5 +1,5 @@
 
-type ConsList a = <Nil : Unit, Cons : {head+ : a, tail+ : ConsList}>
+type ConsList a = <Nil : Unit, Cons : {head : a, tail : ConsList}>
 
 type Fix (f : Type -> Type) = f Fix
 #eval Fix
@@ -7,7 +7,7 @@ type Fix (f : Type -> Type) = f Fix
 type NilConsSum a b = < Nil : a, Cons : b >
 #eval NilConsSum
 
-type HeadTailProduct a b = { head+ : a, tail+ : b }
+type HeadTailProduct a b = { head : a, tail : b }
 #eval HeadTailProduct
 
 type Compose (f : Type -> Type) (g : Type -> Type) (a : Type) = f (g a)

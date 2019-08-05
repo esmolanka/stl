@@ -11,19 +11,19 @@ type SumOfProducts =
 #eval SumOfProducts
 
 type ProductOfSumsOptional =
-  { first  : Sum
-  , second : Sum
+  { first?  : Sum
+  , second? : Sum
   }
 #eval ProductOfSumsOptional
 
 type ProductOfSums =
-  { first+  : Sum
-  , second+ : Sum
+  { first  : Sum
+  , second : Sum
   }
 #eval ProductOfSums
 
 type ProductOfFunctions =
-  { choice+  : Unit -> Void -> Sum
-  , product+ : Unit -> Void -> Product
+  { choice  : Unit -> Void -> Sum
+  , product : Unit -> Void -> Product
   }
 #eval ProductOfFunctions

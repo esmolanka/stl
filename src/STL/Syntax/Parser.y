@@ -48,7 +48,7 @@ import STL.Syntax.Types
   '|'            { L _ (TokPunctuation "|"   ) }
   ','            { L _ (TokPunctuation ","   ) }
   '.'            { L _ (TokPunctuation "."   ) }
-  '+'            { L _ (TokPunctuation "+"   ) }
+  '?'            { L _ (TokPunctuation "?"   ) }
   '<:'           { L _ (TokPunctuation "<:"  ) }
 
   -- Keywords
@@ -186,11 +186,11 @@ RecordRow :: { Position -> Row Type }
 RecRowExt :: { Row Type -> Row Type }
   : VARIABLE ':' Type                    { RExtend (position $1 <> typePos $3)
                                              (Label $ getVariable $ extract $1)
-                                             (PVariable (position $1))
+                                             (PPresent (position $1))
                                              $3 }
-  | VARIABLE '+' ':' Type                { RExtend (position $1 <> typePos $4)
+  | VARIABLE '?' ':' Type                { RExtend (position $1 <> typePos $4)
                                              (Label $ getVariable $ extract $1)
-                                             (PPresent (position $3))
+                                             (PVariable (position $3))
                                              $4 }
   | CONSTRUCTOR                          {% otherError (position $1) "labels in records must start with a lower-case letter or an underscore" }
 

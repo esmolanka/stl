@@ -1,20 +1,20 @@
 
 type API =
-  { truncate+ : Float -> Int
-  , fromInt+  : Int -> Float
-  , showInt+  : Int -> String
+  { truncate : Float -> Int
+  , fromInt  : Int -> Float
+  , showInt  : Int -> String
   }
 
 #check forall i f s.
-       { truncate+ : f -> i
-       , fromInt+  : i -> f
-       , showInt+  : i -> s
+       { truncate : f -> i
+       , fromInt  : i -> f
+       , showInt  : i -> s
        }
        <: API
 
 type Array a = exists (n : Nat).
-  { size+     : Nat n
-  , elements+ : a[n]
+  { size     : Nat n
+  , elements : a[n]
   }[n]
 
 #eval Array

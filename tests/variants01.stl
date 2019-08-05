@@ -16,4 +16,4 @@
 
 -- Matching cases' types must unify
 #check <Foo : Unit, Bar : Void> <: <Bar : Unit, Foo : Unit>
-#check <Foo : Unit, Bar : {foo : Unit}> <: <Bar : {bar : Unit}, Foo : Unit>
+#check <Foo : Unit, Bar : {foo? : Unit}> <: <Bar : {bar? : Unit}, Foo : Unit>

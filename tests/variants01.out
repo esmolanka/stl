@@ -47,7 +47,7 @@ tests/variants01.stl:18:1-18:60:
         Void
       Is not subsumed by:
         Unit
-tests/variants01.stl:19:1-19:76:
+tests/variants01.stl:19:1-19:78:
   Subtype:
     ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Foo^ω : Unit, Bar^ω/1 : ∃ (ρ : Row). (∃ (ω : #). {foo^ω : Unit | ρ}) | ρ>))
   Supertype:

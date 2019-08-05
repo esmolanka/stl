@@ -32,7 +32,7 @@ instance Pretty Token where
     TokKeyword x     -> "keyword" <+> squotes (pretty x)
     TokConstructor x -> "identifier" <+> squotes (pretty x)
     TokVariable x    -> "identifier" <+> squotes (pretty x)
-    TokUnknown x     -> "sequence" <+> pretty x <> "..."
+    TokUnknown x     -> "sequence" <+> dquotes (pretty x <> "...")
     TokEOF           -> "end of file"
 
 data LocatedBy p a = L !p !a

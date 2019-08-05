@@ -30,20 +30,20 @@ tests/basic01.stl:11:1-11:9:
     Type
 tests/basic01.stl:13:1-13:21:
   Normalised:
-    ∃ (ρ : Row). (∃ (ω : #). {foo^ω : Unit | ρ})
+    ∃ (ρ : Row). {foo : Unit | ρ}
   Kind:
     Type
 tests/basic01.stl:15:1-15:22:
   Normalised:
-    ∃ (ρ : Row). {foo : Unit | ρ}
+    ∃ (ρ : Row). (∃ (ω : #). {foo^ω : Unit | ρ})
   Kind:
     Type
-tests/basic01.stl:17:1-17:43:
+tests/basic01.stl:17:1-17:42:
   Normalised:
     ∀ (r : Row). {foo : Unit | r}
   Kind:
     Type
-tests/basic01.stl:19:1-19:43:
+tests/basic01.stl:19:1-19:42:
   Normalised:
     ∃ (r : Row). {foo : Unit | r}
   Kind:

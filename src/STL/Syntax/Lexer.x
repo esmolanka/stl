@@ -17,6 +17,7 @@ import qualified Data.ByteString.Lazy as BLW
 import Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
+import Data.Char (isSpace)
 import Data.Int
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -41,7 +42,7 @@ $upper      = [A-Z]
 
 @paren      = [\(\)\[\]\<\>\{\}]
 
-@punct      = "=" | ":" | "->" | "|" | "." | "," | "<:" | "+"
+@punct      = "=" | ":" | "->" | "|" | "." | "," | "<:" | "?"
 
 @keyword    = "forall" | "exists"
             | "type" | "mutual" | "return"
@@ -99,7 +100,7 @@ alexScanTokens input =
     AlexEOF ->
       [L (aiLineCol input, 1) TokEOF]
     AlexError (AlexInput {aiInput, aiLineCol}) ->
-      let rest = T.takeWhile (/= '\n') $ decode $ UTF8.take 100 aiInput
+      let rest = T.takeWhile (not . isSpace) $ decode $ UTF8.take 100 aiInput
       in [L (aiLineCol, T.length rest) (TokUnknown rest)]
     AlexSkip input _ ->
       alexScanTokens input

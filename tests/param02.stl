@@ -6,15 +6,15 @@ type Maybe (a : Type) =
 
 
 type ParametrisedByFunctor (f : Type -> Type) =
-  { first  : f Unit
-  , second : f Unit
+  { first?  : f Unit
+  , second? : f Unit
   }
 #eval ParametrisedByFunctor
 #eval ParametrisedByFunctor Maybe
 
 
 type ParametrisedByFunctor2 (g : (Type -> Type) -> Type) =
-  { use : g Maybe
+  { use? : g Maybe
   }
 #eval ParametrisedByFunctor2
 #eval ParametrisedByFunctor2 ParametrisedByFunctor
