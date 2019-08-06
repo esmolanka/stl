@@ -48,7 +48,8 @@ executable stl
   default-language:    Haskell2010
   build-depends:
     stl, base >= 4.7 && < 5, mtl, bytestring, text, utf8-string,
-    prettyprinter, haskeline, ansi-terminal, recursion-schemes
+    prettyprinter, haskeline, ansi-terminal, recursion-schemes,
+    optparse-applicative
 
 executable stl-tests
   main-is:             Test.hs
@@ -58,4 +59,4 @@ executable stl-tests
   build-depends:
     stl, base >= 4.7 && < 5, mtl, bytestring, text, utf8-string,
     prettyprinter, haskeline, ansi-terminal, recursion-schemes, tasty, tasty-golden,
-    filepath, directory
+    filepath, directory, optparse-applicative

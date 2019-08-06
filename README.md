@@ -11,7 +11,7 @@ experience that utilises row-types and higher rank polymorphism.
 * Existential quantification
 * Recursive types
 * REPL and batch checking mode
-* Simplistic Emacs mode
+* Emacs mode with highlighing and Flycheck
 
 ## What is still missing
 

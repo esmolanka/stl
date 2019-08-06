@@ -5,7 +5,6 @@
 module Main (main, runModule) where
 
 import System.Console.Haskeline
-import System.Environment
 import System.Exit
 
 import Control.Arrow ((&&&))
@@ -15,6 +14,8 @@ import Control.Monad.Reader
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
 import Data.Functor.Foldable (Fix(..))
+
+import qualified Options.Applicative as Opt
 
 import STL
 import STL.Check
@@ -75,15 +76,28 @@ runModule handlers fn = do
             Nothing -> pure ()
       in runTCT checking
 
+----------------------------------------------------------------------
+
+config :: Opt.Parser (Maybe FilePath)
+config =
+  Opt.optional $ Opt.strArgument $
+    Opt.metavar "SRC" <>
+    Opt.help "Source .stl file to process"
 
 main :: IO ()
 main = do
-  args <- getArgs
-  case args of
-    (fn : _) ->
-      runModule mainHandlers fn >>= either (\err -> putDocLn err >> exitFailure) pure
+  input <- Opt.execParser $
+    Opt.info
+      (Opt.helper <*> config)
+      (Opt.fullDesc <>
+       Opt.progDesc "Sructurally Typed interface description Language interpreter")
 
-    [] -> do
+  case input of
+    Just fn ->
+      runModule mainHandlers fn >>=
+      either (\err -> putDocLn err >> exitFailure) pure
+
+    Nothing -> do
       putDocLn $ vsep
         [ "Welcome to STL Repl"
         , mempty
