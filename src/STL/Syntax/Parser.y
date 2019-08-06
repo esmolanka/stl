@@ -264,6 +264,7 @@ mkConstructor :: Position -> T.Text -> Type
 mkConstructor pos ctor = case ctor of
   "Unit"   -> Fix (T pos TUnit)
   "Void"   -> Fix (T pos TVoid)
+  "Bool"   -> Fix (T pos TBool)
   "Int"    -> Fix (T pos TInt)
   "Float"  -> Fix (T pos TFloat)
   "String" -> Fix (T pos TString)

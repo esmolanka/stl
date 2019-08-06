@@ -33,6 +33,7 @@ data Kind
 data BaseType
   = TUnit       -- Star
   | TVoid       -- Star
+  | TBool       -- Star
   | TInt        -- Star
   | TFloat      -- Star
   | TString     -- Star

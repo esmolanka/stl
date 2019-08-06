@@ -48,6 +48,7 @@ dsType = cata alg
       T pos bt -> case bt of
         TUnit   -> Fix (Core.TBase pos Core.TUnit)
         TVoid   -> Fix (Core.TBase pos Core.TVoid)
+        TBool   -> Fix (Core.TBase pos Core.TBool)
         TInt    -> Fix (Core.TBase pos Core.TInt)
         TFloat  -> Fix (Core.TBase pos Core.TFloat)
         TString -> Fix (Core.TBase pos Core.TString)
