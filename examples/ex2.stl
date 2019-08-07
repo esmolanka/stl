@@ -7,8 +7,8 @@ type Service a =
   { foo : Unit
   , bar : Unit
   } ->
-  { output1+ : Unit
-  , output2+ : a
+  { output1 : Unit
+  , output2 : a
   }
 
 type Client a =

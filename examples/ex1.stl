@@ -10,8 +10,8 @@ type Maybe a =
   >
 
 type Pair a b =
-  { fst+ : a
-  , snd+ : b
+  { fst : a
+  , snd : b
   }
 
 type Fun1 =
@@ -31,3 +31,4 @@ mutual (a : Type)
 
 return
   Maybe (Pair Unit Void)
+
