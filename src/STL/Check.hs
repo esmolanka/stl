@@ -222,13 +222,16 @@ withGlobal pos name ty k cont = do
 -- Bidirectional kind checking
 
 expectAny :: forall m a. (MonadTC m) => m a -> m a
-expectAny = local (\ctx -> ctx { ctxKindAnn = NoExpectation })
+expectAny = local
+  (\ctx -> ctx { ctxKindAnn = NoExpectation })
 
 expectArrowPush :: forall m a. (MonadTC m) => Kind -> m a -> m a
-expectArrowPush arg = local (\ctx -> ctx { ctxKindAnn = ExpectArrow (ExpectExactly arg) (ctxKindAnn ctx) })
+expectArrowPush arg = local
+  (\ctx -> ctx { ctxKindAnn = ExpectArrow (ExpectExactly arg) (ctxKindAnn ctx) })
 
 expectArrowPushAny :: forall m a. (MonadTC m) => m a -> m a
-expectArrowPushAny = local (\ctx -> ctx { ctxKindAnn = ExpectArrow NoExpectation (ctxKindAnn ctx) })
+expectArrowPushAny = local
+  (\ctx -> ctx { ctxKindAnn = ExpectArrow NoExpectation (ctxKindAnn ctx) })
 
 expectArrowPop :: forall m a. (MonadTC m) => m a -> m a
 expectArrowPop = local
@@ -239,7 +242,8 @@ expectArrowPop = local
                                 ExpectExactly _ -> NoExpectation })
 
 expectExactly :: forall m a. (MonadTC m) => Kind -> m a -> m a
-expectExactly k = local (\ctx -> ctx { ctxKindAnn = ExpectExactly k })
+expectExactly k = local
+  (\ctx -> ctx { ctxKindAnn = ExpectExactly k })
 
 is :: forall m. (MonadTC m) => Type -> Kind -> m Kind
 is typ kind = do
