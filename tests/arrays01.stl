@@ -1,0 +1,27 @@
+
+type SomeArray a = exists (n : Nat). Int[n]
+
+#eval SomeArray Float
+
+#check forall a. SomeArray a <: forall b. SomeArray b
+
+type SizedArray a = exists (n : Nat). { size : Nat n, elements : a[n] }
+
+#eval SizedArray Int
+
+#check forall a. SizedArray a <: forall b. SizedArray b
+
+#eval exists (n : Nat). { ints : Int[n], doubles : Float[n] }
+
+type Table (n : Nat) k v =
+  { name : k[n]
+  , value : v[n]
+  }
+
+type Maybe a = < Nothing, Just : a >
+
+type Lookup = forall (n : Nat) k v. k -> Table n k v -> Maybe v
+
+#eval Lookup
+
+#check Lookup <: Lookup

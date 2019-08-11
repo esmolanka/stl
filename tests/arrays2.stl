@@ -1,0 +1,16 @@
+
+type Table =
+  exists (n : Nat).
+  { name : String[n]
+  , a    : Int[n]
+  , b    : Int[n]
+  }
+
+type SumProduct =
+  (exists (n : Nat).
+     { a : Int[n]
+     , b : Int[n]
+     }) -> Int
+
+#check SumProduct <: Table -> Int
+#check Table -> Int <: SumProduct
