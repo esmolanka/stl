@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
-module STL.Eval where
+module STL.Core.Eval where
 
 import Control.Monad.Reader
 
@@ -14,7 +14,7 @@ import Data.Monoid (Any (..))
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import STL.Types
+import STL.Core.Types
 
 ----------------------------------------------------------------------
 -- Substitutions

@@ -8,8 +8,8 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
-module STL.Types
-  ( module STL.Types
+module STL.Core.Types
+  ( module STL.Core.Types
   , Position(..)
   , dummyPos
   ) where

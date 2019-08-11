@@ -18,10 +18,10 @@ import Data.Functor.Foldable (Fix(..))
 import qualified Options.Applicative as Opt
 
 import STL
-import STL.Check
+import STL.Core.Check
+import STL.Core.Subsumption
 import STL.Elab (dsStatement, dsReturn, dsGlobalName, dsModule, Handlers(..))
 import STL.Pretty hiding (list)
-import STL.Subsumption
 import STL.Syntax (parseStatement, parseModule, Statement(..))
 
 ----------------------------------------------------------------------

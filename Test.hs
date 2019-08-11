@@ -17,10 +17,10 @@ import Data.Text.Prettyprint.Doc
 import Data.Text.Prettyprint.Doc.Render.Text
 
 import STL
-import STL.Check
+import STL.Core.Check
+import STL.Core.Subsumption
 import STL.Elab (Handlers(..))
 import STL.Pretty
-import STL.Subsumption
 
 import Main (runModule)
 

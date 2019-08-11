@@ -17,8 +17,9 @@ import qualified Data.Set as S
 
 import STL.Syntax.Position
 import STL.Syntax.Types
-import qualified STL.Eval as Core
-import qualified STL.Types as Core
+
+import qualified STL.Core.Eval as Core
+import qualified STL.Core.Types as Core
 import STL.Pretty
 
 dsVar :: Var -> Core.Var

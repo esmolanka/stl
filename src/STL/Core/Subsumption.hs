@@ -5,7 +5,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
-module STL.Subsumption where
+module STL.Core.Subsumption where
 
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -17,9 +17,9 @@ import qualified Data.IntMap as IM
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import STL.Eval
+import STL.Core.Eval
+import STL.Core.Types
 import STL.Pretty as PP
-import STL.Types
 
 ----------------------------------------------------------------------
 -- Unification

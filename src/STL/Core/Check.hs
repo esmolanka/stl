@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
-module STL.Check where
+module STL.Core.Check where
 
 import Control.Monad.Reader
 import Control.Monad.Except
@@ -20,8 +20,8 @@ import Data.Maybe
 import Data.Monoid (Any (..))
 import STL.Pretty
 
-import STL.Types
-import STL.Eval
+import STL.Core.Types
+import STL.Core.Eval
 
 ----------------------------------------------------------------------
 -- Kind inference types

@@ -1,11 +1,11 @@
 {-# LANGUAGE PatternSynonyms #-}
 
-module STL.DSL where
+module STL.Core.DSL where
 
 import Data.Functor.Compose
 import Data.Functor.Foldable (Fix(..))
 import Data.Text (Text)
-import STL.Types
+import STL.Core.Types
 
 pattern Ref :: Var -> Type
 pattern Ref x <- Fix (TRef _ x 0)

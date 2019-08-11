@@ -1,8 +1,8 @@
 
 module STL
-  ( module STL.Types
-  , module STL.Eval
+  ( module STL.Core.Types
+  , module STL.Core.Eval
   ) where
 
-import STL.Types
-import STL.Eval
+import STL.Core.Types
+import STL.Core.Eval
