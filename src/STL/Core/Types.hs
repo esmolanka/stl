@@ -40,6 +40,9 @@ data Kind
 instance CPretty Kind where
   cpretty = ppKind False
 
+instance Pretty Kind where
+  pretty = unAnnotate . cpretty
+
 ppKind :: Bool -> Kind -> Doc AnsiStyle
 ppKind nested = \case
   Star -> aKind "Type"
@@ -246,6 +249,9 @@ instance CPretty Definition where
         if kind == Star
         then cpretty var
         else parens (cpretty var <+> colon <+> cpretty kind)
+
+instance Pretty Definition where
+  pretty = unAnnotate . cpretty
 
 data ColistF a e
   = Later a (ColistF a e)

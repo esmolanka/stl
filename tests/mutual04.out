@@ -1,0 +1,5 @@
+tests/mutual04.stl:9:1-9:10:
+  Normalised:
+    λ a. (∀ (a : Nat). ((Nat a) -> ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Left^ω : μ Even. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : a/1, ESucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : a/1, OSucc^ω/1 : Even | ρ>)) | ρ>))), Right^ω/1 : μ Odd. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : a/1, OSucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : a/1, ESucc^ω/1 : Odd | ρ>)) | ρ>))) | ρ>))))
+  Kind:
+    Type -> Type

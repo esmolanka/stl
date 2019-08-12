@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -17,7 +18,8 @@ import Data.Functor.Foldable (Fix(..), cata, para)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
-import Data.Monoid (Any (..))
+import Data.Monoid (Any(..))
+import Data.Semigroup (Option(..))
 import STL.Pretty
 
 import STL.Core.Types
@@ -74,6 +76,7 @@ data Err
   | GlobalNotFound Position GlobalName
   | GlobalAlreadyDefined Position GlobalName Position
   | IllegalDefinition Position GlobalName Type IllegalDefinitionReason
+  | IllegalMutualDefinition Position [Definition]
 
 data IllegalDefinitionReason
   = DefinitionContainsMetasOrSkolems
@@ -129,6 +132,13 @@ instance CPretty Err where
         , "Illegal global definition" <+> squotes (cpretty name) <+> parens (pretty reason) <> colon
         , indent 4 (cpretty t)
         ]
+    IllegalMutualDefinition pos ds ->
+      nest 4 $ vsep
+        [ pretty pos <> ": error:"
+        , "Incoherent mutual definition clauses:"
+        , indent 4 (vsep $ map cpretty ds)
+        ]
+
 
 instance Pretty IllegalDefinitionReason where
   pretty = \case
@@ -410,13 +420,45 @@ containsNodes = getAnys . cata alg
       TSkolem _ _ _ _ -> mempty { containsMetasOrSkolems = Any True }
       other -> fold other
 
+resolveRecursion
+  :: forall m. (m ~ Reader (M.Map GlobalName (Position -> Type))) =>
+     GlobalName -> M.Map GlobalName (Position -> Type) -> Type -> Type
+resolveRecursion root@(GlobalName dname) env0 ty =
+  let ty' =
+        runReader
+          (cata alg (shift 1 (Var dname) ty))
+          (M.insert root (\p -> Fix (TRef p (Var dname) 0)) env0)
+  in if freeVar (Var dname) 0 ty'
+     then Fix $ TMu (getPosition ty) (Var dname) ty'
+     else (shift (-1) (Var dname) ty')
+  where
+    shifted :: Var -> m a -> m a
+    shifted x' = local (fmap (fmap (shift 1 x')))
+
+    alg :: TypeF (m Type) -> m Type
+    alg = \case
+      TGlobal pos name' -> do
+        env <- ask
+        case M.lookup name' env of
+          Nothing -> return (Fix (TGlobal pos name'))
+          Just fty -> return $ resolveRecursion name' env (fty pos)
+      TLambda pos x' k b -> do
+        b' <- shifted x' b
+        return (Fix (TLambda pos x' k b'))
+      TForall pos x' k b -> do
+        b' <- shifted x' b
+        return (Fix (TForall pos x' k b'))
+      TExists pos x' k b -> do
+        b' <- shifted x' b
+        return (Fix (TExists pos x' k b'))
+      TMu pos x' b -> do
+        b' <- shifted x' b
+        return (Fix (TMu pos x' b'))
+      other -> Fix <$> sequence other
+
 handleSelfReference :: GlobalName -> Type -> Type
-handleSelfReference name@(GlobalName dname) ty =
-  if containsRecursion ty
-  then Fix $ TMu (getPosition ty) (Var dname) $
-         substGlobal name (\p -> Fix (TRef p (Var dname) 0)) $
-           shift 1 (Var dname) ty
-  else ty
+handleSelfReference name ty =
+  if containsRecursion ty then resolveRecursion name M.empty ty else ty
   where
     containsRecursion :: Type -> Bool
     containsRecursion = (getAny .) . cata $ \case
@@ -446,15 +488,28 @@ checkProgram program cont = cataCompose alg runActions program
     alg = \case
       PLet pos (Definition _ name params ty) rest -> do
         checkDefinitionTypeWellformedness pos (Just name) ty
-        let ty' =
-              extendWithParameters pos params $
-              handleSelfReference name ty
+        let ty' = extendWithParameters pos params $ handleSelfReference name ty
         kind <- expectAny (inferKind ty')
         withGlobal pos name ty' kind rest
 
-      PMutual _ _ rest -> do
-        -- TODO: Not supported
-        rest
+      PMutual pos defs rest -> do
+        params <- case allTheSame (map _defParams defs) of
+          Just (Same p) -> pure p
+          Just Different -> throwError $ IllegalMutualDefinition pos defs
+          Nothing -> pure []
+
+        let recEnv = M.fromList $ map (\(Definition _ name _ ty) -> (name, const ty)) defs
+
+        defs' <- forM defs $ \(Definition dpos name _ ty) -> do
+          checkDefinitionTypeWellformedness dpos (Just name) ty
+          let ty' = extendWithParameters pos params $ resolveRecursion name recEnv ty
+          kind <- expectAny (inferKind ty')
+          pure $ (Definition dpos name [] ty', kind)
+
+        foldr
+          (\(Definition dpos name _ ty, kind) -> withGlobal dpos name ty kind)
+          rest
+          defs'
 
       PReturn pos ty -> do
         checkDefinitionTypeWellformedness pos Nothing ty
@@ -470,6 +525,18 @@ checkProgram program cont = cataCompose alg runActions program
       Later action k -> action >> runActions k
 
 ----------------------------------------------------------------------
+-- Utils
 
+-- | Catamorphism over a functor composition
 cataCompose :: (Functor f, Functor g) => (g a -> b) -> (f b -> a) -> Fix (Compose f g) -> a
 cataCompose g f = cata (f . fmap g . getCompose)
+
+-- | Sameness semigroup
+data AreTheSame a = Same a | Different
+
+instance Eq a => Semigroup (AreTheSame a) where
+  Same a <> Same b = if a == b then Same a else Different
+  _      <> _      = Different
+
+allTheSame :: (Eq a, Foldable f) => f a -> Maybe (AreTheSame a)
+allTheSame = getOption . foldMap (Option . Just . Same)

@@ -19,6 +19,23 @@ import STL.Core.Types
 ----------------------------------------------------------------------
 -- Substitutions
 
+freeVar :: Var -> Int -> Type -> Bool
+freeVar x0 n0 e = getAny $ runReader (cata alg e) n0
+  where
+    push :: Var -> Reader Int a -> Reader Int a
+    push x cont = if x == x0 then local succ cont else cont
+
+    alg :: TypeF (Reader Int Any) -> Reader Int Any
+    alg = \case
+      TRef _ x n -> do
+        n' <- ask
+        pure $ if x == x0 && n == n' then Any True else mempty
+      TLambda _ x _ b -> push x b
+      TForall _ x _ b -> push x b
+      TExists _ x _ b -> push x b
+      TMu _ x b -> push x b
+      other -> fold <$> sequence other
+
 freeMeta :: MetaVar -> Type -> Bool
 freeMeta name = getAny . cata alg
   where
@@ -106,33 +123,6 @@ subst x n0 sub0 expr = runReader (cata alg expr) (n0, sub0)
           if x == x'
           then succIndex b
           else b
-        return (Fix (TMu pos x' b'))
-      other -> Fix <$> sequence other
-
-substGlobal :: GlobalName -> (Position -> Type) -> Type -> Type
-substGlobal name sub0 expr = runReader (cata alg expr) sub0
-  where
-    shifted :: Var -> Reader (Position -> Type) a -> Reader (Position -> Type) a
-    shifted x' = local (\f pos -> shift 1 x' (f pos))
-
-    alg :: TypeF (Reader (Position -> Type) Type) -> Reader (Position -> Type) Type
-    alg = \case
-      TGlobal pos name' -> do
-        sub <- ask
-        if name' == name
-          then return (sub pos)
-          else return (Fix (TGlobal pos name'))
-      TLambda pos x' k b -> do
-        b' <- shifted x' b
-        return (Fix (TLambda pos x' k b'))
-      TForall pos x' k b -> do
-        b' <- shifted x' b
-        return (Fix (TForall pos x' k b'))
-      TExists pos x' k b -> do
-        b' <- shifted x' b
-        return (Fix (TExists pos x' k b'))
-      TMu pos x' b -> do
-        b' <- shifted x' b
         return (Fix (TMu pos x' b'))
       other -> Fix <$> sequence other
 
