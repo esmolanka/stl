@@ -4,6 +4,7 @@
 
 module Main (main, runModule) where
 
+import qualified System.IO as IO
 import System.Console.Haskeline
 import System.Exit
 
@@ -86,11 +87,15 @@ config =
 
 main :: IO ()
 main = do
+  IO.hSetEncoding IO.stdin  IO.utf8
+  IO.hSetEncoding IO.stdout IO.utf8
+  IO.hSetEncoding IO.stderr IO.utf8
+
   input <- Opt.execParser $
     Opt.info
       (Opt.helper <*> config)
       (Opt.fullDesc <>
-       Opt.progDesc "Sructurally Typed interface description Language interpreter")
+       Opt.progDesc "Structural Types Langauge")
 
   case input of
     Just fn ->
@@ -99,7 +104,7 @@ main = do
 
     Nothing -> do
       putDocLn $ vsep
-        [ "Welcome to STL Repl"
+        [ "Welcome to STL REPL."
         , mempty
         , "Supported syntax:"
         , indent 2 $ vsep
@@ -125,9 +130,9 @@ main = do
 
 repl :: String -> (String -> IO ()) -> IO ()
 repl prompt f =
-  runInputT defaultSettings loop
+  runInputT defaultSettings (withInterrupt loop)
   where
-    loop = do
+    loop = handle (\Interrupt -> outputStrLn "Ctrl-C" >> loop) $ do
       input <- getInputLine prompt
       case fmap (id &&& words) input of
         Nothing -> return ()
