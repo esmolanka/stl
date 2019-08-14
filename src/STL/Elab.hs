@@ -1,3 +1,5 @@
+{-# LANGUAGE ConstraintKinds     #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -8,12 +10,15 @@ module STL.Elab where
 
 import Control.Arrow (first, second)
 
+import Control.Monad.Reader
 import Control.Monad.State
+
+import Data.Coerce
 import Data.Functor.Compose
 import Data.Functor.Foldable (Fix(..), cata)
-import Data.Coerce
-import qualified Data.Text as T
+import Data.Functor.Identity
 import qualified Data.Set as S
+import qualified Data.Text as T
 
 import STL.Syntax.Position
 import STL.Syntax.Types
@@ -21,6 +26,9 @@ import STL.Syntax.Types
 import qualified STL.Core.Eval as Core
 import qualified STL.Core.Types as Core
 import STL.Pretty
+
+----------------------------------------------------------------------
+-- Desugaring / representation conversion
 
 dsVar :: Var -> Core.Var
 dsVar = coerce
@@ -41,52 +49,83 @@ dsKind pos = \case
 dsBindings :: [Binding] -> [(Core.Var, Core.Kind)]
 dsBindings = map (\(Binding p x k) -> (dsVar x, maybe Core.Star (dsKind p) k))
 
-dsType :: Type -> Core.Type
-dsType = cata alg
+----------------------------------------------------------------------
+-- Elaboration monad
+
+data ElabContext a = ElabContext
+  { ectxHandlers     :: Handlers a
+  }
+
+type MonadElab a m = (MonadReader (ElabContext a) m)
+
+data Handlers a = Handlers
+  { hNormalise :: Position -> Core.Type -> a
+  , hCheck     :: Position -> Core.Type -> Core.Type -> a
+  , hImport    :: forall b. Position -> Core.Program b -> Core.Program a
+  }
+
+runElab :: Handlers a -> Reader (ElabContext a) b -> b
+runElab handlers elab = runReader elab (ElabContext handlers)
+
+----------------------------------------------------------------------
+-- Elaboration procedures
+
+elabType :: forall m a. (MonadElab a m) => Type -> m Core.Type
+elabType sugared = pure $ runIdentity (cata alg sugared)
   where
-    alg :: TypeF Core.Type -> Core.Type
+    alg :: TypeF (Identity Core.Type) -> Identity Core.Type
     alg = \case
       T pos bt -> case bt of
-        TUnit   -> Fix (Core.TBase pos Core.TUnit)
-        TVoid   -> Fix (Core.TBase pos Core.TVoid)
-        TBool   -> Fix (Core.TBase pos Core.TBool)
-        TInt    -> Fix (Core.TBase pos Core.TInt)
-        TFloat  -> Fix (Core.TBase pos Core.TFloat)
-        TString -> Fix (Core.TBase pos Core.TString)
-        TList   -> Fix (Core.TBase pos Core.TList)
-        TDict   -> Fix (Core.TBase pos Core.TDict)
-        TNat    -> Fix (Core.TBase pos Core.TNat)
+        TUnit   -> pure $ Fix (Core.TBase pos Core.TUnit)
+        TVoid   -> pure $ Fix (Core.TBase pos Core.TVoid)
+        TBool   -> pure $ Fix (Core.TBase pos Core.TBool)
+        TInt    -> pure $ Fix (Core.TBase pos Core.TInt)
+        TFloat  -> pure $ Fix (Core.TBase pos Core.TFloat)
+        TString -> pure $ Fix (Core.TBase pos Core.TString)
+        TList   -> pure $ Fix (Core.TBase pos Core.TList)
+        TDict   -> pure $ Fix (Core.TBase pos Core.TDict)
+        TNat    -> pure $ Fix (Core.TBase pos Core.TNat)
       TRef pos x ->
-        Fix (Core.TRef pos (dsVar x) 0)
-      TGlobal pos Nothing name ->
-        Fix (Core.TGlobal pos (dsGlobalName name))
+        pure $ Fix (Core.TRef pos (dsVar x) 0)
+      TGlobal pos Nothing name -> do
+        pure $ Fix (Core.TGlobal pos (dsGlobalName name))
       TGlobal pos (Just _mod) _name ->
         error $ show $ pretty pos <> colon <+> "Qualified names are not yet supported"
-      TForall _ bnds body ->
-        foldr (\(Binding pos var k) -> Fix . Core.TForall (pos <> Core.getPosition body) (dsVar var) (maybe Core.Star (dsKind pos) k)) body bnds
-      TExists _ bnds body ->
-        foldr (\(Binding pos var k) -> Fix . Core.TExists pos (dsVar var) (maybe Core.Star (dsKind pos) k)) body bnds
-      TArrow pos a b cs ->
-        foldl (\acc x -> Core.untele (Fix (Core.TArrow pos)) [acc, x]) a (b:cs)
-      TApp _ f a as ->
-        Core.untele f (a : as)
-      TRecord pos row ->
-        let (row', (pvars, rvars)) = dsRow row
-            withP k = foldr (\x -> Fix . Core.TExists pos x Core.Presence) k pvars
+      TForall _ bnds body -> do
+        body' <- body
+        pure $ foldr (\(Binding pos var k) -> Fix . Core.TForall (pos <> Core.getPosition body') (dsVar var) (maybe Core.Star (dsKind pos) k)) body' bnds
+      TExists _ bnds body -> do
+        body' <- body
+        pure $ foldr (\(Binding pos var k) -> Fix . Core.TExists pos (dsVar var) (maybe Core.Star (dsKind pos) k)) body' bnds
+      TArrow pos a b cs -> do
+        a' <- a
+        b' <- b
+        cs' <- sequence cs
+        pure $ foldl (\acc x -> Core.untele (Fix (Core.TArrow pos)) [acc, x]) a' (b' : cs')
+      TApp _ f a as -> do
+        f' <- f
+        a' <- a
+        as' <- sequence as
+        pure $ Core.untele f' (a' : as')
+      TRecord pos row -> do
+        (row', (pvars, rvars)) <- dsRow <$> sequence row
+        let withP k = foldr (\x -> Fix . Core.TExists pos x Core.Presence) k pvars
             withR k = foldr (\x -> Fix . Core.TExists pos x Core.Row) k rvars
-        in withR $ withP $ Core.untele (Fix (Core.TRecord pos)) [row']
-      TVariant pos row ->
-        let (row', (pvars, rvars)) = dsRow row
-            withP k = foldr (\x -> Fix . Core.TExists pos x Core.Presence) k pvars
+        pure $ withR $ withP $ Core.untele (Fix (Core.TRecord pos)) [row']
+      TVariant pos row -> do
+        (row', (pvars, rvars)) <- dsRow <$> sequence row
+        let withP k = foldr (\x -> Fix . Core.TExists pos x Core.Presence) k pvars
             withR k = foldr (\x -> Fix . Core.TForall pos x Core.Row) k rvars
-        in withR $ withP $ Core.untele (Fix (Core.TVariant pos)) [row']
-      TArray pos el sz ->
-        Core.untele (Fix (Core.TArray pos)) [el, sz]
+        pure $ withR $ withP $ Core.untele (Fix (Core.TVariant pos)) [row']
+      TArray pos a n -> do
+        a' <- a
+        n' <- n
+        pure $ Core.untele (Fix (Core.TArray pos)) [a', n']
 
 dsRow :: Row Core.Type -> (Core.Type, ([Core.Var], [Core.Var]))
 dsRow t =
-  second (\(ps, rs) -> (replicate ps omega, replicate rs rho)) $
-  runState (go t) (0, 0)
+  let (ty, (ps, rs)) = runState (go t) (0, 0)
+  in (ty, (replicate ps omega, replicate rs rho))
   where
     freeVars = S.map fst $ foldMap Core.freeVars t
     mkVar x =
@@ -121,50 +160,56 @@ dsRow t =
           [ prs', ty, cont']
 
 
+elabStatements :: forall m a. (MonadElab a m) => [Statement] -> m (Core.Program a) -> m (Core.Program a)
+elabStatements = flip (foldr elabStatement)
+
+elabStatement :: forall m a. (MonadElab a m) => Statement -> m (Core.Program a) -> m (Core.Program a)
+elabStatement  stmt cont = do
+  Handlers{hNormalise, hCheck} <- asks ectxHandlers
+  case stmt of
+    Typedef pos name params body -> do
+      defn <-
+        Core.Definition pos (dsGlobalName name) (dsBindings params) <$> elabType body
+      cont' <- cont
+      pure $ Fix (Compose (Core.Now (Core.PLet pos defn cont')))
+
+    Mutualdef pos params clauses -> do
+      defs <-
+        forM clauses $ \(MutualClause clausePos name body) ->
+          Core.Definition clausePos (dsGlobalName name) (dsBindings params) <$> elabType body
+      cont' <- cont
+      pure $ Fix (Compose (Core.Now (Core.PMutual pos defs cont')))
+
+    Normalise pos ty -> do
+      ty' <- elabType ty
+      Fix (Compose kont) <- cont
+      pure $ Fix (Compose (Core.Later (hNormalise pos ty') kont))
+
+    Subsume pos sub super -> do
+      sub' <- elabType sub
+      super' <- elabType super
+      Fix (Compose kont) <- cont
+      pure $ Fix (Compose (Core.Later (hCheck pos sub' super') kont))
+
+elabReturn :: forall m a. (MonadElab a m) => Maybe Type -> m (Core.Program a)
+elabReturn ty = do
+  leaf <- maybe (pure Core.PNil) (\t -> Core.PReturn (typePos t) <$> elabType t) ty
+  pure $ Fix (Compose (Core.Now leaf))
+
+elabModule :: forall m a. (MonadElab a m) => Module -> m (Core.Program a)
+elabModule (Module _name _params _imports statements rettype) =
+  elabStatements statements (elabReturn rettype)
+
 ----------------------------------------------------------------------
 
-data Handlers a = Handlers
-  { hNormalise :: Position -> Core.Type -> a
-  , hCheck     :: Position -> Core.Type -> Core.Type -> a
-  , hImport    :: forall b. Position -> Core.Program b -> Core.Program a
-  }
+dsStatement :: Handlers a -> Statement -> Core.Program a -> Core.Program a
+dsStatement handlers stmt cont =
+  runElab handlers (elabStatement stmt (pure cont))
 
-dsStatements :: forall a. Handlers a -> [Statement] -> Core.Program a -> Core.Program a
-dsStatements handlers = flip (foldr (dsStatement handlers))
+dsReturn :: Handlers a -> Maybe Type -> Core.Program a
+dsReturn handlers ty =
+  runElab handlers (elabReturn ty)
 
-dsStatement :: forall a. Handlers a -> Statement -> Core.Program a -> Core.Program a
-dsStatement Handlers{hNormalise, hCheck} stmt cont =
-  case stmt of
-    Typedef pos name params body ->
-      let defn = Core.Definition
-            pos
-            (dsGlobalName name)
-            (dsBindings params)
-            (dsType body)
-      in Fix (Compose (Core.Now (Core.PLet pos defn cont)))
-
-    Mutualdef pos params clauses ->
-      let bindings = dsBindings params
-          defs = flip map clauses $ \(MutualClause clausePos name body) ->
-            Core.Definition
-              clausePos
-              (dsGlobalName name)
-              bindings
-              (dsType body)
-      in Fix (Compose (Core.Now (Core.PMutual pos defs cont)))
-
-    Normalise pos ty ->
-      let Fix (Compose kont) = cont
-      in Fix (Compose (Core.Later (hNormalise pos (dsType ty)) kont))
-
-    Subsume pos sub super ->
-      let Fix (Compose kont) = cont
-      in Fix (Compose (Core.Later (hCheck pos (dsType sub) (dsType super)) kont))
-
-dsReturn :: Maybe Type -> Core.Program a
-dsReturn ty =
-  Fix (Compose (Core.Now (maybe Core.PNil (\t -> Core.PReturn (typePos t) (dsType t)) ty)))
-
-dsModule :: forall a. Handlers a -> Module -> Core.Program a
-dsModule handlers (Module _name _params _imports statements rettype) =
-  dsStatements handlers statements (dsReturn rettype)
+dsModule :: Handlers a -> Module -> Core.Program a
+dsModule handlers modul =
+  runElab handlers (elabModule modul)

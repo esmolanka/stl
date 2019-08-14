@@ -119,7 +119,7 @@ main = do
           Left err -> putStrLn err
           Right stmt ->
             let checking =
-                  checkProgram (dsStatement mainHandlers stmt (dsReturn Nothing)) $ \_ ->
+                  checkProgram (dsStatement mainHandlers stmt (dsReturn mainHandlers Nothing)) $ \_ ->
                   case stmt of
                     (Typedef pos name _ _) -> eval pos (Fix (TGlobal pos (dsGlobalName name)))
                     _                      -> pure ()
