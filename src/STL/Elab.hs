@@ -197,7 +197,7 @@ elabReturn ty = do
   pure $ Fix (Compose (Core.Now leaf))
 
 elabModule :: forall m a. (MonadElab a m) => Module -> m (Core.Program a)
-elabModule (Module _name _params _imports statements rettype) =
+elabModule (Module _name _imports statements rettype) =
   elabStatements statements (elabReturn rettype)
 
 ----------------------------------------------------------------------

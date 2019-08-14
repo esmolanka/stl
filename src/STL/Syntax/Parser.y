@@ -82,25 +82,28 @@ Module :: { Module }
   : ModuleHeader
     list(ImportStatement)
     list(Statement)
-    ReturnType                { let (name, bindings) = $1
-                                in Module name bindings $2 $3 $4 }
+    ReturnType                {  Module $1 $2 $3 $4 }
 
-ModuleHeader :: { (ModuleName, [Binding]) }
-  : {- empty -}               { ( ModuleName "Main", [] ) }
-  | "module" CONSTRUCTOR
-      list(Bindings)          { ( (ModuleName $ getConstructor $ extract $2)
-                                , concat $3
-                                ) }
+ModuleHeader :: { [ModuleName] }
+  : {- empty -}               { [ModuleName "Main"] }
+  | "module"
+    sepBy1(CONSTRUCTOR, '.')  { map (ModuleName . getConstructor . extract) $2 }
 
 ImportStatement :: { Import }
-  : "import" CONSTRUCTOR      { Import (position $2)
-                                  (ModuleName $ getConstructor $ extract $2)
-                                  [] Nothing }
-  | "import" CONSTRUCTOR '='
-      CONSTRUCTOR
-      list(AtomType)          { Import (position $2)
-                                  (ModuleName $ getConstructor $ extract $4)
-                                  $5 (Just (ModuleName $ getConstructor $ extract $2)) }
+  : "import"
+    sepBy1(CONSTRUCTOR, '.')  { Import (foldl1 (<>) $ map position $2)
+                                  (map (ModuleName . getConstructor . extract) $2)
+                                  Nothing }
+  | "import"
+    sepBy1(CONSTRUCTOR, '.')
+    VARIABLE {- as -}
+    sepBy1(CONSTRUCTOR, '.')  {% case getVariable (extract $3) of
+                                   "as" ->
+                                     pure $ Import (foldl1 (<>) $ map position $2)
+                                       (map (ModuleName . getConstructor . extract) $2)
+                                       (Just (map (ModuleName . getConstructor . extract) $4))
+                                   _ -> parseError [$3]
+                              }
 
 ReturnType :: { Maybe Type }
   : {- -}                     { Nothing }

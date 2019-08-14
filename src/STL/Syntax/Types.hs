@@ -95,14 +95,12 @@ data Statement
 
 data Import = Import
   { _importPos    :: Position
-  , _importName   :: ModuleName
-  , _importArgs   :: [Type]
-  , _importRename :: Maybe ModuleName
+  , _importName   :: [ModuleName]
+  , _importRename :: Maybe [ModuleName]
   } deriving (Show)
 
 data Module = Module
-  { _modName       :: ModuleName
-  , _modParams     :: [Binding]
+  { _modName       :: [ModuleName]
   , _modImport     :: [Import]
   , _modStatements :: [Statement]
   , _modReturnType :: Maybe Type
