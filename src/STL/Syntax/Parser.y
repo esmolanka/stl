@@ -62,19 +62,6 @@ import STL.Syntax.Types
   "#eval"        { L _ (TokKeyword "#eval")    }
   "#check"       { L _ (TokKeyword "#check")   }
 
-  -- "Unit"         { L _ (TokConstructor "Unit")   }
-  -- "Void"         { L _ (TokConstructor "Void")   }
-  -- "Int"          { L _ (TokConstructor "Int")    }
-  -- "Float"        { L _ (TokConstructor "Float")  }
-  -- "String"       { L _ (TokConstructor "String") }
-  -- "List"         { L _ (TokConstructor "List")   }
-  -- "Dict"         { L _ (TokConstructor "Dict")   }
-
-
-  -- "Type"         { L _ (TokConstructor "Type")   }
-  -- "Row"          { L _ (TokConstructor "Row")    }
-  -- "Nat"          { L _ (TokConstructor "Nat")    }
-
   CONSTRUCTOR    { L _ (TokConstructor _) }
   VARIABLE       { L _ (TokVariable    _) }
 
@@ -192,7 +179,7 @@ RecRowExt :: { Row Type -> Row Type }
                                              (Label $ getVariable $ extract $1)
                                              (PVariable (position $3))
                                              $4 }
-  | CONSTRUCTOR                          {% otherError (position $1) "labels in records must start with a lower-case letter or an underscore" }
+  | CONSTRUCTOR                          {% otherError (position $1) "record field names must start with a lower-case letter or an underscore" }
 
 VariantRow :: { Position -> Row Type }
   : sepBy1(VarRowExt, ',')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
@@ -206,7 +193,7 @@ VarRowExt :: { Row Type -> Row Type }
                                              (Label $ getConstructor $ extract $1)
                                              (PVariable (position $1))
                                              $3 }
-  | VARIABLE                             {% otherError (position $1) "labels in variants must start with an upper-case letter" }
+  | VARIABLE                             {% otherError (position $1) "variant alternative names must start with an upper-case letter" }
 
 ----------------------------------------------------------------------
 -- Kind

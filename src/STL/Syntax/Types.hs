@@ -1,9 +1,9 @@
-{-# LANGUAGE DeriveFoldable             #-}
-{-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DeriveTraversable          #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module STL.Syntax.Types where
 
@@ -87,7 +87,7 @@ data MutualClause = MutualClause
   } deriving (Show)
 
 data Statement
-  = Typedef   { _stmtPos :: Position, _defnName :: GlobalName, _defnParams :: [Binding] , _defnBody :: Type }
+  = Typedef   { _stmtPos :: Position, _defnName :: GlobalName, _defnParams :: [Binding], _defnBody :: Type }
   | Mutualdef { _stmtPos :: Position, _mutParams :: [Binding], _mutClauses :: [MutualClause] }
   | Normalise { _stmtPos :: Position, _normaliseBody :: Type }
   | Subsume   { _stmpPos :: Position, _subType :: Type, _superType :: Type }
