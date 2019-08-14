@@ -22,7 +22,6 @@
   :group 'stl
   :type 'string)
 
-
 (defconst stl-mode-syntax-table
   (let ((table (make-syntax-table)))
     (modify-syntax-entry ?\- ". 12" table)
@@ -39,8 +38,6 @@
     (modify-syntax-entry ?\] ")[" table)
     (modify-syntax-entry ?\{ "(}" table)
     (modify-syntax-entry ?\} "){" table)
-    ;; (modify-syntax-entry ?\< "(>" table)
-    ;; (modify-syntax-entry ?\> ")>" table)
 
     (mapc (lambda (x)
             (modify-syntax-entry x "." table))
@@ -61,47 +58,52 @@
   '("#check"
     "#eval"))
 
-(defconst stl-keyword-operators
-  '("\\="
-    "\\:"
-    "\\-\\>"
-    "\|"
-    "\\."
-    "\\,"
-    "\\<\\:"
-    "\\+"))
+(defconst stl-rx-constructor-name
+  '(upper (* (in alnum digit ?_))
+   (* ?. upper (* (in alnum digit ?_)))))
 
-(defconst stl-keyword-constants
-  '("Unit"
-    "Void"
-    "Integer"
-    "Double"
-    "String"
-    "List"
-    "Dictionary"
-    "Natural"
-    "Array"))
+(defconst stl-rx-upper-name
+  '(upper (* (in alnum digit ?_))))
 
-(defconst stl-keyword-kinds
-  '("Type"
-    "Row"
-    "Nat"))
+(defconst stl-rx-lower-name
+  '((in lower ?_) (* (in alnum digit ?_))))
 
 (defvar stl-font-lock-keywords
   `(
     (,(rx symbol-start (eval `(or ,@stl-keyword-keywords)) symbol-end) .
      (0 font-lock-keyword-face))
+
     (,(rx (eval `(or ,@stl-keyword-hints)) symbol-end) .
      (0 font-lock-keyword-face))
-    (,(rx symbol-start (eval `(or ,@stl-keyword-constants)) symbol-end) .
-     (0 font-lock-constant-face))
-    (,(rx symbol-start (eval `(or ,@stl-keyword-kinds)) symbol-end) .
-     (0 font-lock-type-face))
-    ;; (,(rx (eval `(or ,@stl-keyword-operators))) .
-    ;;  (0 font-lock-operator-face))
-    (,(rx symbol-start "type" (1+ space) (group (1+ (or word "_"))) symbol-end) .
+
+    ;; Record labels
+    (,(rx (or "," "{") (* space) (eval `(group ,@stl-rx-lower-name)) (* space) (? "?" (* space)) ":") .
+     (1 font-lock-string-face))
+
+    ;; Variant labels
+    (,(rx (or "," "<") (* space) (eval `(group ,@stl-rx-upper-name)) symbol-end) .
+     (1 font-lock-string-face))
+
+    ;; Type declarations
+    (,(rx symbol-start "type" (1+ space) (group upper (* (in alnum digit ?_)))) .
      (1 font-lock-type-face))
-    ))
+
+    (,(rx "|" (* space) (group upper (* (in alnum digit ?_))) (* space) "=") .
+     (1 font-lock-type-face))
+
+    ;; Module declarations
+    (,(rx symbol-start "module" (1+ space) (eval `(group ,@stl-rx-constructor-name))) .
+     (1 font-lock-constant-face))
+
+    ;; Imports
+    (,(rx symbol-start "import" (1+ space) (eval `(group ,@stl-rx-constructor-name)) (? (1+ space) (group "as") (1+ space) (eval `(group ,@stl-rx-constructor-name))))
+     (1 font-lock-constant-face)
+     (2 font-lock-keyword-face)
+     (3 font-lock-constant-face))
+
+    ;; Operators
+    (,(rx (or bol (in space alnum digit ?_)) (group (or "->" "<:" ":" "=" "|" "?" "?:"))) .
+     (1 font-lock-variable-name-face))))
 
 ;;;###autoload
 (define-derived-mode stl-mode prog-mode "STL"
@@ -148,8 +150,6 @@
                            (+ not-newline)))))))
       :modes (stl-mode))
   (add-to-list 'flycheck-checkers 'stl))
-
-;; (add-to-list 'eglot-server-programs '(stl-mode . (stl-mode-exe "--lsp")))
 
 (provide 'stl-mode)
 ;;; stl-mode.el ends here
