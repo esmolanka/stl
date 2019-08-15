@@ -103,15 +103,15 @@ instance CPretty Err where
             _other ->
               "Strictly positive variable" <+> squotes (ppVar x n) <+> "must not be used in a function argument."
         ]
-    KindMismatch pos t k k' ->
+    KindMismatch pos ty kind expectation ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
         , "Kind mismatch while checking type:"
-        , indent 4 (cpretty t)
+        , indent 4 (cpretty ty)
         , "Expected kind:"
-        , indent 4 (cpretty k)
+        , indent 4 (cpretty expectation)
         , "Actual kind:"
-        , indent 4 (cpretty k')
+        , indent 4 (cpretty kind)
         ]
     GlobalNotFound pos name ->
       nest 4 $ vsep
