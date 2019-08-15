@@ -98,8 +98,6 @@ instance CPretty Err where
       nest 4 $ vsep
         [ pretty pos <> ": error:"
         , case flavour of
-            Parameter ->
-              "Parameter" <+> squotes (ppVar x n) <+> "must not be used in a function argument."
             Recursion ->
               "Recursive reference" <+> squotes (ppVar x n) <+> "must not occur in a function argument."
             _other ->
@@ -210,7 +208,6 @@ extendCtx x flavour kind cont = flip local cont $ \ctx ->
         kind
         flavour
         (case flavour of
-           Parameter -> Just (ctxPolarity ctx)
            Recursion -> Just (ctxPolarity ctx)
            _other    -> Nothing)
 
