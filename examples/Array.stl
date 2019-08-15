@@ -1,0 +1,49 @@
+
+-- Interface of an array-oriented operations library.
+module Array
+
+-- We can't write propositions in this language. So we can only trust
+-- that the `Int` value is strictly lesser than corresponding `Nat n`.
+type Fin (n : Nat) = Int
+
+-- Type `a` is a monoid if there is an associative `combine` operator
+-- and a `neutral` element.
+type Monoid a =
+  { neutral : a
+  , combine : a -> a -> a
+  }
+
+-- `CommutativeMonoid` is the same as `Monoid` but with a "proof" that
+-- the `combine` operator is also commutative. We don't have
+-- propositions and proofs in our language, so it is rather a flag
+-- which can also be useful.
+type CommutativeMonoid a =
+  { isCommutative : Unit
+  , neutral       : a
+  , combine       : a -> a -> a
+  }
+
+-- E.g. you can pass a `CommutativeMonoid` instead of `Monoid`
+#check
+  forall a. Monoid a -> List a -> a
+  <:
+  forall a. CommutativeMonoid a -> List a -> a
+
+-- But not the other way around!
+#check
+  forall a. CommutativeMonoid a -> List a -> a
+  <:
+  forall a. Monoid a -> List a -> a
+
+return
+  { iota        : forall (n : Nat). Nat n -> Int[n]
+  , size        : forall a (n : Nat). a[n] -> Nat n
+  , index       : forall a (n : Nat). Fin n -> a[n] -> a
+  , replicate   : forall a (n : Nat). a -> a[n]
+  , map         : forall a b (n : Nat). (a -> b) -> a[n] -> b[n]
+  , apply       : forall a b (n : Nat). (a -> b)[n] -> a[n] -> b[n]
+  , fold        : forall a (n : Nat). Monoid a -> a[n] -> a
+  , foldPermute : forall a (n : Nat). CommutativeMonoid a -> a[n] -> a
+  , scan        : forall a b (n : Nat). (b -> a -> b) -> b -> a[n] -> b[n]
+  , transpose   : forall a (n, m : Nat). a[n][m] -> a[m][n]
+  }
