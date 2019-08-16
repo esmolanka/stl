@@ -1,9 +1,9 @@
-{-# LANGUAGE ConstraintKinds            #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE ConstraintKinds     #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module STL.Core.Check where
 
@@ -137,7 +137,6 @@ instance CPretty Err where
         , indent 4 (vsep $ map cpretty ds)
         ]
 
-
 instance Pretty IllegalDefinitionReason where
   pretty = \case
     DefinitionContainsMetasOrSkolems ->
@@ -210,7 +209,6 @@ extendCtx x flavour kind cont = flip local cont $ \ctx ->
         (case flavour of
            Recursion -> Just (ctxPolarity ctx)
            _other    -> Nothing)
-
   in ctx { ctxGamma = M.alter (maybe (Just [info]) (Just . (info :))) x (ctxGamma ctx) }
 
 -- Globals
@@ -223,7 +221,7 @@ withGlobal :: forall m a. (MonadTC m) => Position -> GlobalName -> Type -> Kind 
 withGlobal pos name ty k cont = do
   oldg <- lookupGlobal name
   case oldg of
-    Nothing -> local (\ctx -> ctx { ctxGlobals = M.insert name (ty, k) (ctxGlobals ctx) } ) cont
+    Nothing -> local (\ctx -> ctx { ctxGlobals = M.insert name (ty, k) (ctxGlobals ctx) }) cont
     Just (oldty, _) -> throwError $ GlobalAlreadyDefined pos name (getPosition oldty)
 
 -- Bidirectional kind checking
@@ -379,7 +377,6 @@ baseKind = \case
   TList   -> Arr Star Star
   TDict   -> Arr Star Star
   TNat    -> Arr Nat Star
-
 
 inferKindClosed :: Type -> Kind
 inferKindClosed ty =

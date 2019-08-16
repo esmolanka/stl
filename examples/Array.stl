@@ -45,5 +45,5 @@ return
   , fold        : forall a (n : Nat). Monoid a -> a[n] -> a
   , foldPermute : forall a (n : Nat). CommutativeMonoid a -> a[n] -> a
   , scan        : forall a b (n : Nat). (b -> a -> b) -> b -> a[n] -> b[n]
-  , transpose   : forall a (n, m : Nat). a[n][m] -> a[m][n]
+  , transpose   : forall a (n m : Nat). a[n][m] -> a[m][n]
   }

@@ -1,8 +1,7 @@
 
-module Foo (f : Type -> Type)
+module Foo
 
 import Bar
-import Baz = Quux (f a)
 
 type Maybe a =
   < Nothing

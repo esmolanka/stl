@@ -20,6 +20,6 @@ type ParametrisedByFunctor2 (g : (Type -> Type) -> Type) =
 #eval ParametrisedByFunctor2 ParametrisedByFunctor
 
 
-type RecordOf (r : Row) = { | r }
+type RecordOf (r : Row) = { r }
 #eval RecordOf
 #eval forall (r : Row). RecordOf r

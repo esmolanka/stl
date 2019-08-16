@@ -1,20 +1,24 @@
 
 module Example2
 
+import Foo as Bar
+
 #eval Unit
 
 type Service a =
-  { foo : Unit
-  , bar : Unit
-  } ->
+  (exists (n : Nat).
+  { foo  : Unit[n]
+  , bar? : Unit[n]
+  }) ->
   { output1 : Unit
   , output2 : a
   }
 
 type Client a =
-  { foo : Unit
-  } ->
-  { output : a
+  (exists (n : Nat).
+  { foo : Unit[n]
+  }) ->
+  { output? : a
   }
 
 #check Service Unit <: Client Unit
@@ -23,6 +27,8 @@ type ConsList a =
   < Nil : Unit
   , Cons : {head : a, tail : ConsList}
   >
+
+#eval ConsList
 
 type Fix (f : Type -> Type) = f Fix
 type PairHT a b = {head : a, tail : b}
@@ -43,6 +49,36 @@ type Compose (f : Type -> Type) (g : Type -> Type) (a : Type) = f (g a)
   forall a. ConsList a
   <:
   forall a. <Nil : Unit, Cons : Fix (Compose (PairHT a) (SumNC Unit))>
+
+mutual (a : Type)
+  | Delay  = < Now : { head : a, tail : Stream }, Later : Delay >
+  | Stream = < Yield : Delay, Skip : Stream, EndOfStream >
+
+#eval Delay Int
+
+#eval Stream Int
+
+#check Delay Int <: < Later : Delay Int, Now : {head : Int, tail : Stream Int} >
+
+mutual
+  | Even = < EZero, ESucc : Odd >
+  | Odd  = < OZero, OSucc : Even >
+
+#eval Even
+
+#eval Odd
+
+#check <EZero, ESucc : Odd> <: Even
+#check Even <: <EZero, ESucc : Odd>
+
+#check <OZero, OSucc : Even> <: Odd
+#check Odd <: <OZero, OSucc : Even>
+
+mutual
+  | Foo = < Foo : Bar, Self : Foo >
+  | Bar = < Bar : Foo, Self : Bar >
+
+#check <Bar : Foo> <: Bar
 
 return
   { call : forall a. Service a

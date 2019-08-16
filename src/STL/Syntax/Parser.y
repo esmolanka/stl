@@ -145,7 +145,7 @@ Type :: { Type }
 
 Bindings :: { [Binding] }
   : VARIABLE                             { [Binding (position $1) (Var $ getVariable $ extract $1) Nothing] }
-  | '(' sepBy1(VARIABLE, ',')
+  | '(' list1(VARIABLE)
     ':' Kind ')'                         { map (\idn -> Binding (position idn)
                                                     (Var $ getVariable $ extract idn)
                                                     (Just $4)) $2}
@@ -171,7 +171,7 @@ AtomType :: { Type }
 RecordRow :: { Position -> Row Type }
   : sepBy1(RecRowExt, ',')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
   | sepBy1(RecRowExt, ',') '|' AppType   { \_ -> foldr ($) (RExplicit (position $2) $3) $1 }
-  | '|' AppType                          { \_ -> RExplicit (position $1) $2 }
+  | AppType                              { \_ -> RExplicit (typePos $1) $1 }
 
 RecRowExt :: { Row Type -> Row Type }
   : VARIABLE ':' Type                    { RExtend (position $1 <> typePos $3)
