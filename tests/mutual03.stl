@@ -1,14 +1,13 @@
-mutual
-  | Even = < EZero, ESucc : Odd, ESuccSucc : Even >
-  | Odd  = < OZero, OSucc : Even, OSuccSucc : Odd >
+type Even = < EZero | ESucc : Odd | ESuccSucc : Even >
+  with Odd = < OZero | OSucc : Even | OSuccSucc : Odd >
 
 #eval Even
 
 #eval Odd
 
-#check <EZero, ESucc : Odd, ESuccSucc : Even> <: Even
-#check Even <: <EZero, ESucc : Odd, ESuccSucc : Even>
+#check <EZero | ESucc : Odd | ESuccSucc : Even> <: Even
+#check Even <: <EZero | ESucc : Odd | ESuccSucc : Even>
 
-#check <OZero, OSucc : Even, OSuccSucc : Odd> <: Odd
-#check Odd <: <OZero, OSucc : Even, OSuccSucc : Odd>
+#check <OZero | OSucc : Even | OSuccSucc : Odd> <: Odd
+#check Odd <: <OZero | OSucc : Even | OSuccSucc : Odd>
 

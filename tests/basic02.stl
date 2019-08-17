@@ -1,13 +1,13 @@
 type Product = { fst : Unit, snd : Void }
 #eval Product
 
-type Sum = < Inl : Unit, Inr : Void >
+type Sum = < Inl : Unit | Inr : Void >
 #eval Sum
 
 type SumOfProducts =
-  < Left  : Product
-  , Right : Product
-  >
+  | Left  : Product
+  | Right : Product
+
 #eval SumOfProducts
 
 type ProductOfSumsOptional =

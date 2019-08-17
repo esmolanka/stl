@@ -55,8 +55,8 @@ import STL.Syntax.Types
   "forall"       { L _ (TokKeyword "forall")   }
   "exists"       { L _ (TokKeyword "exists")   }
   "type"         { L _ (TokKeyword "type")     }
-  "mutual"       { L _ (TokKeyword "mutual")   }
-  "return"       { L _ (TokKeyword "return")   }
+  "with"         { L _ (TokKeyword "with")     }
+  "provide"      { L _ (TokKeyword "provide")  }
   "module"       { L _ (TokKeyword "module")   }
   "import"       { L _ (TokKeyword "import")   }
   "#eval"        { L _ (TokKeyword "#eval")    }
@@ -82,7 +82,7 @@ Module :: { Module }
   : ModuleHeader
     list(ImportStatement)
     list(Statement)
-    ReturnType                {  Module $1 $2 $3 $4 }
+    ProvideType               {  Module $1 $2 $3 $4 }
 
 ModuleHeader :: { [ModuleName] }
   : {- empty -}               { [ModuleName "Main"] }
@@ -105,9 +105,9 @@ ImportStatement :: { Import }
                                    _ -> parseError [$3]
                               }
 
-ReturnType :: { Maybe Type }
+ProvideType :: { Maybe Type }
   : {- -}                     { Nothing }
-  | "return" Type             { Just $2 }
+  | "provide" Type            { Just $2 }
 ----------------------------------------------------------------------
 -- Statement
 
@@ -121,13 +121,22 @@ Statement :: { Statement }
                                    (GlobalName $ getConstructor $ extract $2)
                                    (concat $3)
                                    $5 }
-  | "mutual" list(Bindings)
-      list1(MutualClause)       { Mutualdef (position $1) (concat $2) $3  }
+  | "type" CONSTRUCTOR
+      list(Bindings) '='
+      Type
+      list1(MutualClause)
+                                { Mutualdef (position $2) (concat $3)
+                                   (MutualClause
+                                     (position $2)
+                                     (GlobalName $ getConstructor $ extract $2)
+                                     $5 : $6 ) }
+
   | "#eval" Type                { Normalise (position $1 <> typePos $2) $2 }
   | "#check" Type '<:' Type     { Subsume (position $1 <> typePos $4) $2 $4 }
 
 MutualClause :: { MutualClause }
-  : '|' CONSTRUCTOR '=' Type    { MutualClause (position $2)
+  : "with" CONSTRUCTOR '=' Type
+                                { MutualClause (position $2)
                                     (GlobalName $ getConstructor $ extract $2)
                                     $4 }
 
@@ -142,6 +151,8 @@ Type :: { Type }
   | AppType '->' sepBy1(Type,'->')       { mkArrow ($1 : $3) }
   | "forall" list1(Bindings) '.' Type    { Fix $ TForall (position $1 <> typePos $4) (concat $2) $4 }
   | "exists" list1(Bindings) '.' Type    { Fix $ TExists (position $1 <> typePos $4) (concat $2) $4 }
+  | VariantRowAlt                        { Fix $ TVariant (_rowPos $1) $1 }
+
 
 Bindings :: { [Binding] }
   : VARIABLE                             { [Binding (position $1) (Var $ getVariable $ extract $1) Nothing] }
@@ -182,10 +193,13 @@ RecRowExt :: { Row Type -> Row Type }
                                              (Label $ getVariable $ extract $1)
                                              (PVariable (position $3))
                                              $4 }
-  | CONSTRUCTOR                          {% otherError (position $1) "record field names must start with a lower-case letter or an underscore" }
+  | CONSTRUCTOR ':'                      {% otherError (position $1) "record field names must start with a lower-case letter or an underscore" }
 
 VariantRow :: { Position -> Row Type }
-  : sepBy1(VarRowExt, ',')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
+  : sepBy1(VarRowExt, '|')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
+
+VariantRowAlt :: { Row Type }
+  : list1(snd('|', VarRowExt))           { foldr ($) (RNil dummyPos) $1 }
 
 VarRowExt :: { Row Type -> Row Type }
   : CONSTRUCTOR                          { RExtend (position $1)

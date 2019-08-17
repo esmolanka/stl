@@ -1,6 +1,7 @@
 {
-{-# LANGUAGE BangPatterns   #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing     #-}
 {-# OPTIONS_GHC -fno-warn-tabs               #-}
@@ -45,7 +46,7 @@ $upper      = [A-Z]
 @punct      = "=" | ":" | "->" | "|" | "." | "," | "<:" | "?"
 
 @keyword    = "forall" | "exists"
-            | "type" | "mutual" | "return"
+            | "type" | "with" | "provide"
             | "module" | "import"
             | "#eval" | "#check"
 
@@ -59,10 +60,17 @@ $whitespace+       ;
 "--" .*            ;
 
 @paren             { TokParen `via` BL.head }
+"⟨"                { just (TokParen '<') }
+"⟩"                { just (TokParen '>') }
+"→"                { just (TokPunctuation "->") }
+"⊑"                { just (TokPunctuation "<:") }
 @punct             { TokPunctuation `via` decode }
 @keyword           { TokKeyword `via` decode }
+"∀"                { just (TokKeyword "forall") }
+"∃"                { just (TokKeyword "exists") }
 @constr            { TokConstructor `via` decode }
 @variable          { TokVariable `via` decode }
+\' @variable \'    { TokVariable `via` (decode . dropHeadLast) }
 
 {
 ----------------------------------------------------------------------
@@ -79,6 +87,9 @@ via ftok f = ftok . f
 
 decode :: ByteString -> T.Text
 decode = TL.toStrict . decodeUtf8
+
+dropHeadLast :: ByteString -> ByteString
+dropHeadLast bs = BL.drop 1 (BL.take (BL.length bs - 1) bs)
 
 ----------------------------------------------------------------------
 -- Entry point
@@ -105,7 +116,7 @@ alexScanTokens input =
     AlexSkip input _ ->
       alexScanTokens input
     AlexToken input' tokLen action ->
-      let inputText = UTF8.take (fromIntegral tokLen) (aiInput input)
+      let inputText = BL.take (fromIntegral tokLen) (aiInput input)
       in L (aiLineCol input, tokLen) (action inputText) : alexScanTokens input'
   where
     defaultCode :: Int

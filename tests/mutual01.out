@@ -1,35 +1,35 @@
-tests/mutual01.stl:5:1-5:11:
+tests/mutual01.stl:4:1-4:11:
   Normalised:
     μ Even. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : Even | ρ>)) | ρ>)))
   Kind:
     Type
-tests/mutual01.stl:7:1-7:10:
+tests/mutual01.stl:6:1-6:10:
   Normalised:
     μ Odd. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : Odd | ρ>)) | ρ>)))
   Kind:
     Type
-tests/mutual01.stl:9:1-9:36:
+tests/mutual01.stl:8:1-8:37:
   Subtype:
     ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : μ Odd. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : Odd | ρ>)) | ρ>))) | ρ>))
   Supertype:
     μ Even. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : Even | ρ>)) | ρ>)))
   Result:
     OK
-tests/mutual01.stl:10:1-10:36:
+tests/mutual01.stl:9:1-9:37:
   Subtype:
     μ Even. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : Even | ρ>)) | ρ>)))
   Supertype:
     ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : μ Odd. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : Odd | ρ>)) | ρ>))) | ρ>))
   Result:
     OK
-tests/mutual01.stl:12:1-12:36:
+tests/mutual01.stl:11:1-11:37:
   Subtype:
     ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : μ Even. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : Even | ρ>)) | ρ>))) | ρ>))
   Supertype:
     μ Odd. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : Odd | ρ>)) | ρ>)))
   Result:
     OK
-tests/mutual01.stl:13:1-13:36:
+tests/mutual01.stl:12:1-12:37:
   Subtype:
     μ Odd. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <OZero^ω : Unit, OSucc^ω/1 : ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <EZero^ω : Unit, ESucc^ω/1 : Odd | ρ>)) | ρ>)))
   Supertype:

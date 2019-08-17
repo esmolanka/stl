@@ -18,4 +18,4 @@ type Array a = exists (n : Nat).
   }[n]
 
 #eval Array
-#eval Array (<Int : Int, Float : Float>)
+#eval Array <Int : Int | Float : Float>

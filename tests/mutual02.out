@@ -8,7 +8,7 @@ tests/mutual02.stl:7:1-7:17:
     μ Stream. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Yield^ω : μ Delay. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Now^ω : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}, Later^ω/1 : Delay | ρ>))), Skip^ω/1 : Stream, EndOfStream^ω/2 : Unit | ρ>))))
   Kind:
     Type
-tests/mutual02.stl:9:1-9:81:
+tests/mutual02.stl:9:1-9:82:
   Subtype:
     μ Delay. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Now^ω : ∃ (ρ : Row). {head : Int, tail : μ Stream. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Yield^ω : Delay, Skip^ω/1 : Stream, EndOfStream^ω/2 : Unit | ρ>)))) | ρ}, Later^ω/1 : Delay | ρ>)))
   Supertype:

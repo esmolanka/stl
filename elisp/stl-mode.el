@@ -49,14 +49,16 @@
   '("forall"
     "exists"
     "type"
-    "mutual"
-    "return"
+    "with"
+    "provide"
     "module"
     "import"))
 
 (defconst stl-keyword-hints
-  '("#check"
-    "#eval"))
+  '("#check" "#eval"))
+
+(defconst stl-keyword-operators
+  '("∀" "∃"))
 
 (defconst stl-rx-constructor-name
   '(upper (* (in alnum digit ?_))
@@ -66,29 +68,31 @@
   '(upper (* (in alnum digit ?_))))
 
 (defconst stl-rx-lower-name
-  '((in lower ?_) (* (in alnum digit ?_))))
+  '((or (seq (in lower ?_) (* (in alnum digit ?_)))
+       (seq "'" (in lower ?_) (* (in alnum digit ?_)) "'"))))
 
 (defvar stl-font-lock-keywords
   `(
+    ;; Record labels
+    (,(rx (or "," "{") (* space) (eval `(group ,@stl-rx-lower-name)) (* space) (? "?" (* space)) ":") .
+     (1 font-lock-string-face))
+
+    ;; Variant labels
+    (,(rx (any "|" "<") (* space) (eval `(group-n 1 ,@stl-rx-upper-name)) symbol-end)
+     (1 font-lock-string-face))
+
+    ;; Keywords
     (,(rx symbol-start (eval `(or ,@stl-keyword-keywords)) symbol-end) .
      (0 font-lock-keyword-face))
 
     (,(rx (eval `(or ,@stl-keyword-hints)) symbol-end) .
      (0 font-lock-keyword-face))
 
-    ;; Record labels
-    (,(rx (or "," "{") (* space) (eval `(group ,@stl-rx-lower-name)) (* space) (? "?" (* space)) ":") .
-     (1 font-lock-string-face))
-
-    ;; Variant labels
-    (,(rx (or "," "<") (* space) (eval `(group ,@stl-rx-upper-name)) symbol-end) .
-     (1 font-lock-string-face))
+    (,(rx (eval `(or ,@stl-keyword-operators)) (not word-boundary)) .
+     (0 font-lock-keyword-face))
 
     ;; Type declarations
-    (,(rx symbol-start "type" (1+ space) (group upper (* (in alnum digit ?_)))) .
-     (1 font-lock-type-face))
-
-    (,(rx "|" (* space) (group upper (* (in alnum digit ?_))) (* space) "=") .
+    (,(rx symbol-start (or "type" "with") (1+ space) (group upper (* (in alnum digit ?_)))) .
      (1 font-lock-type-face))
 
     ;; Module declarations
@@ -102,7 +106,7 @@
      (3 font-lock-constant-face))
 
     ;; Operators
-    (,(rx (or bol (in space alnum digit ?_)) (group (or "->" "<:" ":" "=" "|" "?" "?:"))) .
+    (,(rx (or bol (in space alnum digit ?_)) (group (or "->" "<:" ":" "=" "|" "?" "?:" "⊆" "→"))) .
      (1 font-lock-variable-name-face))))
 
 ;;;###autoload

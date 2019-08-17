@@ -1,9 +1,9 @@
-mutual (a : Type)
-  | Delay  = < Now : { head : a, tail : Stream }, Later : Delay >
-  | Stream = < Yield : Delay, Skip : Stream, EndOfStream >
+
+type Delay (a : Type) = < Now : { head : a, tail : Stream } | Later : Delay >
+  with Stream = < Yield : Delay | Skip : Stream | EndOfStream >
 
 #eval Delay Int
 
 #eval Stream Int
 
-#check Delay Int <: < Later : Delay Int, Now : {head : Int, tail : Stream Int} >
+#check Delay Int <: < Later : Delay Int | Now : {head : Int, tail : Stream Int} >

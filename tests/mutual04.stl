@@ -1,9 +1,9 @@
+type Either a b =
+  | Left : a
+  | Right : b
 
-type Either a b = < Left : a, Right : b >
-
-mutual (a : Type)
-  | Even = < EZero : a, ESucc : Odd >
-  | Odd  = < OZero : a, OSucc : Even >
-  | Foo  = forall (a : Nat). Nat a -> Either Even Odd
+type Even (a : Type) = < EZero : a | ESucc : Odd >
+  with Odd  = < OZero : a | OSucc : Even >
+  with Foo  = forall (a : Nat). Nat a -> Either Even Odd
 
 #eval Foo

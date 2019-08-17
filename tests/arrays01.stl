@@ -18,7 +18,7 @@ type Table (n : Nat) k v =
   , value : v[n]
   }
 
-type Maybe a = < Nothing, Just : a >
+type Maybe a = < Nothing | Just : a >
 
 type Lookup = forall (n : Nat) k v. k -> Table n k v -> Maybe v
 

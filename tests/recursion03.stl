@@ -1,6 +1,6 @@
 
-type Foo = < Nil, Foo : Foo >
-type Bar = < Nil, Foo : Foo, Bar : Bar >
+type Foo = < Nil | Foo : Foo >
+type Bar = < Nil | Foo : Foo | Bar : Bar >
 
 #check Bar <: Foo
 #check Foo <: Bar

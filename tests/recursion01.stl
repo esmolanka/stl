@@ -1,13 +1,13 @@
 
-type Peano = < Zero, Succ : Peano >
+type Peano = < Zero | Succ : Peano >
 #eval Peano
 
-type ConsList a = <Nil : Unit, Cons : {head : a, tail : ConsList}>
+type ConsList a = <Nil : Unit | Cons : {head : a, tail : ConsList}>
 #eval ConsList
 #eval ConsList Unit
 #eval ConsList Peano
 
-type ConsList2 a = <Nil : Unit, Cons : {head : a, tail : ConsList a}>
+type ConsList2 a = <Nil : Unit | Cons : {head : a, tail : ConsList a}>
 #eval ConsList2
 #eval ConsList2 Unit
 #eval ConsList2 Peano

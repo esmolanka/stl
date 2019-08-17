@@ -1,8 +1,8 @@
 
+
 type Maybe (a : Type) =
-  < Nothing
-  , Just : a
-  >
+  | Nothing
+  | Just : a
 
 
 type ParametrisedByFunctor (f : Type -> Type) =

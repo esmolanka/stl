@@ -1,25 +1,25 @@
 type Maybe a =
-  < Nothing
-  , Just : a
-  >
+  | Nothing
+  | Just : a
+
 #eval Maybe
 #eval Maybe Unit
 
 
 type Either a b =
-  < Left  : a
-  , Right : b
-  >
+  | Left  : a
+  | Right : b
+
 #eval Either
 #eval Either Unit
 #eval Either Unit (Maybe Unit)
 
 
 type These a b =
-  < This  : a
-  , That  : b
-  , These : {this : a, that : b}
-  >
+  | This  : a
+  | That  : b
+  | These : {this : a, that : b}
+
 #eval These
 #eval These Unit
 #eval These Unit (Maybe Unit)
