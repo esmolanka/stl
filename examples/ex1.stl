@@ -4,9 +4,8 @@ module Foo
 import Bar
 
 type Maybe a =
-  < Nothing
-  , Just : a
-  >
+  | Nothing
+  | Just : a
 
 type Pair a b =
   { fst : a
@@ -18,9 +17,12 @@ type Fun1 =
     Pair a b -> Pair b a
 
 -- Mutually recursive block with parameter
-mutual (a : Type)
-  | Odd  = <OZero : a, OSucc : Even>
-  | Even = <EZero : a, ESucc : Odd>
+type Odd (a : Type) =
+  | OZero : a
+  | OSucc : Even
+  with Even =
+    | EZero : a
+    | ESucc : Odd
 
 #eval
   Unit
@@ -28,6 +30,6 @@ mutual (a : Type)
 #check
   forall a. Maybe a <: Maybe Unit
 
-return
+provide
   Maybe (Pair Unit Void)
 

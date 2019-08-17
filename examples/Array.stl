@@ -35,7 +35,7 @@ type CommutativeMonoid a =
   <:
   forall a. Monoid a -> List a -> a
 
-return
+provide
   { iota        : forall (n : Nat). Nat n -> Int[n]
   , size        : forall a (n : Nat). a[n] -> Nat n
   , index       : forall a (n : Nat). Fin n -> a[n] -> a
