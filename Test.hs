@@ -27,7 +27,7 @@ import Main (runModule)
 
 main :: IO ()
 main = do
-  files <- sort <$> findByExtension [".stl"] "tests"
+  files <- sort . filter (not . any (== '#')) <$> findByExtension [".stl"] "tests"
   let testCases = map mkTestCase files
   defaultMain $ testGroup "Golden" testCases
 

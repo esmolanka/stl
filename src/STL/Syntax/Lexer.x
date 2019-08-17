@@ -22,7 +22,8 @@ import Data.Char (isSpace)
 import Data.Int
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import Data.Text.Lazy.Encoding (decodeUtf8)
+import Data.Text.Lazy.Encoding (decodeUtf8With)
+import Data.Text.Encoding.Error (lenientDecode)
 import Data.Text.Read
 import Data.Word
 
@@ -53,6 +54,7 @@ $upper      = [A-Z]
 $identrest  = [$alpha $digit _]
 @constr     = [$upper] [$identrest]*
 @variable   = [$lower _] [$identrest]*
+@quotedstr  = \' @variable \'
 
 :-
 
@@ -70,7 +72,7 @@ $whitespace+       ;
 "∃"                { just (TokKeyword "exists") }
 @constr            { TokConstructor `via` decode }
 @variable          { TokVariable `via` decode }
-\' @variable \'    { TokVariable `via` (decode . dropHeadLast) }
+@quotedstr         { TokVariable `via` (decode . dropHeadLast) }
 
 {
 ----------------------------------------------------------------------
@@ -86,7 +88,7 @@ via ftok f = ftok . f
 -- Decoders
 
 decode :: ByteString -> T.Text
-decode = TL.toStrict . decodeUtf8
+decode = TL.toStrict . decodeUtf8With lenientDecode
 
 dropHeadLast :: ByteString -> ByteString
 dropHeadLast bs = BL.drop 1 (BL.take (BL.length bs - 1) bs)
@@ -116,7 +118,7 @@ alexScanTokens input =
     AlexSkip input _ ->
       alexScanTokens input
     AlexToken input' tokLen action ->
-      let inputText = BL.take (fromIntegral tokLen) (aiInput input)
+      let inputText = UTF8.take (fromIntegral tokLen) (aiInput input)
       in L (aiLineCol input, tokLen) (action inputText) : alexScanTokens input'
   where
     defaultCode :: Int
