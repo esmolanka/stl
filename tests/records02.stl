@@ -1,0 +1,10 @@
+
+type Record =
+  { afield     : Unit
+  , 'type'     : Unit
+  , 'module'   : Unit
+  , 'with'     : Unit
+  , 'provides' : Unit
+  }
+
+#eval Record

@@ -1,0 +1,12 @@
+
+module Module01
+
+type Either a b =
+  | Left : a
+  | Right : b
+
+type Maybe a =
+  | Nothing
+  | Just : a
+
+provide forall a b. Either a b -> Maybe b

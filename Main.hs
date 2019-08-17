@@ -73,7 +73,7 @@ runModule handlers fn = do
     Right modul ->
       let program = dsModule handlers modul
           checking = checkProgram program $ \case
-            Just ty -> eval (getPosition ty) ty
+            Just ty -> hNormalise handlers (getPosition ty) ty
             Nothing -> pure ()
       in runTCT checking
 
