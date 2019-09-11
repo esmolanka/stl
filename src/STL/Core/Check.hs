@@ -48,23 +48,6 @@ instance CPretty KindExpectation where
           pure (a' <+> aKind "->" <+> b')
         ExpectExactly k -> pure (ppKind nested k)
 
-data Polarity
-  = Not Polarity
-  | Positive
-    deriving (Eq, Ord)
-
-data Flavour
-  = Universal
-  | Existential
-  | Parameter
-  | Recursion
-
-data VarInfo = VarInfo
-  { varKind     :: Kind
-  , varFlavour  :: Flavour
-  , varPolarity :: Maybe Polarity
-  }
-
 ----------------------------------------------------------------------
 -- Errors
 

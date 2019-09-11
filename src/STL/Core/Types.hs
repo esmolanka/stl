@@ -87,6 +87,23 @@ instance CPretty GlobalName where
         Nothing -> "$"
         Just (n, _) -> if isUpper n then pretty name else "$" <> pretty name
 
+data Polarity
+  = Not Polarity
+  | Positive
+    deriving (Eq, Ord)
+
+data Flavour
+  = Universal
+  | Existential
+  | Parameter
+  | Recursion
+
+data VarInfo = VarInfo
+  { varKind     :: Kind
+  , varFlavour  :: Flavour
+  , varPolarity :: Maybe Polarity
+  }
+
 data BaseType
   = TUnit
   | TVoid
@@ -152,53 +169,105 @@ ppType = ppType' 0
 
     ppTypeCon :: Int -> TypeF Type -> Doc AnsiStyle
     ppTypeCon lvl = \case
-      TRef _ x n -> ppVar x n
-      TGlobal _ name -> cpretty name
+      TRef _ x n      -> ppVar x n
+      TGlobal _ name  -> cpretty name
+      TBase _ base    -> cpretty base
+      TArrow _        -> aConstructor "(->)"
+      TRecord _       -> aConstructor "Record"
+      TVariant _      -> aConstructor "Variant"
+      TArray _        -> aConstructor "Array"
+      TPresent _      -> aConstructor "▪"
+      TAbsent _       -> aConstructor "▫"
+      TExtend _ lbl   -> aConstructor "Extend" <+> cpretty lbl
+      TNil _          -> aConstructor "Nil"
+      TApp _ f a      -> parensIf (lvl > 1) $ ppType' 1 f <+> ppType' 2 a
+      bnd@(TLambda{}) -> parensIf (lvl > 0) $ ppBinders (collectBinders (Fix bnd))
+      bnd@(TForall{}) -> parensIf (lvl > 0) $ ppBinders (collectBinders (Fix bnd))
+      bnd@(TExists{}) -> parensIf (lvl > 0) $ ppBinders (collectBinders (Fix bnd))
+      bnd@(TMu{})     -> parensIf (lvl > 0) $ ppBinders (collectBinders (Fix bnd))
       TSkolem _ (Skolem name) hint _ -> "!" <> cpretty hint <> brackets (pretty name)
-      TMeta _ (MetaVar name) hint _ -> "?" <> cpretty hint <> brackets (pretty name)
-      TBase _ base -> cpretty base
-      TArrow _ -> aConstructor "(->)"
-      TRecord _ -> aConstructor "Record"
-      TVariant _ -> aConstructor "Variant"
-      TArray _ -> aConstructor "Array"
-      TPresent _ -> aConstructor "▪︎"
-      TAbsent _ -> aConstructor "▫︎"
-      TExtend _ lbl -> aConstructor "Extend" <+> cpretty lbl
-      TNil _ -> aConstructor "Nil"
-      TApp _ f a -> parensIf (lvl > 1) $ ppType' 1 f <+> ppType' 2 a
-      TLambda _ x k b ->
-        let var = if k == Star then cpretty x else parens (cpretty x <+> colon <+> cpretty k)
-        in parensIf (lvl > 0) $ aKeyword "λ" <+> var <> "." <+> ppType' 1 b
-      TForall _ x k b ->
-        let var = if k == Star then cpretty x else parens (cpretty x <+> colon <+> cpretty k)
-        in parensIf (lvl > 0) $ aKeyword "∀" <+> var <> "." <+> ppType' 1 b
-      TExists _ x k b ->
-        let var = if k == Star then cpretty x else parens (cpretty x <+> colon <+> cpretty k)
-        in parensIf (lvl > 0) $ aKeyword "∃" <+> var <> "." <+> ppType' 1 b
-      TMu _ x b -> parensIf (lvl > 0) $ aKeyword "μ" <+> cpretty x <> "." <+> ppType' 1 b
+      TMeta _ (MetaVar name) hint _  -> "?" <> cpretty hint <> brackets (pretty name)
 
-    ppType' :: Int -> Type -> Doc AnsiStyle
-    ppType' lvl = tele >>> \case
-      (Fix (TArrow _), [a, b]) -> parensIf (lvl > 0) $ ppType' 1 a <+> aConstructor "->" <+> ppType' 0 b
-      (Fix (TRecord _), [Fix (TNil _)]) -> braces mempty
-      (Fix (TVariant _), [Fix (TNil _)]) -> angles mempty
-      (Fix (TRecord _), [row]) -> group $ braces $ ppType' 0 row
-      (Fix (TVariant _), [row]) -> group $ angles $ ppType' 0 row
-      (Fix (TArray _), [el, sz]) -> ppType' 2 el <> brackets (ppType' 1 sz)
-      (Fix (TExtend _ (Label lbl)), [presence, ty, row]) ->
-        let fieldName =
+    ppBinders :: ([(Flavour, Var, Kind)], Type) -> Doc AnsiStyle
+    ppBinders (vars, body) =
+      nest 2 (fillSep (map ppBinder vars)) <>
+        group (nest 2 (line <> ppType' 0 body))
+
+    ppBinder :: (Flavour, Var, Kind) -> Doc AnsiStyle
+    ppBinder (fl, x, k) =
+      let var =
+            if k == Star
+            then cpretty x
+            else parens (cpretty x <+> colon <+> cpretty k)
+          flavour =
+            case fl of
+              Universal   -> aKeyword "∀"
+              Existential -> aKeyword "∃"
+              Parameter   -> aKeyword "λ"
+              Recursion   -> aKeyword "μ"
+      in flavour <+> var <> "."
+
+    collectBinders :: Type -> ([(Flavour, Var, Kind)], Type)
+    collectBinders = \case
+      Fix (TForall _ x k b) ->
+        let (bnds, body) = collectBinders b
+        in ((Universal, x, k) : bnds, body)
+      Fix (TExists _ x k b) ->
+        let (bnds, body) = collectBinders b
+        in ((Existential, x, k) : bnds, body)
+      Fix (TLambda _ x k b) ->
+        let (bnds, body) = collectBinders b
+        in ((Parameter, x, k) : bnds, body)
+      Fix (TMu _ x b) ->
+        let (bnds, body) = collectBinders b
+        in ((Recursion, x, Star) : bnds, body)
+      other -> ([], other)
+
+    ppRow :: Doc AnsiStyle -> Doc AnsiStyle -> Doc AnsiStyle -> Doc AnsiStyle -> ([(Label, Type, Type)], Type) -> Doc AnsiStyle
+    ppRow lb rb cm ext (fields, tip) =
+      group $ align $ enclose (lb <> flatAlt space mempty) (flatAlt line mempty <> rb) $ vcat $
+        zipWith (<>) (mempty : repeat (cm <> space)) (map ppField fields) ++ ppTip ext tip
+
+    ppTip :: Doc AnsiStyle -> Type -> [Doc AnsiStyle]
+    ppTip ext = \case
+      Fix (TNil _) -> []
+      other        -> [flatAlt mempty space <> ext <+> ppType' 0 other]
+
+    ppField :: (Label, Type, Type) -> Doc AnsiStyle
+    ppField (Label lbl, presence, ty) =
+      let fieldName =
               case presence of
                 Fix (TPresent _) -> aLabel (pretty lbl)
                 Fix (TAbsent _)  -> "¬" <> aLabel (pretty lbl)
                 _other           -> aLabel (pretty lbl) <> "^" <> ppType' 2 presence
-            rest =
-              case tele row of
-                (Fix (TNil _), _) -> mempty
-                (Fix (TExtend _ _), _) -> "," <+> ppType' 0 row
-                _other -> " |" <+> ppType' 0 row
-        in fieldName <+> ":" <+> ppType' 0 ty <> rest
-      (Fix otherTyCon, [])     -> ppTypeCon lvl otherTyCon
-      (Fix otherTyCon, rest)   -> parensIf (lvl > 0) $ ppTele otherTyCon rest
+      in align $ nest 2 $ group (fieldName <+> ":" <> line <> ppType' 0 ty)
+
+    collectRows :: Type -> ([(Label, Type, Type)], Type)
+    collectRows this = case tele this of
+      (Fix (TExtend _ lbl), [presence, ty, row]) ->
+        let (rest, tip) = collectRows row
+        in  ((lbl, presence, ty) : rest, tip)
+      _ -> ([], this)
+
+    ppType' :: Int -> Type -> Doc AnsiStyle
+    ppType' lvl = tele >>> \case
+      (Fix (TArrow _), [a, b]) ->
+        parensIf (lvl > 0) $ group $ ppType' 1 a <> line <> aConstructor "->" <+> ppType' 0 b
+
+      (Fix (TRecord _), [row]) ->
+        ppRow lbrace rbrace comma pipe (collectRows row)
+
+      (Fix (TVariant _), [row]) ->
+        ppRow langle rangle pipe (pipe <+> "...") (collectRows row)
+
+      (Fix (TArray _), [el, sz]) ->
+        ppType' 2 el <> brackets (ppType' 1 sz)
+
+      (Fix otherTyCon, []) ->
+        ppTypeCon lvl otherTyCon
+
+      (Fix otherTyCon, rest) ->
+        parensIf (lvl > 0) $ group $ nest 2 $ ppTele otherTyCon rest
 
 
 instance {-# OVERLAPPING #-} Show (Fix TypeF) where
