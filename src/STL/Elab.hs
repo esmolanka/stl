@@ -101,26 +101,26 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         a' <- a
         b' <- b
         cs' <- sequence cs
-        pure $ foldl (\acc x -> Core.untele (Fix (Core.TArrow pos)) [acc, x]) a' (b' : cs')
+        pure $ foldl (\acc x -> Core.unspine (Fix (Core.TArrow pos)) [acc, x]) a' (b' : cs')
       TApp _ f a as -> do
         f' <- f
         a' <- a
         as' <- sequence as
-        pure $ Core.untele f' (a' : as')
+        pure $ Core.unspine f' (a' : as')
       TRecord pos row -> do
         (row', (pvars, rvars)) <- dsRow <$> sequence row
         let withP k = foldr (\x -> Fix . Core.TExists pos x Core.Presence) k pvars
             withR k = foldr (\x -> Fix . Core.TExists pos x Core.Row) k rvars
-        pure $ withR $ withP $ Core.untele (Fix (Core.TRecord pos)) [row']
+        pure $ withR $ withP $ Core.unspine (Fix (Core.TRecord pos)) [row']
       TVariant pos row -> do
         (row', (pvars, rvars)) <- dsRow <$> sequence row
         let withP k = foldr (\x -> Fix . Core.TExists pos x Core.Presence) k pvars
             withR k = foldr (\x -> Fix . Core.TForall pos x Core.Row) k rvars
-        pure $ withR $ withP $ Core.untele (Fix (Core.TVariant pos)) [row']
+        pure $ withR $ withP $ Core.unspine (Fix (Core.TVariant pos)) [row']
       TArray pos a n -> do
         a' <- a
         n' <- n
-        pure $ Core.untele (Fix (Core.TArray pos)) [a', n']
+        pure $ Core.unspine (Fix (Core.TArray pos)) [a', n']
 
 dsRow :: Row Core.Type -> (Core.Type, ([Core.Var], [Core.Var]))
 dsRow t =
@@ -156,7 +156,7 @@ dsRow t =
                   PPresent pos' -> pure (Fix (Core.TPresent pos'))
                   PVariable pos' -> freshPresence pos'
         cont' <- go cont
-        pure $ Core.untele (Fix (Core.TExtend pos (dsLabel lbl)))
+        pure $ Core.unspine (Fix (Core.TExtend pos (dsLabel lbl)))
           [ prs', ty, cont']
 
 

@@ -143,8 +143,8 @@ subsumedBy sub sup = do
       -- unification and then check if it is the case.
       recordAssumption sub sup >> checkAssumption
   where
-    (Fix tyConSub, argsSub) = tele sub
-    (Fix tyConSup, argsSup) = tele sup
+    (Fix tyConSub, argsSub) = spine sub
+    (Fix tyConSup, argsSup) = spine sup
 
     checkAssumption :: m ()
     checkAssumption =
@@ -182,19 +182,19 @@ subsumedBy sub sup = do
             throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
           pushAlphaEq x x' $
             subsumedBy b b'
-          argsSub `subsumedByTele` argsSup
+          argsSub `subsumedBySpine` argsSup
 
         (TRef _ x n, _, TRef _ x' n', _) -> do
           mathces <- checkAlphaEq (x, n) (x', n')
           unless mathces $
             throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
-          argsSub `subsumedByTele` argsSup
+          argsSub `subsumedBySpine` argsSup
 
         (TGlobal _ n, _, TGlobal _ n', _) | n == n' ->
           -- Type definitions' parameters are checked by the kind
           -- checker to be strictly positive, therefore can be treated
           -- as covariant.
-          argsSub `subsumedByTele` argsSup
+          argsSub `subsumedBySpine` argsSup
 
         (TArrow _, [a, b], TArrow _, [a', b']) ->
           a' `subsumedBy` a >>  -- Argument is contravariant
@@ -204,28 +204,28 @@ subsumedBy sub sup = do
           pure ()
 
         (TNil pos, [], TExtend _ lbl', [_, f', _]) ->
-          untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
+          unspine (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
           `subsumedBy`
           sup
 
         (TExtend _ lbl, [_, f, _], TNil pos', []) ->
           sub
           `subsumedBy`
-          untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
+          unspine (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
 
         (TSkolem pos _ _ _, [], TExtend _ lbl', [_, f', _]) ->
-          untele (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
+          unspine (Fix (TExtend pos lbl')) [Fix (TAbsent pos), f', Fix (TNil pos)]
           `subsumedBy`
           sup
 
         (TExtend _ lbl, [_, f, _], TSkolem pos' _ _ _, []) ->
           sub
           `subsumedBy`
-          untele (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
+          unspine (Fix (TExtend pos' lbl)) [Fix (TAbsent pos'), f, Fix (TNil pos')]
 
         (TExtend _ lbl, [pty, fty, tail_], TExtend pos' lbl', [pty', fty', tail']) -> do
           (pty'', fty'', tail'') <- rewriteRow TypeToMeta lbl pos' lbl' pty' fty' tail'
-          [pty, fty, tail_] `subsumedByTele` [pty'', fty'', tail'']
+          [pty, fty, tail_] `subsumedBySpine` [pty'', fty'', tail'']
 
         (TSkolem _ n _ _, [], TSkolem _ n' _ _, [])
           | n == n' -> pure ()
@@ -237,7 +237,7 @@ subsumedBy sub sup = do
           throwError $ NotPolymorphicEnough sub var'
 
         _ | tyConSub `eqTypeCon` tyConSup ->
-              subsumedByTele argsSub argsSup
+              subsumedBySpine argsSub argsSup
           | otherwise ->
               throwError $ IsNotSubtypeOf sub sup
 
@@ -264,27 +264,27 @@ rewriteRow :: (MonadUnify m) => Direction -> Label -> Position -> Label -> Type 
 rewriteRow dir newLabel pos label pty fty tail_
   | newLabel == label = return (pty, fty, tail_)
   | otherwise =
-      case tele tail_ of
+      case spine tail_ of
         (Fix (TMeta pos' alpha _ _), []) -> do
           beta <- newMeta pos "β" Row
           gamma <- newMeta pos "γ" Star
           theta <- newMeta pos "θ" Presence
-          subsumedByMeta dir pos "α" alpha (untele (Fix (TExtend pos' newLabel)) [theta, gamma, beta])
-          return (theta, gamma, untele (Fix (TExtend pos label)) [pty, fty, beta])
+          subsumedByMeta dir pos "α" alpha (unspine (Fix (TExtend pos' newLabel)) [theta, gamma, beta])
+          return (theta, gamma, unspine (Fix (TExtend pos label)) [pty, fty, beta])
         (Fix (TExtend pos' label'), [pty', fty', tail']) -> do
           (pty'', fty'', tail'') <- rewriteRow dir newLabel pos' label' pty' fty' tail'
-          return (pty'', fty'', untele (Fix (TExtend pos label)) [pty, fty, tail''])
+          return (pty'', fty'', unspine (Fix (TExtend pos label)) [pty, fty, tail''])
         (Fix (TNil pos'), []) -> do
           gamma <- newMeta pos' "γ" Star
-          return (Fix (TAbsent pos'), gamma, untele (Fix (TExtend pos label)) [pty, fty, Fix (TNil pos')])
+          return (Fix (TAbsent pos'), gamma, unspine (Fix (TExtend pos label)) [pty, fty, Fix (TNil pos')])
         (Fix (TSkolem pos' _ _ _), []) -> do
           gamma <- newMeta pos' "γ" Star
-          return (Fix (TAbsent pos'), gamma, untele (Fix (TExtend pos label)) [pty, fty, Fix (TNil pos')])
+          return (Fix (TAbsent pos'), gamma, unspine (Fix (TExtend pos label)) [pty, fty, Fix (TNil pos')])
         _other ->
           error $ "Unexpected type: " ++ show tail_
 
-subsumedByTele :: forall m. (MonadUnify m) => [Type] -> [Type] -> m ()
-subsumedByTele subs sups = do
+subsumedBySpine :: forall m. (MonadUnify m) => [Type] -> [Type] -> m ()
+subsumedBySpine subs sups = do
   let countSubs = length subs
       countSups = length sups
   unless (countSubs == countSups) $

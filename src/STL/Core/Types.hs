@@ -164,8 +164,8 @@ ppType = ppType' 0
     parensIf True = parens
     parensIf False = id
 
-    ppTele :: TypeF Type -> [Type] -> Doc AnsiStyle
-    ppTele f args = hsep (ppTypeCon 1 f : map (ppType' 1) args)
+    ppSpine :: TypeF Type -> [Type] -> Doc AnsiStyle
+    ppSpine f args = hsep (ppTypeCon 1 f : map (ppType' 1) args)
 
     ppTypeCon :: Int -> TypeF Type -> Doc AnsiStyle
     ppTypeCon lvl = \case
@@ -243,14 +243,14 @@ ppType = ppType' 0
       in align $ nest 2 $ group (fieldName <+> ":" <> line <> ppType' 0 ty)
 
     collectRows :: Type -> ([(Label, Type, Type)], Type)
-    collectRows this = case tele this of
+    collectRows this = case spine this of
       (Fix (TExtend _ lbl), [presence, ty, row]) ->
         let (rest, tip) = collectRows row
         in  ((lbl, presence, ty) : rest, tip)
       _ -> ([], this)
 
     ppType' :: Int -> Type -> Doc AnsiStyle
-    ppType' lvl = tele >>> \case
+    ppType' lvl = spine >>> \case
       (Fix (TArrow _), [a, b]) ->
         parensIf (lvl > 0) $ group $ ppType' 1 a <> line <> aConstructor "->" <+> ppType' 0 b
 
@@ -267,7 +267,7 @@ ppType = ppType' 0
         ppTypeCon lvl otherTyCon
 
       (Fix otherTyCon, rest) ->
-        parensIf (lvl > 0) $ group $ nest 2 $ ppTele otherTyCon rest
+        parensIf (lvl > 0) $ group $ nest 2 $ ppSpine otherTyCon rest
 
 
 instance {-# OVERLAPPING #-} Show (Fix TypeF) where
@@ -284,8 +284,8 @@ instance {-# OVERLAPPING #-} Eq (Fix TypeF) where
 getPosition :: Type -> Position
 getPosition (Fix t) = _getPosition t
 
-tele :: Type -> (Type, [Type])
-tele expr = runReader (para alg expr) []
+spine :: Type -> (Type, [Type])
+spine expr = runReader (para alg expr) []
   where
     alg :: TypeF (Type, Reader [Type] (Type, [Type])) -> Reader [Type] (Type, [Type])
     alg = \case
@@ -295,8 +295,8 @@ tele expr = runReader (para alg expr) []
         collected <- ask
         return (Fix (fmap fst other), collected)
 
-untele :: Type -> [Type] -> Type
-untele f args =
+unspine :: Type -> [Type] -> Type
+unspine f args =
   foldl' ((Fix .) . TApp (getPosition f)) f args
 
 ----------------------------------------------------------------------
