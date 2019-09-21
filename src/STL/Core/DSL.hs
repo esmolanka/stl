@@ -62,8 +62,8 @@ pattern (:$) f a <- Fix (TApp _ f a)
 infixl 1 :$
 
 pattern Lambda :: Var -> Kind -> Type -> Type
-pattern Lambda x k b <- Fix (TLambda _ x k b)
-  where Lambda x k b = Fix (TLambda dummyPos x k b)
+pattern Lambda x k b <- Fix (TLambda _ x k _ b)
+  where Lambda x k b = Fix (TLambda dummyPos x k Covariant b)
 
 pattern Forall :: Var -> Kind -> Type -> Type
 pattern Forall x k b <- Fix (TForall _ x k b)
@@ -77,7 +77,7 @@ pattern Mu :: Var -> Type -> Type
 pattern Mu x b <- Fix (TMu _ x b)
   where Mu x b = Fix (TMu dummyPos x b)
 
-pattern Let :: Text -> [(Var, Kind)] -> Type -> Program a -> Program a
+pattern Let :: Text -> [(Var, Kind, Variance)] -> Type -> Program a -> Program a
 pattern Let name params ty cont <- Fix (Compose (Now (PLet _ (Definition _ (GlobalName name) params ty) cont)))
   where Let name params ty cont = Fix (Compose (Now (PLet dummyPos (Definition dummyPos (GlobalName name) params ty) cont)))
 

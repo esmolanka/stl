@@ -30,6 +30,12 @@ import STL.Pretty
 ----------------------------------------------------------------------
 -- Desugaring / representation conversion
 
+dsVariance :: Variance -> Core.Variance
+dsVariance = \case
+  Covariant -> Core.Covariant
+  Contravariant -> Core.Contravariant
+  Invariant -> Core.Invariant
+
 dsVar :: Var -> Core.Var
 dsVar = coerce
 
@@ -44,10 +50,10 @@ dsKind pos = \case
   Star -> Core.Star
   Nat -> Core.Nat
   Row -> Core.Row
-  Arr a b -> Core.Arr (dsKind pos a) (dsKind pos b)
+  Arr a v b -> Core.Arr (dsKind pos a) (dsVariance v) (dsKind pos b)
 
-dsBindings :: [Binding] -> [(Core.Var, Core.Kind)]
-dsBindings = map (\(Binding p x k) -> (dsVar x, maybe Core.Star (dsKind p) k))
+dsBindings :: [Binding Variance] -> [(Core.Var, Core.Kind, Core.Variance)]
+dsBindings = map (\(Binding p x k v) -> (dsVar x, maybe Core.Star (dsKind p) k, dsVariance v))
 
 ----------------------------------------------------------------------
 -- Elaboration monad
@@ -93,10 +99,10 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         error $ show $ pretty pos <> colon <+> "Qualified names are not yet supported"
       TForall _ bnds body -> do
         body' <- body
-        pure $ foldr (\(Binding pos var k) -> Fix . Core.TForall (pos <> Core.getPosition body') (dsVar var) (maybe Core.Star (dsKind pos) k)) body' bnds
+        pure $ foldr (\(Binding pos var k _) -> Fix . Core.TForall (pos <> Core.getPosition body') (dsVar var) (maybe Core.Star (dsKind pos) k)) body' bnds
       TExists _ bnds body -> do
         body' <- body
-        pure $ foldr (\(Binding pos var k) -> Fix . Core.TExists pos (dsVar var) (maybe Core.Star (dsKind pos) k)) body' bnds
+        pure $ foldr (\(Binding pos var k _) -> Fix . Core.TExists pos (dsVar var) (maybe Core.Star (dsKind pos) k)) body' bnds
       TArrow pos a b cs -> do
         a' <- a
         b' <- b

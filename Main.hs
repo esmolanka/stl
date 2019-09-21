@@ -37,7 +37,7 @@ check pos sub sup = do
   void $ expectExactly k $ inferKind sup
   sub' <- normalise lookupGlobal sub
   sup' <- normalise lookupGlobal sup
-  let (res, state) = runSubsumption (sub' `subsumedBy` sup')
+  let (res, state) = runSubsumption mempty (sub' `subsumedBy` sup')
   output $ nest 2 $ vsep
     [ pretty pos <> colon <+> either (const "error: subsumption:") (const "subsumption:") res
     , cpretty sub'

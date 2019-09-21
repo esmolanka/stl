@@ -11,6 +11,12 @@ import Data.Functor.Foldable (Fix(..))
 import Data.Text
 import STL.Syntax.Position
 
+data Variance
+  = Covariant
+  | Contravariant
+  | Invariant
+  deriving (Show, Eq, Ord)
+
 newtype Var = Var Text
   deriving (Show, Eq, Ord)
 
@@ -27,7 +33,7 @@ data Kind
   = Star
   | Nat
   | Row
-  | Arr Kind Kind
+  | Arr Kind Variance Kind
   deriving (Show, Eq, Ord)
 
 data BaseType
@@ -42,18 +48,19 @@ data BaseType
   | TNat        -- Nat -> Star
   deriving (Show, Eq, Ord)
 
-data Binding = Binding
+data Binding v = Binding
   { _bndPos  :: Position
   , _bndVar  :: Var
   , _bdnKind :: Maybe Kind
+  , _bdnVariance :: v
   } deriving (Show, Eq, Ord)
 
 data TypeF e
   = T         { _typePos :: Position, _baseType :: BaseType }
   | TRef      { _typePos :: Position, _refName :: Var }
   | TGlobal   { _typePos :: Position, _globalQualifiers :: Maybe ModuleName, _globalName :: GlobalName }
-  | TForall   { _typePos :: Position, _forallBindings :: [Binding], _forallBody :: e }
-  | TExists   { _typePos :: Position, _existsBindings :: [Binding], _existsBody :: e }
+  | TForall   { _typePos :: Position, _forallBindings :: [Binding ()], _forallBody :: e }
+  | TExists   { _typePos :: Position, _existsBindings :: [Binding ()], _existsBody :: e }
   | TArrow    { _typePos :: Position, _arrA :: e, _arrB :: e, _arrRest :: [e] }
   | TApp      { _typePos :: Position, _appF :: e, _appA :: e, _appRest :: [e] }
   | TRecord   { _typePos :: Position, _recordRow :: Row e  }
@@ -87,8 +94,8 @@ data MutualClause = MutualClause
   } deriving (Show)
 
 data Statement
-  = Typedef   { _stmtPos :: Position, _defnName :: GlobalName, _defnParams :: [Binding], _defnBody :: Type }
-  | Mutualdef { _stmtPos :: Position, _mutParams :: [Binding], _mutClauses :: [MutualClause] }
+  = Typedef   { _stmtPos :: Position, _defnName :: GlobalName, _defnParams :: [Binding Variance], _defnBody :: Type }
+  | Mutualdef { _stmtPos :: Position, _mutParams :: [Binding Variance], _mutClauses :: [MutualClause] }
   | Normalise { _stmtPos :: Position, _normaliseBody :: Type }
   | Subsume   { _stmpPos :: Position, _subType :: Type, _superType :: Type }
   deriving (Show)

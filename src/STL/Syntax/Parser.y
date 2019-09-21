@@ -43,6 +43,8 @@ import STL.Syntax.Types
   '>'            { L _ (TokParen '>'   ) }
 
   '='            { L _ (TokPunctuation "="   ) }
+  '~'            { L _ (TokPunctuation "~"   ) }
+  '+~'           { L _ (TokPunctuation "+~"   ) }
   ':'            { L _ (TokPunctuation ":"   ) }
   '->'           { L _ (TokPunctuation "->"  ) }
   '|'            { L _ (TokPunctuation "|"   ) }
@@ -149,17 +151,36 @@ Type_ :: { Type }
 Type :: { Type }
   : AppType                              { $1 }
   | AppType '->' sepBy1(Type,'->')       { mkArrow ($1 : $3) }
-  | "forall" list1(Bindings) '.' Type    { Fix $ TForall (position $1 <> typePos $4) (concat $2) $4 }
-  | "exists" list1(Bindings) '.' Type    { Fix $ TExists (position $1 <> typePos $4) (concat $2) $4 }
+  | "forall" list1(CovarBindings)
+       '.' Type                          { Fix $ TForall (position $1 <> typePos $4) (concat $2) $4 }
+  | "exists" list1(CovarBindings)
+       '.' Type                          { Fix $ TExists (position $1 <> typePos $4) (concat $2) $4 }
   | VariantRowAlt                        { Fix $ TVariant (_rowPos $1) $1 }
 
+Variance :: { Variance }
+  : {- empty -}                          { Covariant }
+  | '~'                                  { Contravariant }
+  | '+~'                                 { Invariant }
 
-Bindings :: { [Binding] }
-  : VARIABLE                             { [Binding (position $1) (Var $ getVariable $ extract $1) Nothing] }
+VarianceSpecific :: { Variance }
+  : '~'                                  { Contravariant }
+  | '+~'                                 { Invariant }
+
+Bindings :: { [Binding Variance] }
+  : Variance VARIABLE                    { [Binding (position $2) (Var $ getVariable $ extract $2) Nothing $1] }
+  | '(' list1(both(Variance, VARIABLE))
+    ':' Kind ')'                         { map (\(variance, idn) -> Binding (position idn)
+                                                    (Var $ getVariable $ extract idn)
+                                                    (Just $4)
+                                                    variance) $2}
+
+CovarBindings :: { [Binding ()] }
+  : VARIABLE                             { [Binding (position $1) (Var $ getVariable $ extract $1) Nothing ()] }
   | '(' list1(VARIABLE)
     ':' Kind ')'                         { map (\idn -> Binding (position idn)
                                                     (Var $ getVariable $ extract idn)
-                                                    (Just $4)) $2}
+                                                    (Just $4)
+                                                    ()) $2}
 
 AppType :: { Type }
   : list1(AtomType)   { mkApplication $1 }
@@ -217,7 +238,9 @@ VarRowExt :: { Row Type -> Row Type }
 
 Kind :: { Kind }
   : AtomKind             { $1 }
-  | AtomKind '->' Kind   { Arr $1 $3 }
+  | AtomKind '->' Kind   { Arr $1 Covariant $3 }
+  | VarianceSpecific
+      AtomKind '->' Kind { Arr $2 $1 $4 }
 
 AtomKind :: { Kind }
   : CONSTRUCTOR   {% mkKind (position $1) (getConstructor $ extract $1) }

@@ -5,7 +5,12 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
-module STL.Core.Subsumption where
+module STL.Core.Subsumption
+  ( subsumedBy
+  , runSubsumption
+  , UnifyErr (..)
+  , UnifyState
+  ) where
 
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -14,6 +19,8 @@ import Control.Monad.State
 import Data.Functor.Foldable (Fix(..))
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
+import Data.Map (Map)
+import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
 
@@ -25,11 +32,13 @@ import STL.Pretty as PP
 -- Unification
 
 data UnifyErr
-  = IsNotSubtypeOf Type Type
-  | ArgumentCountMismatch Int Int
-  | InfiniteType Type
-  | CannotEscapeBindings (Set (Var, Int))
-  | NotPolymorphicEnough Type Var
+  = IsNotSubtypeOf         Type Type
+  | ArgumentCountMismatch  Int  Int
+  | InfiniteType           Type
+  | CannotEscapeBindings   (Set (Var, Int))
+  | NotPolymorphicEnough   Type Var
+  | GlobalNotFound         GlobalName
+  | UnreducedApplication   Type
 
 instance CPretty UnifyErr where
   cpretty = \case
@@ -61,9 +70,19 @@ instance CPretty UnifyErr where
         , "Rigid variable" <+> cpretty var <+> "does not unify with:"
         , indent 2 $ cpretty ty
         ]
+    GlobalNotFound name ->
+      nest 2 $ vsep
+        [ "Undefined type" <+> squotes (cpretty name) <> "."
+        ]
+    UnreducedApplication t ->
+      nest 2 $ vsep
+        [ "Unreduced type application:"
+        , indent 2 $ cpretty t
+        ]
 
 data UnifyEnv = UnifyEnv
-  { envVarMap :: [(Var, Var)]
+  { envVarMap  :: [(Var, Var)]
+  , envGlobals  :: Map GlobalName Kind
   }
 
 data UnifyState = UnifyState
@@ -100,6 +119,14 @@ checkAlphaEq (x, n) (y, m) = go 0 0 <$> asks envVarMap
            rest
       [] ->
         x == y && n' == m'
+
+lookupGlobalVariances :: (MonadUnify m) => GlobalName -> m (Maybe [Variance])
+lookupGlobalVariances name = asks (fmap getVariances . M.lookup name . envGlobals)
+  where
+    getVariances :: Kind -> [Variance]
+    getVariances = \case
+      Arr _ v rest -> v : getVariances rest
+      _ -> []
 
 newMeta :: (MonadUnify m) => Position -> Var -> Kind -> m Type
 newMeta pos hint kind = do
@@ -149,27 +176,27 @@ subsumedBy sub sup = do
     checkAssumption :: m ()
     checkAssumption =
       case (tyConSub, argsSub, tyConSup, argsSup) of
-        (TForall pos x k b, [], _, _) -> do
+        (TForall pos x k b, _, _, _) -> do
           imp <- newMeta pos x k
-          subst x 0 imp b `subsumedBy` sup
+          unspine (subst x 0 imp b) argsSub `subsumedBy` sup
 
         (_, _, TForall pos' x' k' b', []) -> do
           imp <- newSkolem pos' x' k'
-          sub `subsumedBy` subst x' 0 imp b'
+          sub `subsumedBy` unspine (subst x' 0 imp b') argsSup
 
-        (TExists pos x k b, [], _, _) -> do
+        (TExists pos x k b, _, _, _) -> do
           imp <- newSkolem pos x k
-          subst x 0 imp b `subsumedBy` sup
+          unspine (subst x 0 imp b) argsSub `subsumedBy` sup
 
-        (_, _, TExists pos' x' k' b', []) -> do
+        (_, _, TExists pos' x' k' b', _) -> do
           imp <- newMeta pos' x' k'
-          sub `subsumedBy` subst x' 0 imp b'
+          sub `subsumedBy` unspine (subst x' 0 imp b') argsSup
 
-        (TMu _ x b, [], _, _) ->
-          shift (-1) x (subst x 0 (shift 1 x sub) b) `subsumedBy` sup
+        (TMu _ x b, _, _, _) ->
+          unspine (shift (-1) x (subst x 0 (shift 1 x sub) b)) argsSub `subsumedBy` sup
 
         (_, _, TMu _ x' b', []) ->
-          sub `subsumedBy` shift (-1) x' (subst x' 0 (shift 1 x' sup) b')
+          sub `subsumedBy` unspine (shift (-1) x' (subst x' 0 (shift 1 x' sup) b')) argsSup
 
         (TMeta pos n hint _, [], _, _) -> do
           subsumedByMeta MetaToType pos hint n sup
@@ -177,24 +204,29 @@ subsumedBy sub sup = do
         (_, _, TMeta pos' n' hint' _, []) -> do
           subsumedByMeta TypeToMeta pos' hint' n' sub
 
-        (TLambda _ x k b, _, TLambda _ x' k' b', _) -> do
+        (TLambda _ x k v b, _, TLambda _ x' k' v' b', _) -> do
           unless (k == k') $
             throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
+          unless (v == v') $
+            throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
+          unless (null argsSub) $
+            throwError $ UnreducedApplication sub
+          unless (null argsSup) $
+            throwError $ UnreducedApplication sup
           pushAlphaEq x x' $
             subsumedBy b b'
-          argsSub `subsumedBySpine` argsSup
 
         (TRef _ x n, _, TRef _ x' n', _) -> do
           mathces <- checkAlphaEq (x, n) (x', n')
           unless mathces $
             throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
-          argsSub `subsumedBySpine` argsSup
+          subsumedBySpine (map (const Covariant) argsSup) argsSub argsSup
 
-        (TGlobal _ n, _, TGlobal _ n', _) | n == n' ->
-          -- Type definitions' parameters are checked by the kind
-          -- checker to be strictly positive, therefore can be treated
-          -- as covariant.
-          argsSub `subsumedBySpine` argsSup
+        (TGlobal _ n, _, TGlobal _ n', _) | n == n' -> do
+          mvs <- lookupGlobalVariances n
+          case mvs of
+            Nothing -> throwError $ GlobalNotFound n
+            Just vs -> subsumedBySpine vs argsSub argsSup
 
         (TArrow _, [a, b], TArrow _, [a', b']) ->
           a' `subsumedBy` a >>  -- Argument is contravariant
@@ -225,7 +257,7 @@ subsumedBy sub sup = do
 
         (TExtend _ lbl, [pty, fty, tail_], TExtend pos' lbl', [pty', fty', tail']) -> do
           (pty'', fty'', tail'') <- rewriteRow TypeToMeta lbl pos' lbl' pty' fty' tail'
-          [pty, fty, tail_] `subsumedBySpine` [pty'', fty'', tail'']
+          subsumedBySpine [Covariant, Covariant, Covariant] [pty, fty, tail_] [pty'', fty'', tail'']
 
         (TSkolem _ n _ _, [], TSkolem _ n' _ _, [])
           | n == n' -> pure ()
@@ -237,7 +269,7 @@ subsumedBy sub sup = do
           throwError $ NotPolymorphicEnough sub var'
 
         _ | tyConSub `eqTypeCon` tyConSup ->
-              subsumedBySpine argsSub argsSup
+              subsumedBySpine (map (const Covariant) argsSub) argsSub argsSup
           | otherwise ->
               throwError $ IsNotSubtypeOf sub sup
 
@@ -283,13 +315,20 @@ rewriteRow dir newLabel pos label pty fty tail_
         _other ->
           error $ "Unexpected type: " ++ show tail_
 
-subsumedBySpine :: forall m. (MonadUnify m) => [Type] -> [Type] -> m ()
-subsumedBySpine subs sups = do
+subsumedByVariance :: forall m. (MonadUnify m) => Variance -> Type -> Type -> m ()
+subsumedByVariance v sub sup =
+  case v of
+    Covariant -> sub `subsumedBy` sup
+    Contravariant -> sup `subsumedBy` sub
+    Invariant -> sub `subsumedBy` sup >> sup `subsumedBy` sub
+
+subsumedBySpine :: forall m. (MonadUnify m) => [Variance] -> [Type] -> [Type] -> m ()
+subsumedBySpine vs subs sups = do
   let countSubs = length subs
       countSups = length sups
   unless (countSubs == countSups) $
     throwError $ ArgumentCountMismatch countSubs countSups
-  zipWithM_ subsumedBy subs sups
+  sequence_ $ zipWith3 subsumedByVariance (vs ++ repeat Invariant) subs sups
 
 eqTypeCon :: TypeF Type -> TypeF Type -> Bool
 eqTypeCon a b =
@@ -303,9 +342,9 @@ eqTypeCon a b =
     (TAbsent _       , TAbsent _       ) -> True
     (_               , _               ) -> False
 
-runSubsumption :: ExceptT e (StateT UnifyState (Reader UnifyEnv)) a -> (Either e a, UnifyState)
-runSubsumption k =
+runSubsumption :: Map GlobalName Kind -> ExceptT e (StateT UnifyState (Reader UnifyEnv)) a -> (Either e a, UnifyState)
+runSubsumption globals k =
   runReader (runStateT (runExceptT k) initState) initEnv
   where
     initState = UnifyState { stFreshName = 100, stMetas = mempty, stAssumptions = mempty }
-    initEnv   = UnifyEnv []
+    initEnv   = UnifyEnv [] globals

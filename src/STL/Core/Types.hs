@@ -29,12 +29,27 @@ import GHC.Generics
 import STL.Pretty
 import STL.Syntax.Position
 
+data Variance
+  = Covariant
+  | Contravariant
+  | Invariant
+  deriving (Show, Eq, Ord, Generic)
+
+ppVariance :: Variance -> Doc AnsiStyle
+ppVariance = \case
+  Covariant -> mempty
+  Contravariant -> "~"
+  Invariant -> "±"
+
+instance CPretty Variance where
+  cpretty = ppVariance
+
 data Kind
   = Star
   | Row
   | Presence
   | Nat
-  | Arr Kind Kind
+  | Arr Kind Variance Kind
   deriving (Show, Eq, Ord, Generic)
 
 instance CPretty Kind where
@@ -49,8 +64,8 @@ ppKind nested = \case
   Row -> aKind "Row"
   Presence -> aKind "#"
   Nat -> aKind "Nat"
-  Arr f a -> parensIf nested $
-    ppKind True f <+> aKind "->" <+> ppKind False a
+  Arr f v a -> parensIf nested $
+    ppVariance v <> ppKind True f <+> aKind "->" <+> ppKind False a
   where
     parensIf :: Bool -> Doc a -> Doc a
     parensIf True = parens
@@ -98,12 +113,6 @@ data Flavour
   | Parameter
   | Recursion
 
-data VarInfo = VarInfo
-  { varKind     :: Kind
-  , varFlavour  :: Flavour
-  , varPolarity :: Maybe Polarity
-  }
-
 data BaseType
   = TUnit
   | TVoid
@@ -143,7 +152,7 @@ data TypeF e
   | TExtend   { _getPosition :: Position, _extLabel :: Label }
   | TNil      { _getPosition :: Position }
   | TApp      { _getPosition :: Position, _appFun :: e, _appArg :: e }
-  | TLambda   { _getPosition :: Position, _lambdaName :: Var, _lambdaKind :: Kind, _lambdaBody :: e }
+  | TLambda   { _getPosition :: Position, _lambdaName :: Var, _lambdaKind :: Kind, _lambdaVariance :: Variance, _lambdaBody :: e }
   | TForall   { _getPosition :: Position, _forallName :: Var, _forallKind :: Kind, _forallBody :: e }
   | TExists   { _getPosition :: Position, _existsName :: Var, _existsKind :: Kind, _existsBody :: e }
   | TMu       { _getPosition :: Position, _muName :: Var, _muBody :: e }
@@ -188,13 +197,13 @@ ppType = ppType' 0
       TSkolem _ (Skolem name) hint _ -> "!" <> cpretty hint <> brackets (pretty name)
       TMeta _ (MetaVar name) hint _  -> "?" <> cpretty hint <> brackets (pretty name)
 
-    ppBinders :: ([(Flavour, Var, Kind)], Type) -> Doc AnsiStyle
+    ppBinders :: ([(Flavour, Var, Kind, Variance)], Type) -> Doc AnsiStyle
     ppBinders (vars, body) =
       nest 2 (fillSep (map ppBinder vars)) <>
         group (nest 2 (line <> ppType' 0 body))
 
-    ppBinder :: (Flavour, Var, Kind) -> Doc AnsiStyle
-    ppBinder (fl, x, k) =
+    ppBinder :: (Flavour, Var, Kind, Variance) -> Doc AnsiStyle
+    ppBinder (fl, x, k, v) =
       let var =
             if k == Star
             then cpretty x
@@ -205,22 +214,22 @@ ppType = ppType' 0
               Existential -> aKeyword "∃"
               Parameter   -> aKeyword "λ"
               Recursion   -> aKeyword "μ"
-      in flavour <+> var <> "."
+      in flavour <+> ppVariance v <> var <> "."
 
-    collectBinders :: Type -> ([(Flavour, Var, Kind)], Type)
+    collectBinders :: Type -> ([(Flavour, Var, Kind, Variance)], Type)
     collectBinders = \case
       Fix (TForall _ x k b) ->
         let (bnds, body) = collectBinders b
-        in ((Universal, x, k) : bnds, body)
+        in ((Universal, x, k, Covariant) : bnds, body)
       Fix (TExists _ x k b) ->
         let (bnds, body) = collectBinders b
-        in ((Existential, x, k) : bnds, body)
-      Fix (TLambda _ x k b) ->
+        in ((Existential, x, k, Covariant) : bnds, body)
+      Fix (TLambda _ x k v b) ->
         let (bnds, body) = collectBinders b
-        in ((Parameter, x, k) : bnds, body)
+        in ((Parameter, x, k, v) : bnds, body)
       Fix (TMu _ x b) ->
         let (bnds, body) = collectBinders b
-        in ((Recursion, x, Star) : bnds, body)
+        in ((Recursion, x, Star, Covariant) : bnds, body)
       other -> ([], other)
 
     ppRow :: Doc AnsiStyle -> Doc AnsiStyle -> Doc AnsiStyle -> Doc AnsiStyle -> ([(Label, Type, Type)], Type) -> Doc AnsiStyle
@@ -304,7 +313,7 @@ unspine f args =
 data Definition = Definition
   { _defPos    :: Position
   , _defName   :: GlobalName
-  , _defParams :: [(Var, Kind)]
+  , _defParams :: [(Var, Kind, Variance)]
   , _defType   :: Type
   } deriving (Generic)
 
@@ -314,10 +323,10 @@ instance CPretty Definition where
         ++ map ppParam params
         ++ [ "=", cpretty ty ]
     where
-      ppParam (var, kind) =
+      ppParam (var, kind, variance) =
         if kind == Star
         then cpretty var
-        else parens (cpretty var <+> colon <+> cpretty kind)
+        else parens (cpretty variance <> cpretty var <+> colon <+> cpretty kind)
 
 instance Pretty Definition where
   pretty = unAnnotate . cpretty

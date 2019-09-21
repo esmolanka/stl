@@ -30,7 +30,7 @@ freeVar x0 n0 e = getAny $ runReader (cata alg e) n0
       TRef _ x n -> do
         n' <- ask
         pure $ if x == x0 && n == n' then Any True else mempty
-      TLambda _ x _ b -> push x b
+      TLambda _ x _ _ b -> push x b
       TForall _ x _ b -> push x b
       TExists _ x _ b -> push x b
       TMu _ x b -> push x b
@@ -55,7 +55,7 @@ freeVars e = runReader (cata alg e) M.empty
       TRef _ x n -> do
         n' <- asks (M.findWithDefault 0 x)
         pure $ if n >= n' then S.singleton (x, n - n') else S.empty
-      TLambda _ x _ b -> push x b
+      TLambda _ x _ _ b -> push x b
       TForall _ x _ b -> push x b
       TExists _ x _ b -> push x b
       TMu _ x b -> push x b
@@ -70,9 +70,9 @@ shift d x e = runReader (cata alg e) 0
         c <- ask
         return $ Fix $ TRef pos x' $
           if x == x' && n >= c then n + d else n
-      TLambda pos x' k b -> do
+      TLambda pos x' k v b -> do
         b' <- if x == x' then local succ b else b
-        return $ Fix $ TLambda pos x' k b'
+        return $ Fix $ TLambda pos x' k v b'
       TForall pos x' k b -> do
         b' <- if x == x' then local succ b else b
         return $ Fix $ TForall pos x' k b'
@@ -100,12 +100,12 @@ subst x n0 sub0 expr = runReader (cata alg expr) (n0, sub0)
         if x' == x && n' == n
           then return sub
           else return (Fix (TRef pos x' n'))
-      TLambda pos x' k b -> do
+      TLambda pos x' k v b -> do
         b' <- shifted x' $
           if x == x'
           then succIndex b
           else b
-        return (Fix (TLambda pos x' k b'))
+        return (Fix (TLambda pos x' k v b'))
       TForall pos x' k b -> do
         b' <- shifted x' $
           if x == x'
@@ -140,7 +140,7 @@ normalise resolveGlobal = cata alg
         f' <- f
         a' <- a
         case f' of
-          Fix (TLambda _ x _ b') ->
+          Fix (TLambda _ x _ _ b') ->
             normalise resolveGlobal $ shift (-1) x $ subst x 0 (shift 1 x a') b'
           _other ->
             pure (Fix (TApp pos f' a'))

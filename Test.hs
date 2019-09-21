@@ -56,7 +56,7 @@ check pos sub sup = do
   _ <- expectExactly k $ inferKind sup
   sub' <- normalise lookupGlobal sub
   sup' <- normalise lookupGlobal sup
-  let (res, _) = runSubsumption (sub' `subsumedBy` sup')
+  let (res, _) = runSubsumption mempty (sub' `subsumedBy` sup')
   output $ nest 2 $ vsep
     [ pretty pos <> colon
     , nest 2 $ "Subtype:" <> line <> cpretty sub'

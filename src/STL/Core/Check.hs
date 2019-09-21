@@ -28,9 +28,16 @@ import STL.Core.Eval
 ----------------------------------------------------------------------
 -- Kind inference types
 
+data VarInfo = VarInfo
+  { varKind            :: Kind
+  , varFlavour         :: Flavour
+  , varBindingPolarity :: Polarity
+  , varVariance        :: Maybe Variance
+  }
+
 data KindExpectation
   = NoExpectation
-  | ExpectArrow KindExpectation KindExpectation
+  | ExpectArrow KindExpectation (Maybe Variance) KindExpectation
   | ExpectExactly Kind
 
 instance CPretty KindExpectation where
@@ -42,10 +49,10 @@ instance CPretty KindExpectation where
           n <- get
           modify succ
           pure (aVariable ("κ" <> ppSubscript n))
-        ExpectArrow a b -> do
+        ExpectArrow a v b -> do
           a' <- ppKindExpectation False a
           b' <- ppKindExpectation False b
-          pure (a' <+> aKind "->" <+> b')
+          pure (maybe "?" ppVariance v <> a' <+> aKind "->" <+> b')
         ExpectExactly k -> pure (ppKind nested k)
 
 ----------------------------------------------------------------------
@@ -53,7 +60,7 @@ instance CPretty KindExpectation where
 
 data Err
   = VariableNotFound Position Var Int KindExpectation
-  | IllegalNegativePolarity Position Var Int Flavour
+  | VarianceMismatch Position Var Int Flavour Variance
   | KindMismatch Position Type KindExpectation Kind
     -- Globals
   | GlobalNotFound Position GlobalName
@@ -77,14 +84,18 @@ instance CPretty Err where
             _other ->
               "Undefined variable" <+> squotes (ppVar x n) <+> "of kind" <+> cpretty expectation <> "."
         ]
-    IllegalNegativePolarity pos x n flavour ->
+    VarianceMismatch pos x n flavour variance ->
       nest 4 $ vsep
         [ pretty pos <> ": error:"
-        , case flavour of
-            Recursion ->
-              "Recursive reference" <+> squotes (ppVar x n) <+> "must not occur in a function argument."
-            _other ->
-              "Strictly positive variable" <+> squotes (ppVar x n) <+> "must not be used in a function argument."
+        , case (flavour, variance) of
+            (Recursion, Covariant) ->
+              "Recursive reference" <+> squotes (ppVar x n) <+> "must not occur in contravariant positions."
+            (_, Covariant) ->
+              "Covariant variable" <+> squotes (ppVar x n) <+> "must not be used in contravariant positions."
+            (_, Contravariant) ->
+              "Contravariant variable" <+> squotes (ppVar x n) <+> "must not be used in covariant positions."
+            _ ->
+              error "Impossible polarity error"
         ]
     KindMismatch pos ty kind expectation ->
       nest 4 $ vsep
@@ -153,14 +164,11 @@ instance CPretty Ctx where
         in vsep $ map (ppVarInfo pol) vars
 
       ppVarInfo :: Polarity -> (Var, (Int, VarInfo)) -> Doc AnsiStyle
-      ppVarInfo pol (x, (n, (VarInfo kind _ vpol))) =
-        ppVar x n <+> ppPolarity pol vpol <+> "->" <+> cpretty kind
+      ppVarInfo pol (x, (n, (VarInfo kind _ vpol vvar))) =
+        maybe mempty ppVariance vvar <> ppVar x n <+> ppPolarity pol vpol <+> "~>" <+> cpretty kind
 
-      ppPolarity :: Polarity -> Maybe Polarity -> Doc AnsiStyle
-      ppPolarity pol = \case
-        Nothing   -> "?"
-        Just pol' | pol == pol' -> "+"
-                  | otherwise   -> "~"
+      ppPolarity :: Polarity -> Polarity -> Doc AnsiStyle
+      ppPolarity pol pol' = if pol == pol' then "(+)" else "(-)"
 
       ppGlobals :: Map GlobalName (Type, Kind) -> Doc AnsiStyle
       ppGlobals globals = vsep $ map ppDefinition (M.toList globals)
@@ -184,14 +192,13 @@ lookupCtx x n = asks $ \ctx ->
   listToMaybe . snd . splitAt n .
     M.findWithDefault [] x . ctxGamma $ ctx
 
-extendCtx :: forall m a. (MonadTC m) => Var -> Flavour -> Kind -> m a -> m a
-extendCtx x flavour kind cont = flip local cont $ \ctx ->
+extendCtx :: forall m a. (MonadTC m) => Var -> Flavour -> Kind -> Maybe Variance -> m a -> m a
+extendCtx x flavour kind variance cont = flip local cont $ \ctx ->
   let info = VarInfo
         kind
         flavour
-        (case flavour of
-           Recursion -> Just (ctxPolarity ctx)
-           _other    -> Nothing)
+        (ctxPolarity ctx)
+        variance
   in ctx { ctxGamma = M.alter (maybe (Just [info]) (Just . (info :))) x (ctxGamma ctx) }
 
 -- Globals
@@ -213,20 +220,20 @@ expectAny :: forall m a. (MonadTC m) => m a -> m a
 expectAny = local
   (\ctx -> ctx { ctxKindAnn = NoExpectation })
 
-expectArrowPush :: forall m a. (MonadTC m) => Kind -> m a -> m a
-expectArrowPush arg = local
-  (\ctx -> ctx { ctxKindAnn = ExpectArrow (ExpectExactly arg) (ctxKindAnn ctx) })
+expectArrowPush :: forall m a. (MonadTC m) => Kind -> Variance -> m a -> m a
+expectArrowPush arg variance = local
+  (\ctx -> ctx { ctxKindAnn = ExpectArrow (ExpectExactly arg) (Just variance) (ctxKindAnn ctx) })
 
 expectArrowPushAny :: forall m a. (MonadTC m) => m a -> m a
 expectArrowPushAny = local
-  (\ctx -> ctx { ctxKindAnn = ExpectArrow NoExpectation (ctxKindAnn ctx) })
+  (\ctx -> ctx { ctxKindAnn = ExpectArrow NoExpectation Nothing (ctxKindAnn ctx) })
 
 expectArrowPop :: forall m a. (MonadTC m) => m a -> m a
 expectArrowPop = local
   (\ctx -> ctx { ctxKindAnn = case ctxKindAnn ctx of
                                 NoExpectation -> NoExpectation
-                                ExpectArrow _ ex -> ex
-                                ExpectExactly (Arr _ b) -> ExpectExactly b
+                                ExpectArrow _ _ ex -> ex
+                                ExpectExactly (Arr _ _ b) -> ExpectExactly b
                                 ExpectExactly _ -> NoExpectation })
 
 expectExactly :: forall m a. (MonadTC m) => Kind -> m a -> m a
@@ -240,15 +247,26 @@ is typ kind = do
     throwError $ KindMismatch (getPosition typ) typ expectation kind
   pure kind
   where
+    matchVariance :: Variance -> Variance -> Bool
+    matchVariance actual expected =
+      case (actual, expected) of
+        (Covariant, Covariant) -> True
+        (Covariant, Invariant) -> True
+        (Contravariant, Contravariant) -> True
+        (Contravariant, Invariant) -> True
+        (Invariant, Invariant) -> True
+        _ -> False
+
     matchExpectation :: Kind -> KindExpectation -> Bool
     matchExpectation k = \case
       NoExpectation -> True
       ExpectExactly k' -> k == k'
-      ExpectArrow argExp restExpectation ->
+      ExpectArrow argExp varExp restExpectation ->
         case k of
-          Arr arg restKind ->
+          Arr arg var restKind ->
             matchExpectation arg argExp &&
-              matchExpectation restKind restExpectation
+              maybe True (matchVariance var) varExp &&
+                matchExpectation restKind restExpectation
           _other -> False
 
 getExpectation :: forall m. (MonadTC m) => m KindExpectation
@@ -259,8 +277,11 @@ getExpectation = asks ctxKindAnn
 flippedPolarity :: forall m a. (MonadTC m) => m a -> m a
 flippedPolarity = local (\ctx -> ctx { ctxPolarity = Not (ctxPolarity ctx) })
 
-checkPolarity :: forall m. (MonadTC m) => Polarity -> m Bool
-checkPolarity pol = asks ((pol ==) . ctxPolarity)
+checkPolarity :: forall m. (MonadTC m) => Polarity -> Variance -> m Bool
+checkPolarity pol = \case
+  Covariant -> asks ((pol ==) . ctxPolarity)
+  Contravariant -> asks ((pol /=) . ctxPolarity)
+  Invariant -> return True
 
 -- Backtracking
 
@@ -293,12 +314,12 @@ inferKind = para alg
           Nothing -> do
             expectation <- getExpectation
             throwError $ VariableNotFound pos x n expectation
-          Just (VarInfo kind flavour (Just pol)) -> do
-            ok <- checkPolarity pol
+          Just (VarInfo kind flavour pol (Just variance)) -> do
+            ok <- checkPolarity pol variance
             unless ok $
-              throwError $ IllegalNegativePolarity pos x n flavour
+              throwError $ VarianceMismatch pos x n flavour variance
             this `is` kind
-          Just (VarInfo kind _ _) -> this `is` kind
+          Just (VarInfo kind _ _ Nothing) -> this `is` kind
       TGlobal pos name ->
         lookupGlobal name >>=
         maybe (throwError $ GlobalNotFound pos name) ((this `is`) . snd)
@@ -309,44 +330,40 @@ inferKind = para alg
       TBase _ base ->
         this `is` baseKind base
       TArrow _ ->
-        this `is` Arr Star (Arr Star Star)
+        this `is` Arr Star Contravariant (Arr Star Covariant Star)
       TRecord _ ->
-        this `is` Arr Row Star
+        this `is` Arr Row Covariant Star
       TVariant _ ->
-        this `is` Arr Row Star
+        this `is` Arr Row Covariant Star
       TArray _ ->
-        this `is` Arr Star (Arr Nat Star)
+        this `is` Arr Star Covariant (Arr Nat Covariant Star)
       TPresent _ ->
         this `is` Presence
       TAbsent _ ->
         this `is` Presence
       TExtend _ _ ->
-        this `is` Arr Presence (Arr Star (Arr Row Row))
+        this `is` Arr Presence Covariant (Arr Star Covariant (Arr Row Covariant Row))
       TNil _ ->
         this `is` Row
       TApp pos f a -> do
-        let checkArg =
-              case this of
-                Fix (TApp _ (Fix (TArrow _)) _) -> flippedPolarity a
-                _other                          -> a
-        ma' <- try $ expectAny $ checkArg
-        f' <- maybe expectArrowPushAny expectArrowPush ma' $ f
+        let applyVariance = \case
+              Contravariant -> flippedPolarity
+              _             -> id
+        f' <- expectArrowPushAny f
         case f' of
-          Arr a' b' -> do
-            case ma' of
-              Just _ -> pure ()
-              Nothing -> void (expectExactly a' checkArg)
+          Arr a' v b' -> do
+            void (expectExactly a' (applyVariance v a))
             this `is` b'
           _other -> error $ show $ pretty pos <> colon <+> "internal error: unexpected non-arrow kind"
-      TLambda _ x k b -> do
-        b' <- expectArrowPop (extendCtx x Parameter k b)
-        this `is` Arr k b'
+      TLambda _ x k v b -> do
+        b' <- expectArrowPop (extendCtx x Parameter k (Just v) b)
+        this `is` Arr k v b'
       TForall _ x k b ->
-        extendCtx x Universal k b
+        extendCtx x Universal k Nothing b
       TExists _ x k b ->
-        extendCtx x Existential k b
+        extendCtx x Existential k Nothing b
       TMu _ x b -> do
-        _ <- expectExactly Star (extendCtx x Recursion Star b)
+        _ <- expectExactly Star (extendCtx x Recursion Star (Just Covariant) b)
         this `is` Star
 
 baseKind :: BaseType -> Kind
@@ -357,9 +374,9 @@ baseKind = \case
   TInt    -> Star
   TFloat  -> Star
   TString -> Star
-  TList   -> Arr Star Star
-  TDict   -> Arr Star Star
-  TNat    -> Arr Nat Star
+  TList   -> Arr Star Covariant Star
+  TDict   -> Arr Star Covariant Star
+  TNat    -> Arr Nat Covariant Star
 
 inferKindClosed :: Type -> Kind
 inferKindClosed ty =
@@ -391,10 +408,10 @@ containsNodes = getAnys . cata alg
 
     alg :: TypeF (ContainsNodes Any) -> ContainsNodes Any
     alg = \case
-      TLambda _ _ _ _ -> mempty { containsLambdas = Any True }
-      TMu _ _ _       -> mempty { containsMus = Any True }
-      TMeta _ _ _ _   -> mempty { containsMetasOrSkolems = Any True }
-      TSkolem _ _ _ _ -> mempty { containsMetasOrSkolems = Any True }
+      TLambda{} -> mempty { containsLambdas = Any True }
+      TMu{}     -> mempty { containsMus = Any True }
+      TMeta{}   -> mempty { containsMetasOrSkolems = Any True }
+      TSkolem{} -> mempty { containsMetasOrSkolems = Any True }
       other -> fold other
 
 resolveRecursion
@@ -419,9 +436,9 @@ resolveRecursion root@(GlobalName dname) env0 ty =
         case M.lookup name' env of
           Nothing -> return (Fix (TGlobal pos name'))
           Just fty -> return $ resolveRecursion name' env (fty pos)
-      TLambda pos x' k b -> do
+      TLambda pos x' k v b -> do
         b' <- shifted x' b
-        return (Fix (TLambda pos x' k b'))
+        return (Fix (TLambda pos x' k v b'))
       TForall pos x' k b -> do
         b' <- shifted x' b
         return (Fix (TForall pos x' k b'))
@@ -442,9 +459,9 @@ handleSelfReference name ty =
       TGlobal _ name' -> Any (name == name')
       other -> fold other
 
-extendWithParameters :: Position -> [(Var, Kind)] -> Type -> Type
+extendWithParameters :: Position -> [(Var, Kind, Variance)] -> Type -> Type
 extendWithParameters pos params ty =
-  foldr (\(x, k) -> Fix . TLambda pos x k) ty params
+  foldr (\(x, k, v) -> Fix . TLambda pos x k v) ty params
 
 checkDefinitionTypeWellformedness :: forall m. (MonadTC m) => Position -> Maybe GlobalName -> Type -> m ()
 checkDefinitionTypeWellformedness pos name' ty = do
