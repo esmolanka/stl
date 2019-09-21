@@ -1,0 +1,8 @@
+tests/variance02.stl:14:1-14:19:
+  Normalised:
+    ∀ (f : Type -> Type). ∀ a.
+      (∃ (ρ : Row). {map : ∀ a. ∀ b. (a -> b) -> (f a) -> f b | ρ})
+      -> ((f (∃ (ρ : Row). {r : μ Fix. f Fix, q : a | ρ})) -> a)
+      -> (μ Fix. f Fix) -> a
+  Kind:
+    Type

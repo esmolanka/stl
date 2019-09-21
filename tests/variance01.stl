@@ -1,9 +1,9 @@
 
-type Foo (f : ~Type -> Type) ~a = f a
+type Foo (f : -Type -> Type) -a = f a
 
-type Foo1 ~a (f : ~Type -> Type) = Foo f a
+type Foo1 -a (f : -Type -> Type) = Foo f a
 
-type Arr ~a = a -> Unit
+type Arr -a = a -> Unit
 
 #check {} <: {foo : Unit}
 
@@ -20,11 +20,11 @@ type Arr ~a = a -> Unit
   Foo1 {}
 
 #check
-  forall (f : ~Type -> Type). Foo f {}
+  forall (f : -Type -> Type). Foo f {}
   <:
-  forall (f : ~Type -> Type). Foo f {foo : Unit}
+  forall (f : -Type -> Type). Foo f {foo : Unit}
 
 #check
-  forall (f : ~Type -> Type). Foo f {foo : Unit}
+  forall (f : -Type -> Type). Foo f {foo : Unit}
   <:
-  forall (f : ~Type -> Type). Foo f {}
+  forall (f : -Type -> Type). Foo f {}

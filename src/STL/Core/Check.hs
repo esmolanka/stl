@@ -348,7 +348,8 @@ inferKind = para alg
       TApp pos f a -> do
         let applyVariance = \case
               Contravariant -> flippedPolarity
-              _             -> id
+              Covariant     -> id
+              Invariant     -> \cont -> flippedPolarity cont >> id cont
         f' <- expectArrowPushAny f
         case f' of
           Arr a' v b' -> do

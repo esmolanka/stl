@@ -43,8 +43,8 @@ import STL.Syntax.Types
   '>'            { L _ (TokParen '>'   ) }
 
   '='            { L _ (TokPunctuation "="   ) }
-  '~'            { L _ (TokPunctuation "~"   ) }
-  '+~'           { L _ (TokPunctuation "+~"   ) }
+  '-'            { L _ (TokPunctuation "-"   ) }
+  '+/-'          { L _ (TokPunctuation "+/-" ) }
   ':'            { L _ (TokPunctuation ":"   ) }
   '->'           { L _ (TokPunctuation "->"  ) }
   '|'            { L _ (TokPunctuation "|"   ) }
@@ -159,12 +159,12 @@ Type :: { Type }
 
 Variance :: { Variance }
   : {- empty -}                          { Covariant }
-  | '~'                                  { Contravariant }
-  | '+~'                                 { Invariant }
+  | '-'                                  { Contravariant }
+  | '+/-'                                { Invariant }
 
 VarianceSpecific :: { Variance }
-  : '~'                                  { Contravariant }
-  | '+~'                                 { Invariant }
+  : '-'                                  { Contravariant }
+  | '+/-'                                { Invariant }
 
 Bindings :: { [Binding Variance] }
   : Variance VARIABLE                    { [Binding (position $2) (Var $ getVariable $ extract $2) Nothing $1] }

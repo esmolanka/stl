@@ -44,7 +44,7 @@ $upper      = [A-Z]
 
 @paren      = [\(\)\[\]\<\>\{\}]
 
-@punct      = "=" | ":" | "->" | "|" | "." | "," | "<:" | "?" | "~" | "+~"
+@punct      = "=" | ":" | "->" | "|" | "." | "," | "<:" | "?" | "-" | "+/-"
 
 @keyword    = "forall" | "exists"
             | "type" | "with" | "provide"
@@ -66,7 +66,7 @@ $whitespace+       ;
 "⟩"                { just (TokParen '>') }
 "→"                { just (TokPunctuation "->") }
 "⊑"                { just (TokPunctuation "<:") }
-"±"                { just (TokPunctuation "+~") }
+"±"                { just (TokPunctuation "+/-") }
 @punct             { TokPunctuation `via` decode }
 @keyword           { TokKeyword `via` decode }
 "∀"                { just (TokKeyword "forall") }

@@ -1,0 +1,2 @@
+tests/error09.stl:2:37-2:38: error:
+    Contravariant variable 'a' must not be used in covariant positions.

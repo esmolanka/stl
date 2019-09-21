@@ -38,7 +38,7 @@ data Variance
 ppVariance :: Variance -> Doc AnsiStyle
 ppVariance = \case
   Covariant -> mempty
-  Contravariant -> "~"
+  Contravariant -> "-"
   Invariant -> "±"
 
 instance CPretty Variance where
