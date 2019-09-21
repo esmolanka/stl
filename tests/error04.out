@@ -4,4 +4,4 @@ tests/error04.stl:2:23-2:24: error:
     Expected kind:
         Type
     Actual kind:
-        Type -> κ₁
+        ?κ₁ -> κ₂
