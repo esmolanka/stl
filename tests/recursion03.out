@@ -1,68 +1,162 @@
 tests/recursion03.stl:5:1-5:18:
   Subtype:
-    μ Bar. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))), Bar^ω/2 : Bar | ρ>))))
+    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Foo^ω/1 :
+          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      | Bar^ω/2 : Bar
+      | ... ρ
+      >
   Supertype:
-    μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>)))
+    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
   Result:
     FAIL
     Type is not polymorphic enough.
       Rigid variable ω does not unify with:
-        ▫︎
+        ▫
 tests/recursion03.stl:6:1-6:18:
   Subtype:
-    μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>)))
+    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
   Supertype:
-    μ Bar. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))), Bar^ω/2 : Bar | ρ>))))
+    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Foo^ω/1 :
+          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      | Bar^ω/2 : Bar
+      | ... ρ
+      >
   Result:
     OK
 tests/recursion03.stl:8:1-8:26:
   Subtype:
-    ∀ (ρ : Row). (∃ (ω : #). <Foo^ω : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))) | ρ>)
+    ∀ (ρ : Row). ∃ (ω : #).
+      < Foo^ω :
+          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      | ... ρ
+      >
   Supertype:
-    μ Bar. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))), Bar^ω/2 : Bar | ρ>))))
+    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Foo^ω/1 :
+          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      | Bar^ω/2 : Bar
+      | ... ρ
+      >
   Result:
     OK
 tests/recursion03.stl:9:1-9:26:
   Subtype:
-    ∀ (ρ : Row). (∃ (ω : #). <Foo^ω : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))) | ρ>)
+    ∀ (ρ : Row). ∃ (ω : #).
+      < Foo^ω :
+          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      | ... ρ
+      >
   Supertype:
-    μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>)))
+    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
   Result:
     OK
 tests/recursion03.stl:11:1-11:26:
   Subtype:
-    ∀ (ρ : Row). (∃ (ω : #). <Bar^ω : μ Bar. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))), Bar^ω/2 : Bar | ρ>)))) | ρ>)
+    ∀ (ρ : Row). ∃ (ω : #).
+      < Bar^ω :
+          μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+            < Nil^ω : Unit
+            | Foo^ω/1 :
+                μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+            | Bar^ω/2 : Bar
+            | ... ρ
+            >
+      | ... ρ
+      >
   Supertype:
-    μ Bar. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))), Bar^ω/2 : Bar | ρ>))))
+    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Foo^ω/1 :
+          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      | Bar^ω/2 : Bar
+      | ... ρ
+      >
   Result:
     OK
 tests/recursion03.stl:12:1-12:26:
   Subtype:
-    ∀ (ρ : Row). (∃ (ω : #). <Bar^ω : μ Bar. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))), Bar^ω/2 : Bar | ρ>)))) | ρ>)
+    ∀ (ρ : Row). ∃ (ω : #).
+      < Bar^ω :
+          μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+            < Nil^ω : Unit
+            | Foo^ω/1 :
+                μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+            | Bar^ω/2 : Bar
+            | ... ρ
+            >
+      | ... ρ
+      >
   Supertype:
-    μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>)))
+    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
   Result:
     FAIL
     Type is not polymorphic enough.
       Rigid variable ω does not unify with:
-        ▫︎
+        ▫
 tests/recursion03.stl:14:1-14:26:
   Subtype:
-    μ Bar. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))), Bar^ω/2 : Bar | ρ>))))
+    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Foo^ω/1 :
+          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      | Bar^ω/2 : Bar
+      | ... ρ
+      >
   Supertype:
-    ∀ (ρ : Row). (∃ (ω : #). <Foo^ω : μ Bar. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))), Bar^ω/2 : Bar | ρ>)))) | ρ>)
+    ∀ (ρ : Row). ∃ (ω : #).
+      < Foo^ω :
+          μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+            < Nil^ω : Unit
+            | Foo^ω/1 :
+                μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+            | Bar^ω/2 : Bar
+            | ... ρ
+            >
+      | ... ρ
+      >
   Result:
     FAIL
     Type is not polymorphic enough.
       Rigid variable ω does not unify with:
-        ▫︎
+        ▫
 tests/recursion03.stl:15:1-15:26:
   Subtype:
-    μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>)))
+    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
   Supertype:
-    ∀ (ρ : Row). (∃ (ω : #). <Foo^ω : μ Bar. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : μ Foo. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Foo^ω/1 : Foo | ρ>))), Bar^ω/2 : Bar | ρ>)))) | ρ>)
+    ∀ (ρ : Row). ∃ (ω : #).
+      < Foo^ω :
+          μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+            < Nil^ω : Unit
+            | Foo^ω/1 :
+                μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+            | Bar^ω/2 : Bar
+            | ... ρ
+            >
+      | ... ρ
+      >
   Result:
     FAIL
     Type is not polymorphic enough.
       Rigid variable ω does not unify with:
-        ▫︎
+        ▫

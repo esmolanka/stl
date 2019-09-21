@@ -1,5 +1,8 @@
 tests/module01.stl:12:16-12:42:
   Normalised:
-    ∀ a. (∀ b. ((∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Left^ω : a, Right^ω/1 : b | ρ>))) -> ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nothing^ω : Unit, Just^ω/1 : b | ρ>))))
+    ∀ a. ∀ b.
+      (∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). <Left^ω : a| Right^ω/1 : b | ... ρ>)
+      -> ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+        <Nothing^ω : Unit| Just^ω/1 : b | ... ρ>
   Kind:
     Type

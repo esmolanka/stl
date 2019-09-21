@@ -15,7 +15,7 @@ tests/basic01.stl:5:1-5:19:
     Type
 tests/basic01.stl:7:1-7:23:
   Normalised:
-    ∀ a. (a -> a)
+    ∀ a. a -> a
   Kind:
     Type
 tests/basic01.stl:9:1-9:36:
@@ -25,7 +25,7 @@ tests/basic01.stl:9:1-9:36:
     Type
 tests/basic01.stl:11:1-11:9:
   Normalised:
-    ∃ (ρ : Row). {ρ}
+    ∃ (ρ : Row). { | ρ}
   Kind:
     Type
 tests/basic01.stl:13:1-13:21:
@@ -35,7 +35,7 @@ tests/basic01.stl:13:1-13:21:
     Type
 tests/basic01.stl:15:1-15:22:
   Normalised:
-    ∃ (ρ : Row). (∃ (ω : #). {foo^ω : Unit | ρ})
+    ∃ (ρ : Row). ∃ (ω : #). {foo^ω : Unit | ρ}
   Kind:
     Type
 tests/basic01.stl:17:1-17:42:
@@ -50,11 +50,11 @@ tests/basic01.stl:19:1-19:42:
     Type
 tests/basic01.stl:21:1-21:9:
   Normalised:
-    ∀ (ρ : Row). <ρ>
+    ∀ (ρ : Row). < | ... ρ>
   Kind:
     Type
 tests/basic01.stl:23:1-23:21:
   Normalised:
-    ∀ (ρ : Row). (∃ (ω : #). <Foo^ω : Unit | ρ>)
+    ∀ (ρ : Row). ∃ (ω : #). <Foo^ω : Unit | ... ρ>
   Kind:
     Type

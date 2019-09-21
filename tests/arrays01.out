@@ -5,37 +5,49 @@ tests/arrays01.stl:4:1-4:22:
     Type
 tests/arrays01.stl:6:1-6:54:
   Subtype:
-    ∀ a. (∃ (n : Nat). Int[n])
+    ∀ a. ∃ (n : Nat). Int[n]
   Supertype:
-    ∀ b. (∃ (n : Nat). Int[n])
+    ∀ b. ∃ (n : Nat). Int[n]
   Result:
     OK
 tests/arrays01.stl:10:1-10:21:
   Normalised:
-    ∃ (n : Nat). (∃ (ρ : Row). {size : Nat n, elements : Int[n] | ρ})
+    ∃ (n : Nat). ∃ (ρ : Row). {size : Nat n, elements : Int[n] | ρ}
   Kind:
     Type
 tests/arrays01.stl:12:1-12:56:
   Subtype:
-    ∀ a. (∃ (n : Nat). (∃ (ρ : Row). {size : Nat n, elements : a[n] | ρ}))
+    ∀ a. ∃ (n : Nat). ∃ (ρ : Row). {size : Nat n, elements : a[n] | ρ}
   Supertype:
-    ∀ b. (∃ (n : Nat). (∃ (ρ : Row). {size : Nat n, elements : b[n] | ρ}))
+    ∀ b. ∃ (n : Nat). ∃ (ρ : Row). {size : Nat n, elements : b[n] | ρ}
   Result:
     OK
 tests/arrays01.stl:14:1-14:62:
   Normalised:
-    ∃ (n : Nat). (∃ (ρ : Row). {ints : Int[n], doubles : Float[n] | ρ})
+    ∃ (n : Nat). ∃ (ρ : Row). {ints : Int[n], doubles : Float[n] | ρ}
   Kind:
     Type
 tests/arrays01.stl:25:1-25:13:
   Normalised:
-    ∀ (n : Nat). (∀ k. (∀ v. (k -> (∃ (ρ : Row). {name : k[n], value : v[n] | ρ}) -> ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nothing^ω : Unit, Just^ω/1 : v | ρ>)))))
+    ∀ (n : Nat). ∀ k. ∀ v.
+      k
+      -> (∃ (ρ : Row). {name : k[n], value : v[n] | ρ})
+      -> ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+        <Nothing^ω : Unit| Just^ω/1 : v | ... ρ>
   Kind:
     Type
 tests/arrays01.stl:27:1-27:24:
   Subtype:
-    ∀ (n : Nat). (∀ k. (∀ v. (k -> (∃ (ρ : Row). {name : k[n], value : v[n] | ρ}) -> ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nothing^ω : Unit, Just^ω/1 : v | ρ>)))))
+    ∀ (n : Nat). ∀ k. ∀ v.
+      k
+      -> (∃ (ρ : Row). {name : k[n], value : v[n] | ρ})
+      -> ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+        <Nothing^ω : Unit| Just^ω/1 : v | ... ρ>
   Supertype:
-    ∀ (n : Nat). (∀ k. (∀ v. (k -> (∃ (ρ : Row). {name : k[n], value : v[n] | ρ}) -> ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nothing^ω : Unit, Just^ω/1 : v | ρ>)))))
+    ∀ (n : Nat). ∀ k. ∀ v.
+      k
+      -> (∃ (ρ : Row). {name : k[n], value : v[n] | ρ})
+      -> ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+        <Nothing^ω : Unit| Just^ω/1 : v | ... ρ>
   Result:
     OK

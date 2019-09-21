@@ -1,17 +1,30 @@
 tests/basetype01.stl:8:1-13:14:
   Subtype:
-    ∀ i. (∀ f. (∀ s. (∃ (ρ : Row). {truncate : f -> i, fromInt : i -> f, showInt : i -> s | ρ})))
+    ∀ i. ∀ f. ∀ s. ∃ (ρ : Row).
+      {truncate : f -> i, fromInt : i -> f, showInt : i -> s | ρ}
   Supertype:
-    ∃ (ρ : Row). {truncate : Float -> Int, fromInt : Int -> Float, showInt : Int -> String | ρ}
+    ∃ (ρ : Row).
+      { truncate : Float -> Int
+      , fromInt : Int -> Float
+      , showInt : Int -> String
+      | ρ
+      }
   Result:
     OK
 tests/basetype01.stl:20:1-20:12:
   Normalised:
-    λ a. (∃ (n : Nat). (∃ (ρ : Row). {size : Nat n, elements : a[n] | ρ})[n])
+    λ a. ∃ (n : Nat). (∃ (ρ : Row). {size : Nat n, elements : a[n] | ρ})[n]
   Kind:
     Type -> Type
 tests/basetype01.stl:21:1-21:40:
   Normalised:
-    ∃ (n : Nat). (∃ (ρ : Row). {size : Nat n, elements : (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Int^ω : Int, Float^ω/1 : Float | ρ>)))[n] | ρ})[n]
+    ∃ (n : Nat).
+      (∃ (ρ : Row).
+        { size : Nat n
+        , elements :
+            (∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+              <Int^ω : Int| Float^ω/1 : Float | ... ρ>)[n]
+        | ρ
+        })[n]
   Kind:
     Type

@@ -1,17 +1,93 @@
 tests/mutual02.stl:5:1-5:16:
   Normalised:
-    μ Delay. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Now^ω : ∃ (ρ : Row). {head : Int, tail : μ Stream. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Yield^ω : Delay, Skip^ω/1 : Stream, EndOfStream^ω/2 : Unit | ρ>)))) | ρ}, Later^ω/1 : Delay | ρ>)))
+    μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Now^ω :
+          ∃ (ρ : Row).
+            { head : Int
+            , tail :
+                μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+                  < Yield^ω : Delay
+                  | Skip^ω/1 : Stream
+                  | EndOfStream^ω/2 : Unit
+                  | ... ρ
+                  >
+            | ρ
+            }
+      | Later^ω/1 : Delay
+      | ... ρ
+      >
   Kind:
     Type
 tests/mutual02.stl:7:1-7:17:
   Normalised:
-    μ Stream. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Yield^ω : μ Delay. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Now^ω : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}, Later^ω/1 : Delay | ρ>))), Skip^ω/1 : Stream, EndOfStream^ω/2 : Unit | ρ>))))
+    μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+      < Yield^ω :
+          μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+            < Now^ω : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}
+            | Later^ω/1 : Delay
+            | ... ρ
+            >
+      | Skip^ω/1 : Stream
+      | EndOfStream^ω/2 : Unit
+      | ... ρ
+      >
   Kind:
     Type
 tests/mutual02.stl:9:1-9:82:
   Subtype:
-    μ Delay. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Now^ω : ∃ (ρ : Row). {head : Int, tail : μ Stream. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Yield^ω : Delay, Skip^ω/1 : Stream, EndOfStream^ω/2 : Unit | ρ>)))) | ρ}, Later^ω/1 : Delay | ρ>)))
+    μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Now^ω :
+          ∃ (ρ : Row).
+            { head : Int
+            , tail :
+                μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+                  < Yield^ω : Delay
+                  | Skip^ω/1 : Stream
+                  | EndOfStream^ω/2 : Unit
+                  | ... ρ
+                  >
+            | ρ
+            }
+      | Later^ω/1 : Delay
+      | ... ρ
+      >
   Supertype:
-    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Later^ω : μ Delay. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Now^ω : ∃ (ρ : Row). {head : Int, tail : μ Stream. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Yield^ω : Delay, Skip^ω/1 : Stream, EndOfStream^ω/2 : Unit | ρ>)))) | ρ}, Later^ω/1 : Delay | ρ>))), Now^ω/1 : ∃ (ρ : Row). {head : Int, tail : μ Stream. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). (∃ (ω : #). <Yield^ω : μ Delay. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Now^ω : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}, Later^ω/1 : Delay | ρ>))), Skip^ω/1 : Stream, EndOfStream^ω/2 : Unit | ρ>)))) | ρ} | ρ>))
+    ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Later^ω :
+          μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+            < Now^ω :
+                ∃ (ρ : Row).
+                  { head : Int
+                  , tail :
+                      μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+                        < Yield^ω : Delay
+                        | Skip^ω/1 : Stream
+                        | EndOfStream^ω/2 : Unit
+                        | ... ρ
+                        >
+                  | ρ
+                  }
+            | Later^ω/1 : Delay
+            | ... ρ
+            >
+      | Now^ω/1 :
+          ∃ (ρ : Row).
+            { head : Int
+            , tail :
+                μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
+                  < Yield^ω :
+                      μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                        < Now^ω : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}
+                        | Later^ω/1 : Delay
+                        | ... ρ
+                        >
+                  | Skip^ω/1 : Stream
+                  | EndOfStream^ω/2 : Unit
+                  | ... ρ
+                  >
+            | ρ
+            }
+      | ... ρ
+      >
   Result:
     OK

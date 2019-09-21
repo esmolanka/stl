@@ -1,49 +1,156 @@
 tests/recursion01.stl:3:1-3:12:
   Normalised:
-    μ Peano. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Zero^ω : Unit, Succ^ω/1 : Peano | ρ>)))
+    μ Peano. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      <Zero^ω : Unit| Succ^ω/1 : Peano | ... ρ>
   Kind:
     Type
 tests/recursion01.stl:6:1-6:15:
   Normalised:
-    λ a. (μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : ConsList | ρ} | ρ>))))
+    λ a. μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : ConsList | ρ}
+      | ... ρ
+      >
   Kind:
     Type -> Type
 tests/recursion01.stl:7:1-7:20:
   Normalised:
-    μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ} | ρ>)))
+    μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ}
+      | ... ρ
+      >
   Kind:
     Type
 tests/recursion01.stl:8:1-8:21:
   Normalised:
-    μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : μ Peano. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Zero^ω : Unit, Succ^ω/1 : Peano | ρ>))), tail : ConsList | ρ} | ρ>)))
+    μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 :
+          ∃ (ρ : Row).
+            { head :
+                μ Peano. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  <Zero^ω : Unit| Succ^ω/1 : Peano | ... ρ>
+            , tail : ConsList
+            | ρ
+            }
+      | ... ρ
+      >
   Kind:
     Type
 tests/recursion01.stl:11:1-11:16:
   Normalised:
-    λ a. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : ConsList | ρ} | ρ>))) | ρ} | ρ>)))
+    λ a. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 :
+          ∃ (ρ : Row).
+            { head : a
+            , tail :
+                μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  < Nil^ω : Unit
+                  | Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : ConsList | ρ}
+                  | ... ρ
+                  >
+            | ρ
+            }
+      | ... ρ
+      >
   Kind:
     Type -> Type
 tests/recursion01.stl:12:1-12:21:
   Normalised:
-    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ} | ρ>))) | ρ} | ρ>))
+    ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 :
+          ∃ (ρ : Row).
+            { head : Unit
+            , tail :
+                μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  < Nil^ω : Unit
+                  | Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ}
+                  | ... ρ
+                  >
+            | ρ
+            }
+      | ... ρ
+      >
   Kind:
     Type
 tests/recursion01.stl:13:1-13:22:
   Normalised:
-    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : μ Peano. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Zero^ω : Unit, Succ^ω/1 : Peano | ρ>))), tail : μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : μ Peano. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Zero^ω : Unit, Succ^ω/1 : Peano | ρ>))), tail : ConsList | ρ} | ρ>))) | ρ} | ρ>))
+    ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 :
+          ∃ (ρ : Row).
+            { head :
+                μ Peano. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  <Zero^ω : Unit| Succ^ω/1 : Peano | ... ρ>
+            , tail :
+                μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  < Nil^ω : Unit
+                  | Cons^ω/1 :
+                      ∃ (ρ : Row).
+                        { head :
+                            μ Peano. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                              <Zero^ω : Unit| Succ^ω/1 : Peano | ... ρ>
+                        , tail : ConsList
+                        | ρ
+                        }
+                  | ... ρ
+                  >
+            | ρ
+            }
+      | ... ρ
+      >
   Kind:
     Type
 tests/recursion01.stl:15:1-15:39:
   Subtype:
-    μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ} | ρ>)))
+    μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ}
+      | ... ρ
+      >
   Supertype:
-    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ} | ρ>))) | ρ} | ρ>))
+    ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 :
+          ∃ (ρ : Row).
+            { head : Unit
+            , tail :
+                μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  < Nil^ω : Unit
+                  | Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ}
+                  | ... ρ
+                  >
+            | ρ
+            }
+      | ... ρ
+      >
   Result:
     OK
 tests/recursion01.stl:16:1-16:39:
   Subtype:
-    ∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ} | ρ>))) | ρ} | ρ>))
+    ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 :
+          ∃ (ρ : Row).
+            { head : Unit
+            , tail :
+                μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+                  < Nil^ω : Unit
+                  | Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ}
+                  | ... ρ
+                  >
+            | ρ
+            }
+      | ... ρ
+      >
   Supertype:
-    μ ConsList. (∀ (ρ : Row). (∃ (ω : #). (∃ (ω : #). <Nil^ω : Unit, Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ} | ρ>)))
+    μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
+      < Nil^ω : Unit
+      | Cons^ω/1 : ∃ (ρ : Row). {head : Unit, tail : ConsList | ρ}
+      | ... ρ
+      >
   Result:
     OK

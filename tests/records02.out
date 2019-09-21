@@ -1,5 +1,12 @@
 tests/records02.stl:10:1-10:13:
   Normalised:
-    ∃ (ρ : Row). {afield : Unit, type : Unit, module : Unit, with : Unit, provides : Unit | ρ}
+    ∃ (ρ : Row).
+      { afield : Unit
+      , type : Unit
+      , module : Unit
+      , with : Unit
+      , provides : Unit
+      | ρ
+      }
   Kind:
     Type
