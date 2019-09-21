@@ -21,6 +21,7 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as S
 
@@ -37,6 +38,7 @@ data UnifyErr
   | InfiniteType           Type
   | CannotEscapeBindings   (Set (Var, Int))
   | NotPolymorphicEnough   Type Var
+  | VariableNotFound       Var Int
   | GlobalNotFound         GlobalName
   | UnreducedApplication   Type
 
@@ -70,6 +72,10 @@ instance CPretty UnifyErr where
         , "Rigid variable" <+> cpretty var <+> "does not unify with:"
         , indent 2 $ cpretty ty
         ]
+    VariableNotFound x n ->
+      nest 2 $ vsep
+        [ "Undefined variable" <+> squotes (ppVar x n) <> "."
+        ]
     GlobalNotFound name ->
       nest 2 $ vsep
         [ "Undefined type" <+> squotes (cpretty name) <> "."
@@ -82,7 +88,8 @@ instance CPretty UnifyErr where
 
 data UnifyEnv = UnifyEnv
   { envVarMap  :: [(Var, Var)]
-  , envGlobals  :: Map GlobalName Kind
+  , envGlobals :: Map GlobalName Kind
+  , envGamma   :: Map Var [Kind]
   }
 
 data UnifyState = UnifyState
@@ -120,13 +127,25 @@ checkAlphaEq (x, n) (y, m) = go 0 0 <$> asks envVarMap
       [] ->
         x == y && n' == m'
 
+kindVariances :: Kind -> [Variance]
+kindVariances = \case
+  Arr _ v rest -> v : kindVariances rest
+  _ -> []
+
 lookupGlobalVariances :: (MonadUnify m) => GlobalName -> m (Maybe [Variance])
-lookupGlobalVariances name = asks (fmap getVariances . M.lookup name . envGlobals)
-  where
-    getVariances :: Kind -> [Variance]
-    getVariances = \case
-      Arr _ v rest -> v : getVariances rest
-      _ -> []
+lookupGlobalVariances name = asks (fmap kindVariances . M.lookup name . envGlobals)
+
+extendCtx :: (MonadUnify m) => Var -> Kind -> m a -> m a
+extendCtx x kind cont =
+  flip local cont $ \env ->
+    env { envGamma = M.alter (maybe (Just [kind]) (Just . (kind :))) x (envGamma env) }
+
+lookupCtxVariances :: (MonadUnify m) => Var -> Int -> m (Maybe [Variance])
+lookupCtxVariances x n =
+  asks $
+    fmap kindVariances .
+      listToMaybe . snd . splitAt n .
+        M.findWithDefault [] x . envGamma
 
 newMeta :: (MonadUnify m) => Position -> Var -> Kind -> m Type
 newMeta pos hint kind = do
@@ -198,11 +217,17 @@ subsumedBy sub sup = do
         (_, _, TMu _ x' b', []) ->
           sub `subsumedBy` unspine (shift (-1) x' (subst x' 0 (shift 1 x' sup) b')) argsSup
 
-        (TMeta pos n hint _, [], _, _) -> do
-          subsumedByMeta MetaToType pos hint n sup
+        (TMeta pos n hint k, _, _, _)
+          | null argsSub -> subsumedByMeta MetaToType pos hint n sup
+          | length argsSub == length argsSup ->
+              subsumedByMeta MetaToType pos hint n (Fix tyConSup) >>
+              subsumedBySpine (kindVariances k) argsSub argsSup
 
-        (_, _, TMeta pos' n' hint' _, []) -> do
-          subsumedByMeta TypeToMeta pos' hint' n' sub
+        (_, _, TMeta pos' n' hint' k', _)
+          | null argsSup -> subsumedByMeta TypeToMeta pos' hint' n' sub
+          | length argsSub == length argsSup ->
+              subsumedByMeta MetaToType pos' hint' n' (Fix tyConSub) >>
+              subsumedBySpine (kindVariances k') argsSub argsSup
 
         (TLambda _ x k v b, _, TLambda _ x' k' v' b', _) -> do
           unless (k == k') $
@@ -214,13 +239,17 @@ subsumedBy sub sup = do
           unless (null argsSup) $
             throwError $ UnreducedApplication sup
           pushAlphaEq x x' $
-            subsumedBy b b'
+            extendCtx x k $
+              subsumedBy b b'
 
         (TRef _ x n, _, TRef _ x' n', _) -> do
           mathces <- checkAlphaEq (x, n) (x', n')
           unless mathces $
             throwError $ IsNotSubtypeOf (Fix tyConSub) (Fix tyConSup)
-          subsumedBySpine (map (const Covariant) argsSup) argsSub argsSup
+          mvs <- lookupCtxVariances x n
+          case mvs of
+            Nothing -> throwError $ VariableNotFound x n
+            Just vs -> subsumedBySpine vs argsSub argsSup
 
         (TGlobal _ n, _, TGlobal _ n', _) | n == n' -> do
           mvs <- lookupGlobalVariances n
@@ -347,4 +376,4 @@ runSubsumption globals k =
   runReader (runStateT (runExceptT k) initState) initEnv
   where
     initState = UnifyState { stFreshName = 100, stMetas = mempty, stAssumptions = mempty }
-    initEnv   = UnifyEnv [] globals
+    initEnv   = UnifyEnv [] globals mempty
