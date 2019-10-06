@@ -36,6 +36,8 @@ library
     STL.Pretty
     STL.Elab
 
+    Data.StructuralType
+
   build-depends:
     base >= 4.7 && < 5, prettyprinter, prettyprinter-ansi-terminal,
     containers, mtl, text, recursion-schemes,
