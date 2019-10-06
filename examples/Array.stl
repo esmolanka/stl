@@ -8,7 +8,7 @@ type Fin (n : Nat) = Int
 
 -- Type `a` is a monoid if there is an associative `combine` operator
 -- and a `neutral` element.
-type Monoid a =
+type Monoid ±a =
   { neutral : a
   , combine : a -> a -> a
   }
@@ -17,7 +17,7 @@ type Monoid a =
 -- the `combine` operator is also commutative. We don't have
 -- propositions and proofs in our language, so it is rather a flag
 -- which can also be useful.
-type CommutativeMonoid a =
+type CommutativeMonoid ±a =
   { isCommutative : Unit
   , neutral       : a
   , combine       : a -> a -> a
