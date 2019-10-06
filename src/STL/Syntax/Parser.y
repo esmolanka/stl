@@ -150,7 +150,7 @@ Type_ :: { Type }
 
 Type :: { Type }
   : AppType                              { $1 }
-  | AppType '->' sepBy1(Type,'->')       { mkArrow ($1 : $3) }
+  | AppType '->' sepBy1(AppType,'->')    { mkArrow ($1 : $3) }
   | "forall" list1(CovarBindings)
        '.' Type                          { Fix $ TForall (position $1 <> typePos $4) (concat $2) $4 }
   | "exists" list1(CovarBindings)

@@ -107,7 +107,7 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         a' <- a
         b' <- b
         cs' <- sequence cs
-        pure $ foldl (\acc x -> Core.unspine (Fix (Core.TArrow pos)) [acc, x]) a' (b' : cs')
+        pure $ foldr (\x rest -> Core.unspine (Fix (Core.TArrow pos)) [x, rest]) (last (a' : b' : cs')) (init (a' : b' : cs'))
       TApp _ f a as -> do
         f' <- f
         a' <- a
