@@ -65,25 +65,53 @@ eval pos ty = do
 mainHandlers :: (MonadTC m, MonadIO m) => Handlers (m ())
 mainHandlers = Handlers eval check (\_ k -> purifyProgram k)
 
+silentHandlers :: (MonadTC m, MonadIO m) => Handlers (m ())
+silentHandlers = Handlers (\_ _ -> pure ()) (\_ _ _ -> pure ()) (\_ k -> purifyProgram k)
+
 runModule :: (MonadIO m) => Handlers (ExceptT Err (ReaderT Ctx m) ()) -> FilePath -> m (Either (Doc AnsiStyle) ())
 runModule handlers fn = do
   str <- liftIO $ BL.readFile fn
   case parseModule fn str of
-    Left err -> pure (Left (pretty err))
+    Left err ->
+      pure (Left (pretty err))
     Right modul ->
-      let program = dsModule handlers modul
-          checking = checkProgram program $ \case
-            Just ty -> hNormalise handlers (getPosition ty) ty
-            Nothing -> pure ()
-      in runTCT checking
+      runTCT $ checkProgram (dsModule handlers modul) $ \case
+        Just ty -> hNormalise handlers (getPosition ty) ty
+        Nothing -> pure ()
+
+runModuleRetType :: (MonadIO m) => FilePath -> m (Either (Doc AnsiStyle) Type)
+runModuleRetType fn = do
+  str <- liftIO $ BL.readFile fn
+  case parseModule fn str of
+    Left err ->
+      pure (Left (pretty err))
+    Right modul ->
+      fmap (>>= maybe (throwError $ pretty fn <> ": does not provide a type.") pure) $
+      runTCT $ checkProgram (dsModule silentHandlers modul) $ \case
+        Just ty -> do
+          inferKind ty
+          ty' <- normalise lookupGlobal ty
+          pure (Just ty')
+        Nothing ->
+          pure Nothing
 
 ----------------------------------------------------------------------
 
-config :: Opt.Parser (Maybe FilePath)
+data Config = Config
+  { cfgFileName :: Maybe FilePath
+  , cfgCheckAgainst :: Maybe FilePath
+  }
+
+config :: Opt.Parser Config
 config =
-  Opt.optional $ Opt.strArgument $
-    Opt.metavar "SRC" <>
-    Opt.help "Source .stl file to process"
+  Config
+    <$> (Opt.optional $ Opt.strArgument $
+           Opt.metavar "SRC" <>
+           Opt.help "Source .stl file to process")
+    <*> (Opt.optional $ Opt.strOption $
+          Opt.long "against" <>
+          Opt.metavar "SRC" <>
+          Opt.help "Supertype .stl file to check against")
 
 main :: IO ()
 main = do
@@ -91,18 +119,27 @@ main = do
   IO.hSetEncoding IO.stdout IO.utf8
   IO.hSetEncoding IO.stderr IO.utf8
 
-  input <- Opt.execParser $
+  cfg <- Opt.execParser $
     Opt.info
       (Opt.helper <*> config)
       (Opt.fullDesc <>
        Opt.progDesc "Structural Types Langauge")
 
-  case input of
-    Just fn ->
+  case (cfgFileName cfg, cfgCheckAgainst cfg) of
+    (Just fn, Nothing) ->
       runModule mainHandlers fn >>=
       either (\err -> putDocLn err >> exitFailure) pure
 
-    Nothing -> do
+    (Just sub, Just sup) -> do
+      subTy <- runModuleRetType sub >>= either (\err -> putDocLn err >> exitFailure) pure
+      supTy <- runModuleRetType sup >>= either (\err -> putDocLn err >> exitFailure) pure
+      let (res, _) = runSubsumption mempty (subTy `subsumedBy` supTy)
+      case res of
+        Right _ -> pure ()
+        Left err -> putDocLn (cpretty err) >> exitFailure
+
+
+    (Nothing, _) -> do
       putDocLn $ vsep
         [ "Welcome to STL REPL."
         , mempty
@@ -139,3 +176,16 @@ repl prompt f =
         Just (_, []) -> loop
         Just (_, [":q"]) -> return ()
         Just (input', _) -> liftIO (f input') >> loop
+
+
+{-
+
+TExists Row
+  (TRecord
+      (TExtend (Label "foo") TPresent (TBase TInt)
+      (TExtend (Label "bar") TPresent
+         (TForall Row (TExists Presence
+            (TVariant (TExtend (Label "Unit") (TRef 0) (TBase TUnit) (TRef 1)))))
+      (TRef 0))))
+
+-}
