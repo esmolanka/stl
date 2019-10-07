@@ -36,12 +36,14 @@ library
     STL.Pretty
     STL.Elab
 
+    STL.CodeGen.GenHaskell
+
     Data.StructuralType
 
   build-depends:
     base >= 4.7 && < 5, prettyprinter, prettyprinter-ansi-terminal,
-    containers, mtl, text, recursion-schemes,
-    utf8-string, bytestring, array, ansi-terminal
+    containers, mtl, text, recursion-schemes, utf8-string, bytestring,
+    array, ansi-terminal
 
   default-language:    Haskell2010
 

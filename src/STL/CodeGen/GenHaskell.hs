@@ -7,12 +7,11 @@
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
-module GenHaskell (genHaskell, process) where
+module STL.CodeGen.GenHaskell (genHaskell) where
 
 import Control.Monad.Except
 import Control.Monad.State
 
-import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Functor.Foldable (cata)
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -21,8 +20,9 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import STL.Pretty hiding (list)
+import STL.Pretty
 import qualified STL.Syntax as S
+import Data.StructuralType
 
 ----------------------------------------------------------------------
 -- Target types
@@ -172,7 +172,7 @@ genDefBody defName params ty = do
         Inline . HGlobal <$> genName name
 
       S.TGlobal pos (Just _mod) _name ->
-        throwError $ pretty pos <> ": fully qualified names are not supported"
+        throwError $ pretty pos <> ": fully qualified names not supported"
 
       S.TForall pos _ _ ->
         throwError $ pretty pos <> ": universal quantificaiton not supported"
@@ -203,7 +203,7 @@ genDefBody defName params ty = do
         pure $ ViaDef $ \name params -> ADT name params ctors
 
       S.TArray pos _ _ ->
-        throwError $ pretty pos <> ": nat-indexed arrays not supported"
+        throwError $ pretty pos <> ": Nat-indexed arrays not supported"
 
 genFields :: (MonadGen m) => S.Row HaskellType -> m [(FieldName, HaskellType)]
 genFields = \case
@@ -237,7 +237,7 @@ genParams = mapM genParam
     genParam :: S.Binding S.Variance -> m VarName
     genParam (S.Binding pos (S.Var x) k _) =
       case k of
-        Just k' | isFancy k' -> throwError $ pretty pos <> ": non-Star kinds unsupported"
+        Just k' | isFancy k' -> throwError $ pretty pos <> ": only Type kind currently supported"
         _ -> pure (VarName x)
 
 genDefinition :: (MonadGen m) => S.GlobalName -> [S.Binding S.Variance] -> S.Type -> m HaskellDef
@@ -275,17 +275,17 @@ ppHaskellType t =
   case spine t of
     (HGlobal n, args) -> app (aConstructor (pretty n)) args
     (HRef x, args) -> app (aVariable (pretty x)) args
-    (HArrow a b, []) -> parens (cpretty a <+> ":~>" <+> cpretty b)
-    (HUnit, []) -> "()"
-    (HVoid, []) -> "X.Void"
-    (HBool, []) -> "X.Bool"
-    (HInt, []) -> "X.Int"
-    (HFloat, []) -> "X.Double"
-    (HString, []) -> "X.Text"
-    (HMaybe, []) -> "X.Maybe"
-    (HList, [a]) -> brackets (cpretty a)
-    (HDict, [a]) -> parens ("X.Map" <+> "X.Text" <+> cpretty a)
-    (HNat, [_]) -> "Int"
+    (HArrow a b, []) -> parens (ppHaskellType a <+> ":~>" <+> ppHaskellType b)
+    (HUnit, []) -> aConstructor "()"
+    (HVoid, []) -> aConstructor "X.Void"
+    (HBool, []) -> aConstructor "X.Bool"
+    (HInt, []) -> aConstructor "X.Int"
+    (HFloat, []) -> aConstructor "X.Double"
+    (HString, []) -> aConstructor "X.Text"
+    (HMaybe, [a]) -> parens (aConstructor "X.Maybe" <+> ppHaskellType a)
+    (HList, [a]) -> brackets (ppHaskellType a)
+    (HDict, [a]) -> parens (aConstructor "X.Map" <+> aConstructor "X.Text" <+> ppHaskellType a)
+    (HNat, [_]) -> aConstructor "X.Int"
     _ -> error $ "cpretty: invalid spine: " ++ show t
     where
       app :: Doc AnsiStyle -> [HaskellType] -> Doc AnsiStyle
@@ -328,22 +328,28 @@ ppHaskellDef = \case
     ppCtor name (ctor, payload) = pretty name <> "'" <> pretty ctor <+> cpretty payload
     ppDeriving classes = aKeyword "deriving" <+> parens (hsep $ punctuate comma $ map aConstructor classes)
 
-genHaskell :: S.Module -> Either (Doc AnsiStyle) (Doc AnsiStyle)
-genHaskell modul = do
+genHaskell :: S.Module -> Maybe SType -> Either (Doc AnsiStyle) (Doc AnsiStyle)
+genHaskell modul _rootTy = do
   defs <- runGen $ collectDefinitions modul
   let modName = T.intercalate "." $ map (\(S.ModuleName n) -> n) (S._modName modul)
   pure $ vsep
-    [ vsep $ map ppLanguagePragma
-        [ "TemplateHaskell"
-        , "TypeOperators"
-        , "GeneralisedNewtypeDeriving"
-        ]
+    [ "{-# LANGUAGE GeneralisedNewtypeDeriving #-}"
+    , "{-# LANGUAGE TemplateHaskell            #-}"
+    , "{-# LANGUAGE TypeOperators              #-}"
+    , mempty
+    , "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
+    , "{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}"
+    , mempty
+    , "----------------------------------------------------------------------"
+    , "--                  Do not modify. Generated code"
+    , "----------------------------------------------------------------------"
     , mempty
     , aKeyword "module" <+> aConstructor (pretty modName) <+> aKeyword "where"
     , mempty
     , ppImport "Prelude" "X"
     , ppImport "Data.Void" "X"
     , ppImport "Data.Map" "X"
+    , ppImport "Data.Text" "X"
     , ppImport "Data.Aeson" "Aeson"
     , ppImport "Data.Aeson.TH" "Aeson"
     , ppImport "Runtime" "R"
@@ -363,75 +369,13 @@ genHaskell modul = do
     ppImportUnqualified mod what =
       aKeyword "import" <+> aConstructor mod <+> parens (hsep $ punctuate comma what)
 
-    ppLanguagePragma :: Doc AnsiStyle -> Doc AnsiStyle
-    ppLanguagePragma p =
-      "{-# LANGUAGE" <+> p <+> "#-}"
-
     ppDeriveJSON :: HaskellDef -> Doc AnsiStyle
-    ppDeriveJSON def = "Aeson.deriveJSON" <+> parens ("R.jsonOptions" <+> isADT def <+> pretty (let (Name n) = hdefName def in T.length n)) <+> squote <> squote <> ppTypeName (hdefName def)
+    ppDeriveJSON def =
+      "Aeson.deriveJSON" <+>
+      parens ("R.jsonOptions" <+> isADT def <+>
+                pretty (let (Name n) = hdefName def in T.length n)) <+>
+      squote <> squote <> ppTypeName (hdefName def)
 
     isADT = \case
       ADT{} -> "X.True"
-      _ -> "X.False"
-
-getModule :: FilePath -> IO (Either (Doc AnsiStyle) S.Module)
-getModule fn = do
-  str <- liftIO $ BL.readFile fn
-  case S.parseModule fn str of
-    Left err ->
-      pure (Left (pretty err))
-    Right modul ->
-      pure (Right modul)
-
-process :: FilePath -> IO ()
-process fn = getModule fn >>= \x ->
-  either (error . show) putDocLn (x >>= genHaskell)
-
--- >>> runGen $ refreshName (Name (T.pack "foo")) >> refreshName (Name (T.pack "foo"))
--- Right (Name "foo")
-
--- >>> process "/Users/eugene/Projects/stl/examples/ex1.stl"
--- {-# LANGUAGE TemplateHaskell #-}
--- {-# LANGUAGE TypeOperators #-}
--- {-# LANGUAGE GeneralisedNewtypeDeriving #-}
--- module Foo where
--- import qualified Prelude as X
--- import qualified Data.Void as X
--- import qualified Data.Map as X
--- import qualified Data.Aeson as Aeson
--- import qualified Data.Aeson.TH as Aeson
--- import qualified Runtime as R
--- import Runtime ((:~>))
--- data Maybe a
---   = Maybe'Nothing ()
---   | Maybe'Just a
---     deriving (X.Eq, X.Show)
--- data Pair a b = Pair
---   { _Pair_fst :: a
---   , _Pair_snd :: b
---   } deriving (X.Eq, X.Show)
--- data Foo'  = Foo'
---   { _Foo'_foo :: (X.Int :~> (X.Int :~> X.Int))
---   , _Foo'_bar :: X.Double
---   } deriving (X.Eq, X.Show)
--- data Foo
---   = Foo'Nothing ()
---   | Foo'Something Foo'
---     deriving (X.Eq, X.Show)
--- data Odd a
---   = Odd'OZero a
---   | Odd'OSucc Even
---     deriving (X.Eq, X.Show)
--- data Even a
---   = Even'EZero a
---   | Even'ESucc Odd
---     deriving (X.Eq, X.Show)
--- newtype API  = API (Maybe [(Pair () X.Void)])
---   deriving (X.Eq, X.Show)
--- Aeson.deriveJSON (R.jsonOptions X.True 5) ''Maybe
--- Aeson.deriveJSON (R.jsonOptions X.False 4) ''Pair
--- Aeson.deriveJSON (R.jsonOptions X.False 4) ''Foo'
--- Aeson.deriveJSON (R.jsonOptions X.True 3) ''Foo
--- Aeson.deriveJSON (R.jsonOptions X.True 3) ''Odd
--- Aeson.deriveJSON (R.jsonOptions X.True 4) ''Even
--- Aeson.deriveJSON (R.jsonOptions X.False 3) ''API
+      _     -> "X.False"

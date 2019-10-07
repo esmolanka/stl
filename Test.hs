@@ -40,7 +40,7 @@ mkTestCase fn =
     (replaceExtension fn ".out")
     (runWriterT (runModule testHandlers fn) >>= \case
         (Left doc, msgs) -> pure $ renderBS $ vsep $ msgs ++ [doc]
-        (Right (), msgs) -> pure $ renderBS $ vsep $ msgs)
+        (Right _,  msgs) -> pure $ renderBS $ vsep $ msgs)
   where
     renderBS :: Doc a -> B8.ByteString
     renderBS = encodeUtf8 . renderLazy . layoutPretty defaultLayoutOptions
