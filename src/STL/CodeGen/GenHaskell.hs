@@ -73,7 +73,7 @@ data HaskellDef
   | SumType
     { hdefName :: Name
     , hdefParams :: [VarName]
-    , hdefCases :: [(CtorName, HaskellType)]
+    , hdefCases :: [(CtorName, Maybe HaskellType)]
     }
   deriving (Show, Eq, Ord)
 
@@ -220,14 +220,17 @@ genFields = \case
     rest' <- genFields rest
     pure $ (fname, if isOptional then HApp HMaybe ty else ty) : rest'
 
-genCtors :: (MonadGen m) => S.Row HaskellType -> m [(CtorName, HaskellType)]
+genCtors :: (MonadGen m) => S.Row HaskellType -> m [(CtorName, Maybe HaskellType)]
 genCtors = \case
   S.RNil _ -> pure []
   S.RExplicit pos _ -> throwError $ pretty pos <> ": explicit variant tail not supported"
   S.RExtend _ (S.Label lbl) _prs ty rest -> do
     let fname = CtorName lbl
+    let cty = case ty of
+          HUnit -> Nothing
+          other -> Just other
     rest' <- genCtors rest
-    pure $ (fname, ty) : rest'
+    pure $ (fname, cty) : rest'
 
 genParams :: forall m. (MonadGen m) => [S.Binding S.Variance] -> m [VarName]
 genParams = mapM genParam
@@ -280,7 +283,7 @@ ppHaskellType t =
   case spine t of
     (HGlobal n, args) -> app (aConstructor (pretty n)) args
     (HRef x, args) -> app (aVariable (pretty x)) args
-    (HArrow a b, []) -> parens (ppHaskellType a <+> ":~>" <+> ppHaskellType b)
+    (HArrow a b, []) -> parens (ppHaskellType a <+> aConstructor ":~>" <+> ppHaskellType b)
     (HUnit, []) -> aConstructor "()"
     (HVoid, []) -> aConstructor "X.Void"
     (HBool, []) -> aConstructor "X.Bool"
@@ -328,10 +331,19 @@ ppHaskellDef = \case
          , indent 4 $ ppDeriving ["X.Eq", "X.Show"]
          ]
   where
-    ppParams params = hsep (map (aVariable . pretty) params)
-    ppField name (fld, ty) = "_" <> pretty name <> "_" <> pretty fld <+> "::" <+> cpretty ty
-    ppCtor name (ctor, payload) = pretty name <> "'" <> pretty ctor <+> cpretty payload
-    ppDeriving classes = aKeyword "deriving" <+> parens (hsep $ punctuate comma $ map aConstructor classes)
+    ppParams params =
+      hsep (map (aVariable . pretty) params)
+
+    ppField name (fld, ty) =
+      "_" <> pretty name <> "_" <> pretty fld <+> "::" <+> cpretty ty
+
+    ppCtor name (ctor, payload) =
+      case payload of
+        Nothing -> pretty name <> "'" <> pretty ctor
+        Just ty -> pretty name <> "'" <> pretty ctor <+> cpretty ty
+
+    ppDeriving classes =
+      aKeyword "deriving" <+> parens (hsep $ punctuate comma $ map aConstructor classes)
 
 genHaskell :: S.Module -> Maybe SType -> Either (Doc AnsiStyle) (Doc AnsiStyle)
 genHaskell modul _rootTy = do
