@@ -70,7 +70,7 @@ data HaskellDef
     , hdefParams :: [VarName]
     , hdefFields :: [(FieldName, HaskellType)]
     }
-  | ADT
+  | SumType
     { hdefName :: Name
     , hdefParams :: [VarName]
     , hdefCases :: [(CtorName, HaskellType)]
@@ -142,8 +142,8 @@ data DelayedType
   = ViaDef (Name -> [VarName] -> HaskellDef)
   | Inline HaskellType
 
-genDefBody :: forall m. MonadGen m => Name -> [VarName] -> S.Type -> m HaskellDef
-genDefBody defName params ty = do
+genDefBody :: forall m. MonadGen m => Name -> [VarName] -> [Name] -> S.Type -> m HaskellDef
+genDefBody defName params recursionClauses ty = do
   delayed <- cata alg ty
   case delayed of
     ViaDef f -> pure $ f defName params
@@ -168,8 +168,11 @@ genDefBody defName params ty = do
       S.TRef _ (S.Var x) ->
         pure $ Inline $ HRef (VarName x)
 
-      S.TGlobal _ Nothing name ->
-        Inline . HGlobal <$> genName name
+      S.TGlobal _ Nothing name -> do
+        name' <- genName name
+        pure $ if name' `elem` recursionClauses
+          then Inline $ applyParams (HGlobal name') params
+          else Inline $ HGlobal name'
 
       S.TGlobal pos (Just _mod) _name ->
         throwError $ pretty pos <> ": fully qualified names not supported"
@@ -200,7 +203,7 @@ genDefBody defName params ty = do
       S.TVariant _ row -> do
         row' <- mapM fromDelayed =<< sequence row
         ctors <- genCtors row'
-        pure $ ViaDef $ \name params -> ADT name params ctors
+        pure $ ViaDef $ \name params -> SumType name params ctors
 
       S.TArray pos _ _ ->
         throwError $ pretty pos <> ": Nat-indexed arrays not supported"
@@ -240,28 +243,30 @@ genParams = mapM genParam
         Just k' | isFancy k' -> throwError $ pretty pos <> ": only Type kind currently supported"
         _ -> pure (VarName x)
 
-genDefinition :: (MonadGen m) => S.GlobalName -> [S.Binding S.Variance] -> S.Type -> m HaskellDef
-genDefinition name params body = do
+genDefinition :: (MonadGen m) => S.GlobalName -> [S.Binding S.Variance] -> [S.GlobalName] -> S.Type -> m HaskellDef
+genDefinition name params recursionClauses body = do
   params' <- genParams params
   name' <- genName name
-  genDefBody name' params' body
+  recursionClauses' <- mapM genName recursionClauses
+  genDefBody name' params' recursionClauses' body
 
 collectDefinitions :: (MonadGen m) => S.Module -> m [HaskellDef]
 collectDefinitions modul = do
   forM_ (S._modStatements modul) $ \case
     S.Typedef _ name params body -> do
-      def <- genDefinition name params body
+      def <- genDefinition name params [name] body
       register def
     S.Mutualdef _ params clauses -> do
+      let names = map (\(S.MutualClause _ name _) -> name) clauses
       defs <- forM clauses $ \(S.MutualClause _ name body) ->
-        genDefinition name params body
+        genDefinition name params names body
       mapM_ register defs
     S.Normalise{} -> pure ()
     S.Subsume{} -> pure ()
 
   case S._modReturnType modul of
     Nothing -> pure ()
-    Just api -> genDefBody (Name "API") [] api >>= register
+    Just api -> genDefBody (Name "API") [] [] api >>= register
 
   defs <- gets (reverse . sRegisteredOrd)
   fmap concat . forM defs $ \def ->
@@ -314,7 +319,7 @@ ppHaskellDef = \case
              [rbrace <+> ppDeriving ["X.Eq", "X.Show"]]
          ]
 
-  ADT name params ctors ->
+  SumType name params ctors ->
     vsep [ aKeyword "data" <+>
            ppTypeName name <+>
            ppParams params
