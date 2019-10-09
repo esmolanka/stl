@@ -10,11 +10,11 @@ import qualified Language.Haskell.TH as TH
 newtype a :~> b = MkFun Int
   deriving (Eq, Show, Aeson.ToJSON, Aeson.FromJSON)
 
-deriveSerialisation :: Bool -> Int -> TH.Name -> TH.Q [TH.Dec]
-deriveSerialisation isSumType namePrefixLen =
+deriveSerialisation :: Bool -> String -> TH.Name -> TH.Q [TH.Dec]
+deriveSerialisation isSumType namePrefix =
   Aeson.deriveJSON $ Aeson.defaultOptions
-    { Aeson.fieldLabelModifier      = drop (namePrefixLen + 2)
-    , Aeson.constructorTagModifier  = drop (namePrefixLen + 1)
+    { Aeson.fieldLabelModifier      = drop (length namePrefix + 2)
+    , Aeson.constructorTagModifier  = drop (length namePrefix + 1)
     , Aeson.allNullaryToStringTag   = False
     , Aeson.omitNothingFields       = True
     , Aeson.sumEncoding             = Aeson.ObjectWithSingleField

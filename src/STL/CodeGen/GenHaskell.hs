@@ -10,6 +10,7 @@
 module STL.CodeGen.GenHaskell (genHaskell) where
 
 import Control.Monad.Except
+import Control.Monad.Reader
 import Control.Monad.State
 
 import Data.Functor.Foldable (cata)
@@ -19,6 +20,7 @@ import Data.Maybe
 import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.List (intersperse)
 
 import STL.Pretty
 import qualified STL.Syntax as S
@@ -27,10 +29,10 @@ import Data.StructuralType
 ----------------------------------------------------------------------
 -- Target types
 
-newtype Name = Name Text deriving (Show, Eq, Ord, Pretty)
-newtype FieldName = FieldName Text deriving (Show, Eq, Ord, Pretty)
-newtype CtorName = CtorName Text deriving (Show, Eq, Ord, Pretty)
-newtype VarName  = VarName Text deriving (Show, Eq, Ord, Pretty)
+newtype Name = Name [Text] deriving (Show, Eq, Ord)
+newtype FieldName = FieldName Text deriving (Show, Eq, Ord)
+newtype CtorName = CtorName Text deriving (Show, Eq, Ord)
+newtype VarName  = VarName Text deriving (Show, Eq, Ord)
 
 data HaskellType
   = HGlobal Name
@@ -84,7 +86,8 @@ instance CPretty HaskellDef where
 -- Generation monad
 
 type MonadGen m =
-  ( MonadState GenState m
+  ( MonadReader GenEnv m
+  , MonadState GenState m
   , MonadError (Doc AnsiStyle) m
   )
 
@@ -92,6 +95,11 @@ data GenState = GenState
   { sRegistered    :: Map Name HaskellDef
   , sRegisteredOrd :: [Name]
   , sNameMapping   :: Map S.GlobalName Name
+  }
+
+data GenEnv = GenEnv
+  { eDerivedName :: Name
+  , eParameters  :: [VarName]
   }
 
 register :: (MonadGen m) => HaskellDef -> m ()
@@ -106,12 +114,22 @@ refreshName (Name n) = do
   used1 <- gets (M.keysSet . sRegistered)
   used2 <- gets (S.fromList . M.elems . sNameMapping)
   let used = S.union used1 used2
-  pure $ head $ filter (not . flip S.member used) (map Name $ iterate (\m -> m <> "'") n)
+  pure $ head $ filter (not . flip S.member used) (map Name $ iterate (\m -> "'" : m) n)
 
-runGen :: ExceptT (Doc AnsiStyle) (State GenState) a -> Either (Doc AnsiStyle) a
+withSuffix :: MonadGen m => Text -> m a -> m a
+withSuffix suffix =
+  local (\s -> s { eDerivedName = addSuffix (eDerivedName s) })
+  where
+    addSuffix (Name parts) = Name (suffix : parts)
+
+forDefinition :: MonadGen m => Name -> [VarName] -> m a -> m a
+forDefinition name params =
+  local (\s -> s { eDerivedName = name, eParameters = params })
+
+runGen :: ExceptT (Doc AnsiStyle) (ReaderT GenEnv (State GenState)) a -> Either (Doc AnsiStyle) a
 runGen a =
   evalState
-    (runExceptT a)
+    (runReaderT (runExceptT a) (GenEnv (Name ["API"]) []))
     (GenState M.empty [] M.empty)
 
 ----------------------------------------------------------------------
@@ -122,7 +140,7 @@ genName global@(S.GlobalName name) = do
   case M.lookup global mapping of
     Just known -> pure known
     Nothing    -> do
-      new <- refreshName $ Name name
+      new <- refreshName $ Name [name]
       modify (\s -> s { sNameMapping = M.insert global new (sNameMapping s) })
       pure new
 
@@ -142,24 +160,27 @@ data DelayedType
   = ViaDef (Name -> [VarName] -> HaskellDef)
   | Inline HaskellType
 
-genDefBody :: forall m. MonadGen m => Name -> [VarName] -> [Name] -> S.Type -> m HaskellDef
-genDefBody defName params recursionClauses ty = do
+applyParams :: HaskellType -> [VarName] -> HaskellType
+applyParams = foldl (\a v -> HApp a (HRef v))
+
+fromDelayed :: MonadGen m => DelayedType -> m HaskellType
+fromDelayed = \case
+  ViaDef f -> do
+    name <- refreshName =<< asks eDerivedName
+    params <- asks eParameters
+    register $ f name params
+    pure $ applyParams (HGlobal name) params
+  Inline t -> pure t
+
+genDefBody :: forall m. MonadGen m => [Name] -> S.Type -> m HaskellDef
+genDefBody recursionClauses ty = do
   delayed <- cata alg ty
+  defName <- asks eDerivedName
+  params  <- asks eParameters
   case delayed of
     ViaDef f -> pure $ f defName params
     Inline t -> pure $ Newtype defName params t
   where
-    applyParams :: HaskellType -> [VarName] -> HaskellType
-    applyParams = foldl (\a v -> HApp a (HRef v))
-
-    fromDelayed :: DelayedType -> m HaskellType
-    fromDelayed = \case
-      ViaDef f -> do
-        name <- refreshName defName
-        register $ f name params
-        pure $ applyParams (HGlobal name) params
-      Inline t -> pure t
-
     alg :: S.TypeF (m DelayedType) -> m DelayedType
     alg = \case
       S.T _ bt ->
@@ -170,9 +191,11 @@ genDefBody defName params recursionClauses ty = do
 
       S.TGlobal _ Nothing name -> do
         name' <- genName name
-        pure $ if name' `elem` recursionClauses
-          then Inline $ applyParams (HGlobal name') params
-          else Inline $ HGlobal name'
+        if name' `elem` recursionClauses
+          then do
+            params  <- asks eParameters
+            pure $ Inline $ applyParams (HGlobal name') params
+          else pure $ Inline $ HGlobal name'
 
       S.TGlobal pos (Just _mod) _name ->
         throwError $ pretty pos <> ": fully qualified names not supported"
@@ -184,8 +207,8 @@ genDefBody defName params recursionClauses ty = do
         throwError $ pretty pos <> ": existential quantification not supported"
 
       S.TArrow _ a b cs -> do
-        a' <- fromDelayed =<< a
-        b' <- fromDelayed =<< b
+        a' <- withSuffix "Argument" $ fromDelayed =<< a
+        b' <- withSuffix "Result" $ fromDelayed =<< b
         cs' <- mapM fromDelayed =<< sequence cs
         pure $ Inline $ foldr (\x rest -> HArrow x rest) (last (a' : b' : cs')) (init (a' : b' : cs'))
 
@@ -196,37 +219,37 @@ genDefBody defName params recursionClauses ty = do
         pure $ Inline $ foldl HApp f' (a' : as')
 
       S.TRecord _ row -> do
-        row' <- mapM fromDelayed =<< sequence row
-        fields <- genFields row'
+        fields <- genFields row
         pure $ ViaDef $ \name params -> Record name params fields
 
       S.TVariant _ row -> do
-        row' <- mapM fromDelayed =<< sequence row
-        ctors <- genCtors row'
+        ctors <- genCtors row
         pure $ ViaDef $ \name params -> SumType name params ctors
 
       S.TArray pos _ _ ->
         throwError $ pretty pos <> ": Nat-indexed arrays not supported"
 
-genFields :: (MonadGen m) => S.Row HaskellType -> m [(FieldName, HaskellType)]
+genFields :: (MonadGen m) => S.Row (m DelayedType) -> m [(FieldName, HaskellType)]
 genFields = \case
   S.RNil _ -> pure []
   S.RExplicit pos _ -> throwError $ pretty pos <> ": explicit record tail not supported"
   S.RExtend _ (S.Label lbl) prs ty rest -> do
+    ty' <- withSuffix lbl $ fromDelayed =<< ty
+    let fname = FieldName lbl
     let isOptional = case prs of
           S.PPresent{} -> False
           S.PVariable{} -> True
-    let fname = FieldName lbl
     rest' <- genFields rest
-    pure $ (fname, if isOptional then HApp HMaybe ty else ty) : rest'
+    pure $ (fname, if isOptional then HApp HMaybe ty' else ty') : rest'
 
-genCtors :: (MonadGen m) => S.Row HaskellType -> m [(CtorName, Maybe HaskellType)]
+genCtors :: (MonadGen m) => S.Row (m DelayedType) -> m [(CtorName, Maybe HaskellType)]
 genCtors = \case
   S.RNil _ -> pure []
   S.RExplicit pos _ -> throwError $ pretty pos <> ": explicit variant tail not supported"
   S.RExtend _ (S.Label lbl) _prs ty rest -> do
+    ty' <- withSuffix "Payload" $ withSuffix lbl $ fromDelayed =<< ty
     let fname = CtorName lbl
-    let cty = case ty of
+    let cty = case ty' of
           HUnit -> Nothing
           other -> Just other
     rest' <- genCtors rest
@@ -251,7 +274,7 @@ genDefinition name params recursionClauses body = do
   params' <- genParams params
   name' <- genName name
   recursionClauses' <- mapM genName recursionClauses
-  genDefBody name' params' recursionClauses' body
+  forDefinition name' params' $ genDefBody recursionClauses' body
 
 collectDefinitions :: (MonadGen m) => S.Module -> m [HaskellDef]
 collectDefinitions modul = do
@@ -269,7 +292,7 @@ collectDefinitions modul = do
 
   case S._modReturnType modul of
     Nothing -> pure ()
-    Just api -> genDefBody (Name "API") [] [] api >>= register
+    Just api -> forDefinition (Name ["API"]) [] $ genDefBody [] api >>= register
 
   defs <- gets (reverse . sRegisteredOrd)
   fmap concat . forM defs $ \def ->
@@ -278,11 +301,24 @@ collectDefinitions modul = do
 ----------------------------------------------------------------------
 -- Pretty-printing
 
+ppTypeName :: Name -> Doc AnsiStyle
+ppTypeName (Name parts) =
+  aConstructor $ hcat $ intersperse "'" $ map pretty (reverse parts)
+
+ppCtorName :: CtorName -> Doc AnsiStyle
+ppCtorName (CtorName name) = pretty name
+
+ppFieldName :: FieldName -> Doc AnsiStyle
+ppFieldName (FieldName name) = pretty name
+
+ppVarName :: VarName -> Doc AnsiStyle
+ppVarName (VarName name) = aVariable $ pretty name
+
 ppHaskellType :: HaskellType -> Doc AnsiStyle
 ppHaskellType t =
   case spine t of
-    (HGlobal n, args) -> app (aConstructor (pretty n)) args
-    (HRef x, args) -> app (aVariable (pretty x)) args
+    (HGlobal n, args) -> app (ppTypeName n) args
+    (HRef x, args) -> app (ppVarName x) args
     (HArrow a b, []) -> parens (ppHaskellType a <+> aConstructor ":~>" <+> ppHaskellType b)
     (HUnit, []) -> aConstructor "()"
     (HVoid, []) -> aConstructor "X.Void"
@@ -299,9 +335,6 @@ ppHaskellType t =
       app :: Doc AnsiStyle -> [HaskellType] -> Doc AnsiStyle
       app f [] = f
       app f as = parens (f <+> hsep (map cpretty as))
-
-ppTypeName :: Name -> Doc AnsiStyle
-ppTypeName name = aConstructor (pretty name)
 
 ppHaskellDef :: HaskellDef -> Doc AnsiStyle
 ppHaskellDef = \case
@@ -332,15 +365,17 @@ ppHaskellDef = \case
          ]
   where
     ppParams params =
-      hsep (map (aVariable . pretty) params)
+      hsep (map ppVarName params)
 
     ppField name (fld, ty) =
-      "_" <> pretty name <> "_" <> pretty fld <+> "::" <+> cpretty ty
+      let uniquifiedField = unAnnotate $ "_" <> ppTypeName name <> "_" <> ppFieldName fld
+      in uniquifiedField <+> "::" <+> cpretty ty
 
     ppCtor name (ctor, payload) =
-      case payload of
-        Nothing -> pretty name <> "'" <> pretty ctor
-        Just ty -> pretty name <> "'" <> pretty ctor <+> cpretty ty
+      let uniquifiedCtor = unAnnotate $ ppTypeName name <> "'" <> ppCtorName ctor
+      in case payload of
+           Nothing -> uniquifiedCtor
+           Just ty -> uniquifiedCtor <+> ppHaskellType ty
 
     ppDeriving classes =
       aKeyword "deriving" <+> parens (hsep $ punctuate comma $ map aConstructor classes)
@@ -388,7 +423,7 @@ genHaskell modul _rootTy = do
     ppDeriveJSON def =
       "R.deriveSerialisation" <+>
          isSumType def <+>
-         pretty (let (Name n) = hdefName def in T.length n) <+>
+         dquotes (ppTypeName (hdefName def)) <+>
          squote <> squote <> ppTypeName (hdefName def)
 
     isSumType = \case
