@@ -337,7 +337,7 @@ genHaskell modul _rootTy = do
     , "{-# LANGUAGE TemplateHaskell            #-}"
     , "{-# LANGUAGE TypeOperators              #-}"
     , mempty
-    , "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
+    , "{-# OPTIONS_GHC -fno-warn-unused-imports   #-}"
     , "{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}"
     , mempty
     , "----------------------------------------------------------------------"
@@ -350,8 +350,6 @@ genHaskell modul _rootTy = do
     , ppImport "Data.Void" "X"
     , ppImport "Data.Map" "X"
     , ppImport "Data.Text" "X"
-    , ppImport "Data.Aeson" "Aeson"
-    , ppImport "Data.Aeson.TH" "Aeson"
     , ppImport "Runtime" "R"
     , ppImportUnqualified "Runtime" ["(:~>)"]
     , mempty
@@ -371,11 +369,11 @@ genHaskell modul _rootTy = do
 
     ppDeriveJSON :: HaskellDef -> Doc AnsiStyle
     ppDeriveJSON def =
-      "Aeson.deriveJSON" <+>
-      parens ("R.jsonOptions" <+> isADT def <+>
-                pretty (let (Name n) = hdefName def in T.length n)) <+>
-      squote <> squote <> ppTypeName (hdefName def)
+      "R.deriveSerialisation" <+>
+         isSumType def <+>
+         pretty (let (Name n) = hdefName def in T.length n) <+>
+         squote <> squote <> ppTypeName (hdefName def)
 
-    isADT = \case
-      ADT{} -> "X.True"
-      _     -> "X.False"
+    isSumType = \case
+      SumType{} -> "X.True"
+      _         -> "X.False"

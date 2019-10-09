@@ -1,21 +1,23 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
-module Runtime where
+module Runtime (deriveSerialisation, (:~>)) where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.TH as Aeson
+import qualified Language.Haskell.TH as TH
 
 newtype a :~> b = MkFun Int
   deriving (Eq, Show, Aeson.ToJSON, Aeson.FromJSON)
 
-jsonOptions :: Bool -> Int -> Aeson.Options
-jsonOptions isADT n = Aeson.defaultOptions
-  { Aeson.fieldLabelModifier      = drop (n + 2)
-  , Aeson.constructorTagModifier  = drop (n + 1)
-  , Aeson.allNullaryToStringTag   = False
-  , Aeson.omitNothingFields       = True
-  , Aeson.sumEncoding             = Aeson.ObjectWithSingleField
-  , Aeson.unwrapUnaryRecords      = False
-  , Aeson.tagSingleConstructors   = isADT
-  }
+deriveSerialisation :: Bool -> Int -> TH.Name -> TH.Q [TH.Dec]
+deriveSerialisation isSumType namePrefixLen =
+  Aeson.deriveJSON $ Aeson.defaultOptions
+    { Aeson.fieldLabelModifier      = drop (namePrefixLen + 2)
+    , Aeson.constructorTagModifier  = drop (namePrefixLen + 1)
+    , Aeson.allNullaryToStringTag   = False
+    , Aeson.omitNothingFields       = True
+    , Aeson.sumEncoding             = Aeson.ObjectWithSingleField
+    , Aeson.unwrapUnaryRecords      = False
+    , Aeson.tagSingleConstructors   = isSumType
+    }
