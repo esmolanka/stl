@@ -75,7 +75,7 @@ data HaskellDef
   | SumType
     { hdefName :: Name
     , hdefParams :: [VarName]
-    , hdefCases :: [(CtorName, Maybe HaskellType)]
+    , hdefCases :: [(CtorName, Maybe (Either [(FieldName, HaskellType)] HaskellType))]
     }
   deriving (Show, Eq, Ord)
 
@@ -157,7 +157,8 @@ genBaseType = \case
   S.TNat    -> pure HNat
 
 data DelayedType
-  = ViaDef (Name -> [VarName] -> HaskellDef)
+  = MkSumType [(CtorName, Maybe (Either [(FieldName, HaskellType)] HaskellType))]
+  | MkRecord  [(FieldName, HaskellType)]
   | Inline HaskellType
 
 applyParams :: HaskellType -> [VarName] -> HaskellType
@@ -165,10 +166,15 @@ applyParams = foldl (\a v -> HApp a (HRef v))
 
 fromDelayed :: MonadGen m => DelayedType -> m HaskellType
 fromDelayed = \case
-  ViaDef f -> do
+  MkSumType ctors -> do
     name <- refreshName =<< asks eDerivedName
     params <- asks eParameters
-    register $ f name params
+    register $ SumType name params ctors
+    pure $ applyParams (HGlobal name) params
+  MkRecord fields -> do
+    name <- refreshName =<< asks eDerivedName
+    params <- asks eParameters
+    register $ Record name params fields
     pure $ applyParams (HGlobal name) params
   Inline t -> pure t
 
@@ -178,8 +184,9 @@ genDefBody recursionClauses ty = do
   defName <- asks eDerivedName
   params  <- asks eParameters
   case delayed of
-    ViaDef f -> pure $ f defName params
-    Inline t -> pure $ Newtype defName params t
+    MkSumType ctors -> pure $ SumType defName params ctors
+    MkRecord fields -> pure $ Record defName params fields
+    Inline t        -> pure $ Newtype defName params t
   where
     alg :: S.TypeF (m DelayedType) -> m DelayedType
     alg = \case
@@ -198,19 +205,19 @@ genDefBody recursionClauses ty = do
           else pure $ Inline $ HGlobal name'
 
       S.TGlobal pos (Just _mod) _name ->
-        throwError $ pretty pos <> ": fully qualified names not supported"
+        throwError $ pretty pos <> ": qualified names not supported"
 
       S.TForall pos _ _ ->
-        throwError $ pretty pos <> ": universal quantificaiton not supported"
+        throwError $ pretty pos <> ": universal quantification not supported"
 
       S.TExists pos _ _ ->
         throwError $ pretty pos <> ": existential quantification not supported"
 
       S.TArrow _ a b cs -> do
-        a' <- withSuffix "Argument" $ fromDelayed =<< a
-        b' <- withSuffix "Result" $ fromDelayed =<< b
-        cs' <- mapM fromDelayed =<< sequence cs
-        pure $ Inline $ foldr (\x rest -> HArrow x rest) (last (a' : b' : cs')) (init (a' : b' : cs'))
+        let argNames = "Arg" : map (\n -> T.pack $ "Arg" ++ show n) [2 :: Int ..]
+        args <- zipWithM (\name ty -> withSuffix name (fromDelayed =<< ty)) argNames (init (a : b : cs))
+        ret  <- withSuffix "Ret" (fromDelayed =<< (last (a : b : cs)))
+        pure $ Inline $ foldr (\x rest -> HArrow x rest) ret args
 
       S.TApp _ f a as -> do
         f' <- fromDelayed =<< f
@@ -220,11 +227,11 @@ genDefBody recursionClauses ty = do
 
       S.TRecord _ row -> do
         fields <- genFields row
-        pure $ ViaDef $ \name params -> Record name params fields
+        pure $ MkRecord fields
 
       S.TVariant _ row -> do
         ctors <- genCtors row
-        pure $ ViaDef $ \name params -> SumType name params ctors
+        pure $ MkSumType ctors
 
       S.TArray pos _ _ ->
         throwError $ pretty pos <> ": Nat-indexed arrays not supported"
@@ -242,18 +249,24 @@ genFields = \case
     rest' <- genFields rest
     pure $ (fname, if isOptional then HApp HMaybe ty' else ty') : rest'
 
-genCtors :: (MonadGen m) => S.Row (m DelayedType) -> m [(CtorName, Maybe HaskellType)]
+genCtors :: (MonadGen m) => S.Row (m DelayedType) -> m [(CtorName, Maybe (Either [(FieldName, HaskellType)] HaskellType))]
 genCtors = \case
   S.RNil _ -> pure []
   S.RExplicit pos _ -> throwError $ pretty pos <> ": explicit variant tail not supported"
-  S.RExtend _ (S.Label lbl) _prs ty rest -> do
-    ty' <- withSuffix "Payload" $ withSuffix lbl $ fromDelayed =<< ty
-    let fname = CtorName lbl
-    let cty = case ty' of
-          HUnit -> Nothing
-          other -> Just other
-    rest' <- genCtors rest
-    pure $ (fname, cty) : rest'
+  S.RExtend _ (S.Label lbl) _prs delayed rest -> do
+    let ctorName = CtorName lbl
+    delayed' <- delayed
+    case delayed' of
+      MkRecord fields -> do
+        rest' <- genCtors rest
+        pure $ (ctorName, Just (Left fields)) : rest'
+      _other -> do
+        ty <- withSuffix lbl $ withSuffix "Payload" $ fromDelayed delayed'
+        let cty = case ty of
+              HUnit -> Nothing
+              other -> Just (Right other)
+        rest' <- genCtors rest
+        pure $ (ctorName, cty) : rest'
 
 genParams :: forall m. (MonadGen m) => [S.Binding S.Variance] -> m [VarName]
 genParams = mapM genParam
@@ -341,15 +354,16 @@ ppHaskellDef = \case
   Newtype name params body ->
     vsep [ aKeyword "newtype" <+>
            ppTypeName name <+>
-           ppParams params <+> "=" <+>
-           ppTypeName name <+> cpretty body
+           ppParams params <> "=" <+>
+           ppTypeName name
+         , indent 2 $ lbrace <+> unAnnotate ("get" <> ppTypeName name) <+> "::" <+> cpretty body <+> rbrace
          , indent 2 $ ppDeriving ["X.Eq", "X.Show"]
          ]
 
   Record name params fields ->
     vsep [ aKeyword "data" <+>
            ppTypeName name <+>
-           ppParams params <+> "=" <+> ppTypeName name
+           ppParams params <> "=" <+> ppTypeName name
          , indent 2 $ vsep $
              zipWith (<+>) (lbrace : repeat comma) (map (ppField name) fields) ++
              [rbrace <+> ppDeriving ["X.Eq", "X.Show"]]
@@ -364,28 +378,79 @@ ppHaskellDef = \case
          , indent 4 $ ppDeriving ["X.Eq", "X.Show"]
          ]
   where
+    ppParams [] = mempty
     ppParams params =
-      hsep (map ppVarName params)
+      hsep (map ppVarName params) <> space
 
-    ppField name (fld, ty) =
-      let uniquifiedField = unAnnotate $ "_" <> ppTypeName name <> "_" <> ppFieldName fld
-      in uniquifiedField <+> "::" <+> cpretty ty
+    ppField _name (fld, ty) =
+      ppFieldName fld <+> "::" <+> cpretty ty
 
     ppCtor name (ctor, payload) =
       let uniquifiedCtor = unAnnotate $ ppTypeName name <> "'" <> ppCtorName ctor
       in case payload of
-           Nothing -> uniquifiedCtor
-           Just ty -> uniquifiedCtor <+> ppHaskellType ty
+           Nothing ->
+             uniquifiedCtor
+           Just (Right ty) ->
+             uniquifiedCtor <+> ppHaskellType ty
+           Just (Left fields) ->
+             vsep [ uniquifiedCtor
+                  , indent 4 $ vsep $
+                    zipWith (<+>) (lbrace : repeat comma) (map (ppField name) fields) ++ [rbrace]
+                  ]
 
     ppDeriving classes =
       aKeyword "deriving" <+> parens (hsep $ punctuate comma $ map aConstructor classes)
 
+ppSType :: Doc AnsiStyle -> SType -> Doc AnsiStyle
+ppSType namePrefix = group . go
+  where
+    ctor = (namePrefix <>)
+    ppKind = \case
+      Star -> ctor "Star"
+      Row -> ctor "Row"
+      Presence -> ctor "Presence"
+      Nat -> ctor "Nat"
+      Arr a v b -> group $ parens (fillSep [ctor "Arr", ppKind a, ppVariance v, ppKind b])
+
+    ppVariance = \case
+      Covariant -> ctor "Covariant"
+      Contravariant -> ctor "Contravariant"
+      Invariant -> ctor "Invariant"
+
+    ppBaseType = \case
+      TUnit -> ctor "TUnit"
+      TVoid -> ctor "TVoid"
+      TBool -> ctor "TBool"
+      TInt -> ctor "TInt"
+      TFloat -> ctor "TFloat"
+      TString -> ctor "TString"
+      TList -> ctor "TList"
+      TDict -> ctor "TDict"
+      TNat -> ctor "TNat"
+
+    go = \case
+      TRef n -> parens (ctor "TRef" <+> pretty n)
+      TBase bt -> group $ parens (fillSep [ctor "TBase", ppBaseType bt])
+      TArrow a b -> group $ parens (fillSep [ctor "TArrow", go a, go b])
+      TRecord r -> group $ parens (fillSep [ctor "TRecord", go r])
+      TVariant r -> group $ parens (fillSep [ctor "TVariant", go r])
+      TArray a n -> group $ parens (fillSep [ctor "TArray", go a, go n])
+      TPresent -> ctor "TPresent"
+      TAbsent -> ctor "TAbsent"
+      TExtend (Label lbl) p a r -> group $ parens (fillSep [ctor "TExtend", parens (ctor "mkLabel" <+> pretty (show lbl)), go p, go a, go r])
+      TNil -> ctor "TNil"
+      TApp f a -> group $ parens (fillSep [ctor "TApp", go f, go a])
+      TForall k b -> group $ parens (fillSep [ctor "TForall", ppKind k, go b])
+      TExists k b -> group $ parens (fillSep [ctor "TExists", ppKind k, go b])
+      TMu b -> group $ parens (fillSep [ctor "TMu", go b])
+
 genHaskell :: S.Module -> Maybe SType -> Either (Doc AnsiStyle) (Doc AnsiStyle)
-genHaskell modul _rootTy = do
+genHaskell modul rootTy = do
   defs <- runGen $ collectDefinitions modul
   let modName = T.intercalate "." $ map (\(S.ModuleName n) -> n) (S._modName modul)
   pure $ vsep
-    [ "{-# LANGUAGE GeneralisedNewtypeDeriving #-}"
+    [ "{-# LANGUAGE DuplicateRecordFields      #-}"
+    , "{-# LANGUAGE GeneralisedNewtypeDeriving #-}"
     , "{-# LANGUAGE TemplateHaskell            #-}"
     , "{-# LANGUAGE TypeOperators              #-}"
     , mempty
@@ -407,6 +472,10 @@ genHaskell modul _rootTy = do
     , mempty
     , vsep $ punctuate line $ map cpretty defs
     , mempty
+    , case rootTy of
+        Nothing -> mempty
+        Just ty -> ppTypeOfInstance (Name ["API"]) ty
+    , mempty
     , vsep $ map ppDeriveJSON defs
     ]
   where
@@ -418,6 +487,13 @@ genHaskell modul _rootTy = do
     ppImportUnqualified :: Doc AnsiStyle -> [Doc AnsiStyle] -> Doc AnsiStyle
     ppImportUnqualified mod what =
       aKeyword "import" <+> aConstructor mod <+> parens (hsep $ punctuate comma what)
+
+    ppTypeOfInstance :: Name -> SType -> Doc AnsiStyle
+    ppTypeOfInstance name ty = vsep
+      [ aKeyword "instance" <+> aConstructor "R.TypeOf" <+> ppTypeName name <+> aKeyword "where"
+      , indent 2 $ "typeOf _" <+> "="
+      , indent 4 $ ppSType "R." ty
+      ]
 
     ppDeriveJSON :: HaskellDef -> Doc AnsiStyle
     ppDeriveJSON def =
