@@ -17,6 +17,7 @@ import Data.Functor.Foldable (Fix(..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as Lazy
 import Data.Text.Prettyprint.Doc
+import Data.Void
 
 import STL.Syntax.Lexer
 import STL.Syntax.Position
@@ -30,7 +31,7 @@ import STL.Syntax.Types
 
 %error     { parseError }
 %tokentype { LocatedBy Position Token }
-%monad     { Either String }
+%monad     { Either (Position, Doc Void) }
 
 %token
   '('            { L _ (TokParen '('   ) }
@@ -300,7 +301,7 @@ mkConstructor pos ctor = case ctor of
   "Nat"    -> Fix (T pos TNat)
   other    -> Fix $ TGlobal pos Nothing (GlobalName ctor)
 
-mkKind :: Position -> T.Text -> Either String Kind
+mkKind :: Position -> T.Text -> Either (Position, Doc Void) Kind
 mkKind pos ctor = case ctor of
   "Type" -> pure Star
   "Row"  -> pure Row
@@ -312,15 +313,14 @@ mkFileName t = T.unpack t ++ ".stl"
 
 type Located = LocatedBy Position
 
-parseError :: [LocatedBy Position Token] -> Either String b
+parseError :: [Located Token] -> Either (Position, Doc Void) b
 parseError toks = case toks of
-  [] ->
-    Left "Unexpected end of file"
   (L pos tok : _) ->
-    Left $ show $ pretty pos <> colon <+> "error: unexpected" <+> pretty tok
+    Left (pos, "unexpected" <+> pretty tok)
+  [] ->
+    -- Well-formed token streams must end with EOF token
+    error "Unexpected end of token stream"
 
-otherError :: Position -> Doc a -> Either String b
-otherError pos msg =
-  Left $ show $ pretty pos <> colon <+> "error:" <+> msg
-
+otherError :: Position -> Doc Void -> Either (Position, Doc Void) b
+otherError pos msg = Left (pos, msg)
 }

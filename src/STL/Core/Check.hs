@@ -73,6 +73,16 @@ data IllegalDefinitionReason
   | DefinitionContainsExplicitRecursion
   | DefinitionContainsExplicitParametrisation
 
+errPosition :: Err -> Position
+errPosition = \case
+  VariableNotFound pos _ _ _ -> pos
+  VarianceMismatch pos _ _ _ _ -> pos
+  KindMismatch pos _ _ _ -> pos
+  GlobalNotFound pos _ -> pos
+  GlobalAlreadyDefined pos _ _ -> pos
+  IllegalDefinition pos _ _ _ -> pos
+  IllegalMutualDefinition pos _ -> pos
+
 instance CPretty Err where
   cpretty = \case
     VariableNotFound pos x n expectation ->
@@ -300,6 +310,9 @@ runTCT :: (Monad m) => ExceptT Err (ReaderT Ctx m) a -> m (Either (Doc AnsiStyle
 runTCT k =
   either (Left . cpretty) Right <$>
     runReaderT (runExceptT k) (Ctx M.empty M.empty NoExpectation Positive)
+
+runRawTCT :: (Monad m) => ExceptT Err (ReaderT Ctx m) a -> m (Either Err a)
+runRawTCT k = runReaderT (runExceptT k) (Ctx M.empty M.empty NoExpectation Positive)
 
 ----------------------------------------------------------------------
 -- Kind check type terms

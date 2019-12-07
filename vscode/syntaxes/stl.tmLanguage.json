@@ -1,0 +1,30 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "STL",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#constructors"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.stl",
+				"match": "\\b(module|import|type|with|provide|forall|exists)\\b"
+			}, {
+				"name": "keyword.control.stl",
+				"match": "(^|\\w*)(#eval|#check)\\b"
+			 }]
+		},
+		"constructors": {
+			"patterns": [{
+				"name": "entity.name.type.stl",
+				"match": "\\b(Type|Row|Nat)\\b"
+			}]
+		}
+	},
+	"scopeName": "source.stl"
+}

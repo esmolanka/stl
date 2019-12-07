@@ -5,13 +5,17 @@ module STL.Pretty
   , AnsiStyle, aKind, aKeyword, aConstructor, aVariable, aLabel
   , CPretty(..), putDocLn
   , ppSubscript
+  , renderDoc
   ) where
 
 import System.Console.ANSI (hSupportsANSI)
 import System.IO (stdout)
+
 import Data.Char
+import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc
 import Data.Text.Prettyprint.Doc.Render.Terminal
+import qualified Data.Text.Prettyprint.Doc.Render.Text as ToText
 
 class CPretty a where
   cpretty :: a -> Doc AnsiStyle
@@ -51,3 +55,8 @@ putDocLn doc = do
   if supports
     then putDoc (doc <> line)
     else putDoc (unAnnotate (doc <> line))
+
+renderDoc :: Doc a -> T.Text
+renderDoc =
+  ToText.renderStrict . layoutSmart defaultLayoutOptions
+
