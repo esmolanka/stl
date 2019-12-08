@@ -1,0 +1,34 @@
+-- Records:
+type Color =
+  { r : Int
+  , g : Int
+  , b : Int
+  }
+
+-- * `Int`, `Float`, and `Text` are base types.
+
+-- Variants with no payload (enums):
+type Font =
+  | SansSerif
+  | Serif
+  | Monospaced
+
+-- Variants with payloads (and recursion):
+type Drawing =
+  | Circle    : { radius : Float, color : Color }
+  | Square    : { side : Float, color : Color }
+  | Label     : { caption : String, color : Color }
+  | Scale     : { x : Float, y : Float }
+  | Rotate    : { radians : Float }
+  | Translate : { x : Float, y : Float }
+  | Compose   : { background : Drawing, foreground : Drawing }
+
+-- API entry point:
+provide
+  { canvasSize  : Drawing -> { width : Float, height : Float }
+  , toGrayscale : Drawing -> Drawing
+  , merge       : List Drawing -> Drawing
+  }
+
+-- * `a -> b` is type of functions with argument of type `a` and result of type `b`.
+-- * `List` is parametrised type of lists. `List Int` means list of integers.
