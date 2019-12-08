@@ -1,0 +1,24 @@
+
+type Functor (±f : Type -> Type) =
+  { map : forall a b. (a -> b) -> f a -> f b }
+
+type Fix (f : Type -> Type) = f Fix
+
+type Algebra (±f : Type -> Type) (±a : Type) =
+  f { r : Fix f, q : a } -> a
+
+type Paramorphism =
+  forall (f : Type -> Type) (a : Type).
+  Functor f -> Algebra f a -> Fix f  -> a
+
+#eval Paramorphism
+
+type ConsListF a e =
+  | Nil
+  | Cons : { head : a, tail : e }
+
+type ConsList a = Fix (ConsListF a)
+
+#eval ConsList
+
+#check ConsListF Unit (ConsListF Unit (ConsListF Unit <Nil>)) <: ConsList Unit
