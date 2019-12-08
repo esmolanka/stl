@@ -1,2 +1,2 @@
-tests/error08.stl:2:36-2:37: error:
+tests/error08.types:2:36-2:37: error:
     Covariant variable 'a' must not be used in contravariant positions.

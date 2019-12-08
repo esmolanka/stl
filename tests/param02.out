@@ -1,10 +1,10 @@
-tests/param02.stl:12:1-12:28:
+tests/param02.types:12:1-12:28:
   Normalised:
     λ (f : Type -> Type). ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       {first^ω : f Unit, second^ω/1 : f Unit | ρ}
   Kind:
     (Type -> Type) -> Type
-tests/param02.stl:13:1-13:34:
+tests/param02.types:13:1-13:34:
   Normalised:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       { first^ω :
@@ -17,7 +17,7 @@ tests/param02.stl:13:1-13:34:
       }
   Kind:
     Type
-tests/param02.stl:19:1-19:29:
+tests/param02.types:19:1-19:29:
   Normalised:
     λ (g : (Type -> Type) -> Type). ∃ (ρ : Row). ∃ (ω : #).
       { use^ω :
@@ -27,7 +27,7 @@ tests/param02.stl:19:1-19:29:
       }
   Kind:
     ((Type -> Type) -> Type) -> Type
-tests/param02.stl:20:1-20:51:
+tests/param02.types:20:1-20:51:
   Normalised:
     ∃ (ρ : Row). ∃ (ω : #).
       { use^ω :
@@ -44,12 +44,12 @@ tests/param02.stl:20:1-20:51:
       }
   Kind:
     Type
-tests/param02.stl:24:1-24:15:
+tests/param02.types:24:1-24:15:
   Normalised:
     λ (r : Row). { | r}
   Kind:
     Row -> Type
-tests/param02.stl:25:1-25:35:
+tests/param02.types:25:1-25:35:
   Normalised:
     ∀ (r : Row). { | r}
   Kind:

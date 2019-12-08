@@ -1,4 +1,4 @@
-tests/records02.stl:10:1-10:13:
+tests/records02.types:10:1-10:13:
   Normalised:
     ∃ (ρ : Row).
       { afield : Unit

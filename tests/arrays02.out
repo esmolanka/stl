@@ -1,4 +1,4 @@
-tests/arrays02.stl:15:1-15:34:
+tests/arrays02.types:15:1-15:34:
   Subtype:
     (∃ (n : Nat). ∃ (ρ : Row). {a : Int[n], b : Int[n] | ρ}) -> Int
   Supertype:
@@ -6,7 +6,7 @@ tests/arrays02.stl:15:1-15:34:
     -> Int
   Result:
     OK
-tests/arrays02.stl:16:1-16:34:
+tests/arrays02.types:16:1-16:34:
   Subtype:
     (∃ (n : Nat). ∃ (ρ : Row). {name : String[n], a : Int[n], b : Int[n] | ρ})
     -> Int

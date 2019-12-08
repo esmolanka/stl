@@ -1,14 +1,14 @@
-tests/basic02.stl:2:1-2:14:
+tests/basic02.types:2:1-2:14:
   Normalised:
     ∃ (ρ : Row). {fst : Unit, snd : Void | ρ}
   Kind:
     Type
-tests/basic02.stl:5:1-5:10:
+tests/basic02.types:5:1-5:10:
   Normalised:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). <Inl^ω : Unit| Inr^ω/1 : Void | ... ρ>
   Kind:
     Type
-tests/basic02.stl:11:1-11:20:
+tests/basic02.types:11:1-11:20:
   Normalised:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Left^ω : ∃ (ρ : Row). {fst : Unit, snd : Void | ρ}
@@ -17,7 +17,7 @@ tests/basic02.stl:11:1-11:20:
       >
   Kind:
     Type
-tests/basic02.stl:17:1-17:28:
+tests/basic02.types:17:1-17:28:
   Normalised:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       { first^ω :
@@ -30,7 +30,7 @@ tests/basic02.stl:17:1-17:28:
       }
   Kind:
     Type
-tests/basic02.stl:23:1-23:20:
+tests/basic02.types:23:1-23:20:
   Normalised:
     ∃ (ρ : Row).
       { first :
@@ -43,7 +43,7 @@ tests/basic02.stl:23:1-23:20:
       }
   Kind:
     Type
-tests/basic02.stl:29:1-29:25:
+tests/basic02.types:29:1-29:25:
   Normalised:
     ∃ (ρ : Row).
       { choice :

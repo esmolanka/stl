@@ -1,2 +1,2 @@
-tests/error03.stl:2:17-2:29: error:
+tests/error03.types:2:17-2:29: error:
     Undefined variable 'undefinedVar' of kind Type.

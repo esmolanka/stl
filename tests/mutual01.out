@@ -1,4 +1,4 @@
-tests/mutual01.stl:4:1-4:11:
+tests/mutual01.types:4:1-4:11:
   Normalised:
     μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < EZero^ω : Unit
@@ -9,7 +9,7 @@ tests/mutual01.stl:4:1-4:11:
       >
   Kind:
     Type
-tests/mutual01.stl:6:1-6:10:
+tests/mutual01.types:6:1-6:10:
   Normalised:
     μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < OZero^ω : Unit
@@ -20,7 +20,7 @@ tests/mutual01.stl:6:1-6:10:
       >
   Kind:
     Type
-tests/mutual01.stl:8:1-8:37:
+tests/mutual01.types:8:1-8:37:
   Subtype:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < EZero^ω : Unit
@@ -44,7 +44,7 @@ tests/mutual01.stl:8:1-8:37:
       >
   Result:
     OK
-tests/mutual01.stl:9:1-9:37:
+tests/mutual01.types:9:1-9:37:
   Subtype:
     μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < EZero^ω : Unit
@@ -68,7 +68,7 @@ tests/mutual01.stl:9:1-9:37:
       >
   Result:
     OK
-tests/mutual01.stl:11:1-11:37:
+tests/mutual01.types:11:1-11:37:
   Subtype:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < OZero^ω : Unit
@@ -92,7 +92,7 @@ tests/mutual01.stl:11:1-11:37:
       >
   Result:
     OK
-tests/mutual01.stl:12:1-12:37:
+tests/mutual01.types:12:1-12:37:
   Subtype:
     μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < OZero^ω : Unit

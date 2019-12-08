@@ -1,4 +1,4 @@
-tests/mutual02.stl:5:1-5:16:
+tests/mutual02.types:5:1-5:16:
   Normalised:
     μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Now^ω :
@@ -18,7 +18,7 @@ tests/mutual02.stl:5:1-5:16:
       >
   Kind:
     Type
-tests/mutual02.stl:7:1-7:17:
+tests/mutual02.types:7:1-7:17:
   Normalised:
     μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < Yield^ω :
@@ -33,7 +33,7 @@ tests/mutual02.stl:7:1-7:17:
       >
   Kind:
     Type
-tests/mutual02.stl:9:1-9:82:
+tests/mutual02.types:9:1-9:82:
   Subtype:
     μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Now^ω :

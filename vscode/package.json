@@ -22,7 +22,7 @@
                     "stl"
                 ],
                 "extensions": [
-                    ".stl"
+                    ".types"
                 ],
                 "configuration": "./language-configuration.json"
             }
@@ -35,14 +35,14 @@
             }
         ],
         "configuration": {
-			"type": "object",
-			"title": "STL Language Support",
-			"properties": {
-				"vscode-stl-language-support.executable": {
-					"scope": "window",
-					"type": "string",
-					"default": "",
-					"markdownDescription": "Path to the `stl-server` executable"
+            "type": "object",
+            "title": "STL Language Support",
+            "properties": {
+                "vscode-stl-language-support.executable": {
+                    "scope": "window",
+                    "type": "string",
+                    "default": "",
+                    "markdownDescription": "Path to the `stl-server` executable"
                 }
             }
         }

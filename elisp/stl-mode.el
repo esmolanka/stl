@@ -119,7 +119,7 @@
   (setq-local comment-start-skip "--+\\s-* "))
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.stl\\'" . stl-mode))
+(add-to-list 'auto-mode-alist '("\\.types\\'" . stl-mode))
 
 (when (featurep 'flycheck)
   (flycheck-define-checker stl
@@ -128,7 +128,7 @@
       :error-patterns
       ( (error
          line-start
-         (file-name (+ not-newline) ".stl") ":"
+         (file-name (+ not-newline) ".types") ":"
          line ":"
          column "-"
          (+ digit) ":"
@@ -141,7 +141,7 @@
                            (+ not-newline))))))
         (info
          line-start
-         (file-name (+ not-newline) ".stl") ":"
+         (file-name (+ not-newline) ".types") ":"
          line ":"
          column "-"
          (+ digit) ":"

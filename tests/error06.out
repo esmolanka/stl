@@ -1,2 +1,2 @@
-tests/error06.stl:2:12-2:15: error:
+tests/error06.types:2:12-2:15: error:
     Recursive reference 'Foo' must not occur in contravariant positions.

@@ -1,59 +1,59 @@
-tests/basic01.stl:1:1-1:11:
+tests/basic01.types:1:1-1:11:
   Normalised:
     Unit
   Kind:
     Type
-tests/basic01.stl:3:1-3:11:
+tests/basic01.types:3:1-3:11:
   Normalised:
     Void
   Kind:
     Type
-tests/basic01.stl:5:1-5:19:
+tests/basic01.types:5:1-5:19:
   Normalised:
     Unit -> Unit
   Kind:
     Type
-tests/basic01.stl:7:1-7:23:
+tests/basic01.types:7:1-7:23:
   Normalised:
     ∀ a. a -> a
   Kind:
     Type
-tests/basic01.stl:9:1-9:36:
+tests/basic01.types:9:1-9:36:
   Normalised:
     (∀ a. a) -> ∀ b. b
   Kind:
     Type
-tests/basic01.stl:11:1-11:9:
+tests/basic01.types:11:1-11:9:
   Normalised:
     ∃ (ρ : Row). { | ρ}
   Kind:
     Type
-tests/basic01.stl:13:1-13:21:
+tests/basic01.types:13:1-13:21:
   Normalised:
     ∃ (ρ : Row). {foo : Unit | ρ}
   Kind:
     Type
-tests/basic01.stl:15:1-15:22:
+tests/basic01.types:15:1-15:22:
   Normalised:
     ∃ (ρ : Row). ∃ (ω : #). {foo^ω : Unit | ρ}
   Kind:
     Type
-tests/basic01.stl:17:1-17:42:
+tests/basic01.types:17:1-17:42:
   Normalised:
     ∀ (r : Row). {foo : Unit | r}
   Kind:
     Type
-tests/basic01.stl:19:1-19:42:
+tests/basic01.types:19:1-19:42:
   Normalised:
     ∃ (r : Row). {foo : Unit | r}
   Kind:
     Type
-tests/basic01.stl:21:1-21:9:
+tests/basic01.types:21:1-21:9:
   Normalised:
     ∀ (ρ : Row). < | ... ρ>
   Kind:
     Type
-tests/basic01.stl:23:1-23:21:
+tests/basic01.types:23:1-23:21:
   Normalised:
     ∀ (ρ : Row). ∃ (ω : #). <Foo^ω : Unit | ... ρ>
   Kind:

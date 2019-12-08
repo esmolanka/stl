@@ -1,4 +1,4 @@
-tests/recursion03.stl:5:1-5:18:
+tests/recursion03.types:5:1-5:18:
   Subtype:
     μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -16,7 +16,7 @@ tests/recursion03.stl:5:1-5:18:
     Type is not polymorphic enough.
       Rigid variable ω does not unify with:
         ▫
-tests/recursion03.stl:6:1-6:18:
+tests/recursion03.types:6:1-6:18:
   Subtype:
     μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
@@ -31,7 +31,7 @@ tests/recursion03.stl:6:1-6:18:
       >
   Result:
     OK
-tests/recursion03.stl:8:1-8:26:
+tests/recursion03.types:8:1-8:26:
   Subtype:
     ∀ (ρ : Row). ∃ (ω : #).
       < Foo^ω :
@@ -50,7 +50,7 @@ tests/recursion03.stl:8:1-8:26:
       >
   Result:
     OK
-tests/recursion03.stl:9:1-9:26:
+tests/recursion03.types:9:1-9:26:
   Subtype:
     ∀ (ρ : Row). ∃ (ω : #).
       < Foo^ω :
@@ -63,7 +63,7 @@ tests/recursion03.stl:9:1-9:26:
       <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
   Result:
     OK
-tests/recursion03.stl:11:1-11:26:
+tests/recursion03.types:11:1-11:26:
   Subtype:
     ∀ (ρ : Row). ∃ (ω : #).
       < Bar^ω :
@@ -88,7 +88,7 @@ tests/recursion03.stl:11:1-11:26:
       >
   Result:
     OK
-tests/recursion03.stl:12:1-12:26:
+tests/recursion03.types:12:1-12:26:
   Subtype:
     ∀ (ρ : Row). ∃ (ω : #).
       < Bar^ω :
@@ -110,7 +110,7 @@ tests/recursion03.stl:12:1-12:26:
     Type is not polymorphic enough.
       Rigid variable ω does not unify with:
         ▫
-tests/recursion03.stl:14:1-14:26:
+tests/recursion03.types:14:1-14:26:
   Subtype:
     μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -138,7 +138,7 @@ tests/recursion03.stl:14:1-14:26:
     Type is not polymorphic enough.
       Rigid variable ω does not unify with:
         ▫
-tests/recursion03.stl:15:1-15:26:
+tests/recursion03.types:15:1-15:26:
   Subtype:
     μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>

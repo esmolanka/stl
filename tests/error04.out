@@ -1,4 +1,4 @@
-tests/error04.stl:2:23-2:24: error:
+tests/error04.types:2:23-2:24: error:
     Kind mismatch while checking type:
         a
     Expected kind:

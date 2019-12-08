@@ -1,4 +1,4 @@
-tests/variance02.stl:14:1-14:19:
+tests/variance02.types:14:1-14:19:
   Normalised:
     ∀ (f : Type -> Type). ∀ a.
       (∃ (ρ : Row). {map : ∀ a. ∀ b. (a -> b) -> (f a) -> f b | ρ})

@@ -1,26 +1,26 @@
-tests/recursion02.stl:5:1-5:10:
+tests/recursion02.types:5:1-5:10:
   Normalised:
     λ (f : Type -> Type). μ Fix. f Fix
   Kind:
     (Type -> Type) -> Type
-tests/recursion02.stl:8:1-8:17:
+tests/recursion02.types:8:1-8:17:
   Normalised:
     λ a. λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Nil^ω : a| Cons^ω/1 : b | ... ρ>
   Kind:
     Type -> Type -> Type
-tests/recursion02.stl:11:1-11:22:
+tests/recursion02.types:11:1-11:22:
   Normalised:
     λ a. λ b. ∃ (ρ : Row). {head : a, tail : b | ρ}
   Kind:
     Type -> Type -> Type
-tests/recursion02.stl:16:1-16:16:
+tests/recursion02.types:16:1-16:16:
   Normalised:
     λ a. μ Fix. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Nil^ω : Unit| Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : Fix | ρ} | ... ρ>
   Kind:
     Type -> Type
-tests/recursion02.stl:18:1-18:53:
+tests/recursion02.types:18:1-18:53:
   Subtype:
     ∀ a. μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -32,7 +32,7 @@ tests/recursion02.stl:18:1-18:53:
       <Nil^ω : Unit| Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : Fix | ρ} | ... ρ>
   Result:
     OK
-tests/recursion02.stl:19:1-19:53:
+tests/recursion02.types:19:1-19:53:
   Subtype:
     ∀ a. μ Fix. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Nil^ω : Unit| Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : Fix | ρ} | ... ρ>

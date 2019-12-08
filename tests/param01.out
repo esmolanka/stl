@@ -1,28 +1,28 @@
-tests/param01.stl:5:1-5:12:
+tests/param01.types:5:1-5:12:
   Normalised:
     λ a. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Nothing^ω : Unit| Just^ω/1 : a | ... ρ>
   Kind:
     Type -> Type
-tests/param01.stl:6:1-6:17:
+tests/param01.types:6:1-6:17:
   Normalised:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Nothing^ω : Unit| Just^ω/1 : Unit | ... ρ>
   Kind:
     Type
-tests/param01.stl:13:1-13:13:
+tests/param01.types:13:1-13:13:
   Normalised:
     λ a. λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Left^ω : a| Right^ω/1 : b | ... ρ>
   Kind:
     Type -> Type -> Type
-tests/param01.stl:14:1-14:18:
+tests/param01.types:14:1-14:18:
   Normalised:
     λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Left^ω : Unit| Right^ω/1 : b | ... ρ>
   Kind:
     Type -> Type
-tests/param01.stl:15:1-15:30:
+tests/param01.types:15:1-15:30:
   Normalised:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Left^ω : Unit
@@ -33,7 +33,7 @@ tests/param01.stl:15:1-15:30:
       >
   Kind:
     Type
-tests/param01.stl:23:1-23:12:
+tests/param01.types:23:1-23:12:
   Normalised:
     λ a. λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < This^ω : a
@@ -43,7 +43,7 @@ tests/param01.stl:23:1-23:12:
       >
   Kind:
     Type -> Type -> Type
-tests/param01.stl:24:1-24:17:
+tests/param01.types:24:1-24:17:
   Normalised:
     λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < This^ω : Unit
@@ -53,7 +53,7 @@ tests/param01.stl:24:1-24:17:
       >
   Kind:
     Type -> Type
-tests/param01.stl:25:1-25:29:
+tests/param01.types:25:1-25:29:
   Normalised:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < This^ω : Unit

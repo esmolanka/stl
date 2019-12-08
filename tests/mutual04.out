@@ -1,4 +1,4 @@
-tests/mutual04.stl:9:1-9:10:
+tests/mutual04.types:9:1-9:10:
   Normalised:
     λ a. ∀ (a : Nat).
       (Nat a)

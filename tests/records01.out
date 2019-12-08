@@ -1,32 +1,32 @@
-tests/records01.stl:3:1-3:16:
+tests/records01.types:3:1-3:16:
   Subtype:
     ∃ (ρ : Row). { | ρ}
   Supertype:
     ∃ (ρ : Row). { | ρ}
   Result:
     OK
-tests/records01.stl:6:1-6:27:
+tests/records01.types:6:1-6:27:
   Subtype:
     ∃ (ρ : Row). ∃ (ω : #). {foo^ω : Unit | ρ}
   Supertype:
     ∃ (ρ : Row). { | ρ}
   Result:
     OK
-tests/records01.stl:7:1-7:26:
+tests/records01.types:7:1-7:26:
   Subtype:
     ∃ (ρ : Row). {foo : Unit | ρ}
   Supertype:
     ∃ (ρ : Row). { | ρ}
   Result:
     OK
-tests/records01.stl:11:1-11:27:
+tests/records01.types:11:1-11:27:
   Subtype:
     ∃ (ρ : Row). { | ρ}
   Supertype:
     ∃ (ρ : Row). ∃ (ω : #). {foo^ω : Unit | ρ}
   Result:
     OK
-tests/records01.stl:14:1-14:26:
+tests/records01.types:14:1-14:26:
   Subtype:
     ∃ (ρ : Row). { | ρ}
   Supertype:
@@ -37,21 +37,21 @@ tests/records01.stl:14:1-14:26:
         ▫
       Is not subsumed by:
         ▪
-tests/records01.stl:17:1-17:60:
+tests/records01.types:17:1-17:60:
   Subtype:
     ∃ (ρ : Row). {foo : Unit, bar : Void | ρ}
   Supertype:
     ∃ (ρ : Row). {bar : Void, foo : Unit | ρ}
   Result:
     OK
-tests/records01.stl:18:1-18:64:
+tests/records01.types:18:1-18:64:
   Subtype:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {foo^ω : Unit, bar^ω/1 : Unit | ρ}
   Supertype:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {bar^ω : Unit, foo^ω/1 : Unit | ρ}
   Result:
     OK
-tests/records01.stl:21:1-21:76:
+tests/records01.types:21:1-21:76:
   Subtype:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       {foo^ω : Unit, baz : Unit, bar^ω/1 : Unit | ρ}
@@ -59,7 +59,7 @@ tests/records01.stl:21:1-21:76:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {bar^ω : Unit, foo^ω/1 : Unit | ρ}
   Result:
     OK
-tests/records01.stl:22:1-22:77:
+tests/records01.types:22:1-22:77:
   Subtype:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {foo^ω : Unit, bar^ω/1 : Unit | ρ}
   Supertype:
@@ -67,7 +67,7 @@ tests/records01.stl:22:1-22:77:
       {bar^ω : Unit, baz^ω/1 : Unit, foo^ω/2 : Unit | ρ}
   Result:
     OK
-tests/records01.stl:25:1-25:60:
+tests/records01.types:25:1-25:60:
   Subtype:
     ∃ (ρ : Row). {foo : Unit, bar : Void | ρ}
   Supertype:
@@ -78,7 +78,7 @@ tests/records01.stl:25:1-25:60:
         Void
       Is not subsumed by:
         Unit
-tests/records01.stl:26:1-26:64:
+tests/records01.types:26:1-26:64:
   Subtype:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {foo^ω : Unit, bar^ω/1 : Void | ρ}
   Supertype:
@@ -89,7 +89,7 @@ tests/records01.stl:26:1-26:64:
         Void
       Is not subsumed by:
         Unit
-tests/records01.stl:27:1-27:79:
+tests/records01.types:27:1-27:79:
   Subtype:
     ∃ (ρ : Row).
       {foo : Unit, bar : ∃ (ρ : Row). ∃ (ω : #). {baz^ω : Unit | ρ} | ρ}

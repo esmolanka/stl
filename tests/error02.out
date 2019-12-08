@@ -1,2 +1,2 @@
-tests/error02.stl:2:7-2:19: error:
+tests/error02.types:2:7-2:19: error:
     Undefined variable 'undefinedVar'.

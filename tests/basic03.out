@@ -1,11 +1,11 @@
-tests/basic03.stl:5:1-5:18:
+tests/basic03.types:5:1-5:18:
   Subtype:
     Unit
   Supertype:
     Unit
   Result:
     OK
-tests/basic03.stl:6:1-6:18:
+tests/basic03.types:6:1-6:18:
   Subtype:
     Unit
   Supertype:

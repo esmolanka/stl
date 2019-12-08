@@ -1,2 +1,2 @@
-tests/error05.stl:2:23-2:24: error:
+tests/error05.types:2:23-2:24: error:
     Covariant variable 'a' must not be used in contravariant positions.

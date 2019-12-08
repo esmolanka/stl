@@ -1,2 +1,2 @@
-tests/error01.stl:2:7-2:22: error:
+tests/error01.types:2:7-2:22: error:
     Undefined type 'UndefinedGlobal'.

@@ -1,10 +1,10 @@
-tests/recursion01.stl:3:1-3:12:
+tests/recursion01.types:3:1-3:12:
   Normalised:
     μ Peano. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       <Zero^ω : Unit| Succ^ω/1 : Peano | ... ρ>
   Kind:
     Type
-tests/recursion01.stl:6:1-6:15:
+tests/recursion01.types:6:1-6:15:
   Normalised:
     λ a. μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -13,7 +13,7 @@ tests/recursion01.stl:6:1-6:15:
       >
   Kind:
     Type -> Type
-tests/recursion01.stl:7:1-7:20:
+tests/recursion01.types:7:1-7:20:
   Normalised:
     μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -22,7 +22,7 @@ tests/recursion01.stl:7:1-7:20:
       >
   Kind:
     Type
-tests/recursion01.stl:8:1-8:21:
+tests/recursion01.types:8:1-8:21:
   Normalised:
     μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -38,7 +38,7 @@ tests/recursion01.stl:8:1-8:21:
       >
   Kind:
     Type
-tests/recursion01.stl:11:1-11:16:
+tests/recursion01.types:11:1-11:16:
   Normalised:
     λ a. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -57,7 +57,7 @@ tests/recursion01.stl:11:1-11:16:
       >
   Kind:
     Type -> Type
-tests/recursion01.stl:12:1-12:21:
+tests/recursion01.types:12:1-12:21:
   Normalised:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -76,7 +76,7 @@ tests/recursion01.stl:12:1-12:21:
       >
   Kind:
     Type
-tests/recursion01.stl:13:1-13:22:
+tests/recursion01.types:13:1-13:22:
   Normalised:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -104,7 +104,7 @@ tests/recursion01.stl:13:1-13:22:
       >
   Kind:
     Type
-tests/recursion01.stl:15:1-15:39:
+tests/recursion01.types:15:1-15:39:
   Subtype:
     μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
@@ -129,7 +129,7 @@ tests/recursion01.stl:15:1-15:39:
       >
   Result:
     OK
-tests/recursion01.stl:16:1-16:39:
+tests/recursion01.types:16:1-16:39:
   Subtype:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
