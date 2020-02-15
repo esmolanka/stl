@@ -7,13 +7,13 @@ tests/mutual02.types:5:1-5:16:
             , tail :
                 μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
                   < Yield^ω : Delay
-                  | Skip^ω/1 : Stream
-                  | EndOfStream^ω/2 : Unit
+                  | Skip^ω¹ : Stream
+                  | EndOfStream^ω² : Unit
                   | ... ρ
                   >
             | ρ
             }
-      | Later^ω/1 : Delay
+      | Later^ω¹ : Delay
       | ... ρ
       >
   Kind:
@@ -24,11 +24,11 @@ tests/mutual02.types:7:1-7:17:
       < Yield^ω :
           μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
             < Now^ω : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}
-            | Later^ω/1 : Delay
+            | Later^ω¹ : Delay
             | ... ρ
             >
-      | Skip^ω/1 : Stream
-      | EndOfStream^ω/2 : Unit
+      | Skip^ω¹ : Stream
+      | EndOfStream^ω² : Unit
       | ... ρ
       >
   Kind:
@@ -42,13 +42,13 @@ tests/mutual02.types:9:1-9:82:
             , tail :
                 μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
                   < Yield^ω : Delay
-                  | Skip^ω/1 : Stream
-                  | EndOfStream^ω/2 : Unit
+                  | Skip^ω¹ : Stream
+                  | EndOfStream^ω² : Unit
                   | ... ρ
                   >
             | ρ
             }
-      | Later^ω/1 : Delay
+      | Later^ω¹ : Delay
       | ... ρ
       >
   Supertype:
@@ -61,16 +61,16 @@ tests/mutual02.types:9:1-9:82:
                   , tail :
                       μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
                         < Yield^ω : Delay
-                        | Skip^ω/1 : Stream
-                        | EndOfStream^ω/2 : Unit
+                        | Skip^ω¹ : Stream
+                        | EndOfStream^ω² : Unit
                         | ... ρ
                         >
                   | ρ
                   }
-            | Later^ω/1 : Delay
+            | Later^ω¹ : Delay
             | ... ρ
             >
-      | Now^ω/1 :
+      | Now^ω¹ :
           ∃ (ρ : Row).
             { head : Int
             , tail :
@@ -78,11 +78,11 @@ tests/mutual02.types:9:1-9:82:
                   < Yield^ω :
                       μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
                         < Now^ω : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}
-                        | Later^ω/1 : Delay
+                        | Later^ω¹ : Delay
                         | ... ρ
                         >
-                  | Skip^ω/1 : Stream
-                  | EndOfStream^ω/2 : Unit
+                  | Skip^ω¹ : Stream
+                  | EndOfStream^ω² : Unit
                   | ... ρ
                   >
             | ρ

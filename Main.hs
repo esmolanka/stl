@@ -89,7 +89,7 @@ runModuleRetType fn = do
       fmap (>>= maybe (throwError $ pretty fn <> ": does not provide a type.") pure) $
       runTCT $ checkProgram (dsModule silentHandlers modul) $ \case
         Just ty -> do
-          inferKind ty
+          void $ inferKind ty
           ty' <- normalise lookupGlobal ty
           pure (Just ty')
         Nothing ->

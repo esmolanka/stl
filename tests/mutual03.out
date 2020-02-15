@@ -2,10 +2,10 @@ tests/mutual03.types:4:1-4:11:
   Normalised:
     μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < EZero^ω : Unit
-      | ESucc^ω/1 :
+      | ESucc^ω¹ :
           μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            <OZero^ω : Unit| OSucc^ω/1 : Even| OSuccSucc^ω/2 : Odd | ... ρ>
-      | ESuccSucc^ω/2 : Even
+            <OZero^ω : Unit| OSucc^ω¹ : Even| OSuccSucc^ω² : Odd | ... ρ>
+      | ESuccSucc^ω² : Even
       | ... ρ
       >
   Kind:
@@ -14,10 +14,10 @@ tests/mutual03.types:6:1-6:10:
   Normalised:
     μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < OZero^ω : Unit
-      | OSucc^ω/1 :
+      | OSucc^ω¹ :
           μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            <EZero^ω : Unit| ESucc^ω/1 : Odd| ESuccSucc^ω/2 : Even | ... ρ>
-      | OSuccSucc^ω/2 : Odd
+            <EZero^ω : Unit| ESucc^ω¹ : Odd| ESuccSucc^ω² : Even | ... ρ>
+      | OSuccSucc^ω² : Odd
       | ... ρ
       >
   Kind:
@@ -26,30 +26,22 @@ tests/mutual03.types:8:1-8:56:
   Subtype:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < EZero^ω : Unit
-      | ESucc^ω/1 :
+      | ESucc^ω¹ :
           μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < OZero^ω : Unit
-            | OSucc^ω/1 :
+            | OSucc^ω¹ :
                 μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < EZero^ω : Unit
-                  | ESucc^ω/1 : Odd
-                  | ESuccSucc^ω/2 : Even
-                  | ... ρ
-                  >
-            | OSuccSucc^ω/2 : Odd
+                  <EZero^ω : Unit| ESucc^ω¹ : Odd| ESuccSucc^ω² : Even | ... ρ>
+            | OSuccSucc^ω² : Odd
             | ... ρ
             >
-      | ESuccSucc^ω/2 :
+      | ESuccSucc^ω² :
           μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < EZero^ω : Unit
-            | ESucc^ω/1 :
+            | ESucc^ω¹ :
                 μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < OZero^ω : Unit
-                  | OSucc^ω/1 : Even
-                  | OSuccSucc^ω/2 : Odd
-                  | ... ρ
-                  >
-            | ESuccSucc^ω/2 : Even
+                  <OZero^ω : Unit| OSucc^ω¹ : Even| OSuccSucc^ω² : Odd | ... ρ>
+            | ESuccSucc^ω² : Even
             | ... ρ
             >
       | ... ρ
@@ -57,10 +49,10 @@ tests/mutual03.types:8:1-8:56:
   Supertype:
     μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < EZero^ω : Unit
-      | ESucc^ω/1 :
+      | ESucc^ω¹ :
           μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            <OZero^ω : Unit| OSucc^ω/1 : Even| OSuccSucc^ω/2 : Odd | ... ρ>
-      | ESuccSucc^ω/2 : Even
+            <OZero^ω : Unit| OSucc^ω¹ : Even| OSuccSucc^ω² : Odd | ... ρ>
+      | ESuccSucc^ω² : Even
       | ... ρ
       >
   Result:
@@ -69,39 +61,31 @@ tests/mutual03.types:9:1-9:56:
   Subtype:
     μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < EZero^ω : Unit
-      | ESucc^ω/1 :
+      | ESucc^ω¹ :
           μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            <OZero^ω : Unit| OSucc^ω/1 : Even| OSuccSucc^ω/2 : Odd | ... ρ>
-      | ESuccSucc^ω/2 : Even
+            <OZero^ω : Unit| OSucc^ω¹ : Even| OSuccSucc^ω² : Odd | ... ρ>
+      | ESuccSucc^ω² : Even
       | ... ρ
       >
   Supertype:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < EZero^ω : Unit
-      | ESucc^ω/1 :
+      | ESucc^ω¹ :
           μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < OZero^ω : Unit
-            | OSucc^ω/1 :
+            | OSucc^ω¹ :
                 μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < EZero^ω : Unit
-                  | ESucc^ω/1 : Odd
-                  | ESuccSucc^ω/2 : Even
-                  | ... ρ
-                  >
-            | OSuccSucc^ω/2 : Odd
+                  <EZero^ω : Unit| ESucc^ω¹ : Odd| ESuccSucc^ω² : Even | ... ρ>
+            | OSuccSucc^ω² : Odd
             | ... ρ
             >
-      | ESuccSucc^ω/2 :
+      | ESuccSucc^ω² :
           μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < EZero^ω : Unit
-            | ESucc^ω/1 :
+            | ESucc^ω¹ :
                 μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < OZero^ω : Unit
-                  | OSucc^ω/1 : Even
-                  | OSuccSucc^ω/2 : Odd
-                  | ... ρ
-                  >
-            | ESuccSucc^ω/2 : Even
+                  <OZero^ω : Unit| OSucc^ω¹ : Even| OSuccSucc^ω² : Odd | ... ρ>
+            | ESuccSucc^ω² : Even
             | ... ρ
             >
       | ... ρ
@@ -112,30 +96,22 @@ tests/mutual03.types:11:1-11:55:
   Subtype:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < OZero^ω : Unit
-      | OSucc^ω/1 :
+      | OSucc^ω¹ :
           μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < EZero^ω : Unit
-            | ESucc^ω/1 :
+            | ESucc^ω¹ :
                 μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < OZero^ω : Unit
-                  | OSucc^ω/1 : Even
-                  | OSuccSucc^ω/2 : Odd
-                  | ... ρ
-                  >
-            | ESuccSucc^ω/2 : Even
+                  <OZero^ω : Unit| OSucc^ω¹ : Even| OSuccSucc^ω² : Odd | ... ρ>
+            | ESuccSucc^ω² : Even
             | ... ρ
             >
-      | OSuccSucc^ω/2 :
+      | OSuccSucc^ω² :
           μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < OZero^ω : Unit
-            | OSucc^ω/1 :
+            | OSucc^ω¹ :
                 μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < EZero^ω : Unit
-                  | ESucc^ω/1 : Odd
-                  | ESuccSucc^ω/2 : Even
-                  | ... ρ
-                  >
-            | OSuccSucc^ω/2 : Odd
+                  <EZero^ω : Unit| ESucc^ω¹ : Odd| ESuccSucc^ω² : Even | ... ρ>
+            | OSuccSucc^ω² : Odd
             | ... ρ
             >
       | ... ρ
@@ -143,10 +119,10 @@ tests/mutual03.types:11:1-11:55:
   Supertype:
     μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < OZero^ω : Unit
-      | OSucc^ω/1 :
+      | OSucc^ω¹ :
           μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            <EZero^ω : Unit| ESucc^ω/1 : Odd| ESuccSucc^ω/2 : Even | ... ρ>
-      | OSuccSucc^ω/2 : Odd
+            <EZero^ω : Unit| ESucc^ω¹ : Odd| ESuccSucc^ω² : Even | ... ρ>
+      | OSuccSucc^ω² : Odd
       | ... ρ
       >
   Result:
@@ -155,39 +131,31 @@ tests/mutual03.types:12:1-12:55:
   Subtype:
     μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < OZero^ω : Unit
-      | OSucc^ω/1 :
+      | OSucc^ω¹ :
           μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            <EZero^ω : Unit| ESucc^ω/1 : Odd| ESuccSucc^ω/2 : Even | ... ρ>
-      | OSuccSucc^ω/2 : Odd
+            <EZero^ω : Unit| ESucc^ω¹ : Odd| ESuccSucc^ω² : Even | ... ρ>
+      | OSuccSucc^ω² : Odd
       | ... ρ
       >
   Supertype:
     ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < OZero^ω : Unit
-      | OSucc^ω/1 :
+      | OSucc^ω¹ :
           μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < EZero^ω : Unit
-            | ESucc^ω/1 :
+            | ESucc^ω¹ :
                 μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < OZero^ω : Unit
-                  | OSucc^ω/1 : Even
-                  | OSuccSucc^ω/2 : Odd
-                  | ... ρ
-                  >
-            | ESuccSucc^ω/2 : Even
+                  <OZero^ω : Unit| OSucc^ω¹ : Even| OSuccSucc^ω² : Odd | ... ρ>
+            | ESuccSucc^ω² : Even
             | ... ρ
             >
-      | OSuccSucc^ω/2 :
+      | OSuccSucc^ω² :
           μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < OZero^ω : Unit
-            | OSucc^ω/1 :
+            | OSucc^ω¹ :
                 μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < EZero^ω : Unit
-                  | ESucc^ω/1 : Odd
-                  | ESuccSucc^ω/2 : Even
-                  | ... ρ
-                  >
-            | OSuccSucc^ω/2 : Odd
+                  <EZero^ω : Unit| ESucc^ω¹ : Odd| ESuccSucc^ω² : Even | ... ρ>
+            | OSuccSucc^ω² : Odd
             | ... ρ
             >
       | ... ρ

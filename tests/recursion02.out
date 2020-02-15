@@ -6,7 +6,7 @@ tests/recursion02.types:5:1-5:10:
 tests/recursion02.types:8:1-8:17:
   Normalised:
     λ a. λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : a| Cons^ω/1 : b | ... ρ>
+      <Nil^ω : a| Cons^ω¹ : b | ... ρ>
   Kind:
     Type -> Type -> Type
 tests/recursion02.types:11:1-11:22:
@@ -17,29 +17,29 @@ tests/recursion02.types:11:1-11:22:
 tests/recursion02.types:16:1-16:16:
   Normalised:
     λ a. μ Fix. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : Fix | ρ} | ... ρ>
+      <Nil^ω : Unit| Cons^ω¹ : ∃ (ρ : Row). {head : a, tail : Fix | ρ} | ... ρ>
   Kind:
     Type -> Type
 tests/recursion02.types:18:1-18:53:
   Subtype:
     ∀ a. μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
-      | Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : ConsList | ρ}
+      | Cons^ω¹ : ∃ (ρ : Row). {head : a, tail : ConsList | ρ}
       | ... ρ
       >
   Supertype:
     ∀ a. μ Fix. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : Fix | ρ} | ... ρ>
+      <Nil^ω : Unit| Cons^ω¹ : ∃ (ρ : Row). {head : a, tail : Fix | ρ} | ... ρ>
   Result:
     OK
 tests/recursion02.types:19:1-19:53:
   Subtype:
     ∀ a. μ Fix. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : Fix | ρ} | ... ρ>
+      <Nil^ω : Unit| Cons^ω¹ : ∃ (ρ : Row). {head : a, tail : Fix | ρ} | ... ρ>
   Supertype:
     ∀ a. μ ConsList. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
-      | Cons^ω/1 : ∃ (ρ : Row). {head : a, tail : ConsList | ρ}
+      | Cons^ω¹ : ∃ (ρ : Row). {head : a, tail : ConsList | ρ}
       | ... ρ
       >
   Result:

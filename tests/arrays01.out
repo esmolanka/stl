@@ -33,7 +33,7 @@ tests/arrays01.types:25:1-25:13:
       k
       -> (∃ (ρ : Row). {name : k[n], value : v[n] | ρ})
       -> ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-        <Nothing^ω : Unit| Just^ω/1 : v | ... ρ>
+        <Nothing^ω : Unit| Just^ω¹ : v | ... ρ>
   Kind:
     Type
 tests/arrays01.types:27:1-27:24:
@@ -42,12 +42,12 @@ tests/arrays01.types:27:1-27:24:
       k
       -> (∃ (ρ : Row). {name : k[n], value : v[n] | ρ})
       -> ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-        <Nothing^ω : Unit| Just^ω/1 : v | ... ρ>
+        <Nothing^ω : Unit| Just^ω¹ : v | ... ρ>
   Supertype:
     ∀ (n : Nat). ∀ k. ∀ v.
       k
       -> (∃ (ρ : Row). {name : k[n], value : v[n] | ρ})
       -> ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-        <Nothing^ω : Unit| Just^ω/1 : v | ... ρ>
+        <Nothing^ω : Unit| Just^ω¹ : v | ... ρ>
   Result:
     OK

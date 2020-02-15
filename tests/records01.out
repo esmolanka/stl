@@ -46,25 +46,25 @@ tests/records01.types:17:1-17:60:
     OK
 tests/records01.types:18:1-18:64:
   Subtype:
-    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {foo^ω : Unit, bar^ω/1 : Unit | ρ}
+    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {foo^ω : Unit, bar^ω¹ : Unit | ρ}
   Supertype:
-    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {bar^ω : Unit, foo^ω/1 : Unit | ρ}
+    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {bar^ω : Unit, foo^ω¹ : Unit | ρ}
   Result:
     OK
 tests/records01.types:21:1-21:76:
   Subtype:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      {foo^ω : Unit, baz : Unit, bar^ω/1 : Unit | ρ}
+      {foo^ω : Unit, baz : Unit, bar^ω¹ : Unit | ρ}
   Supertype:
-    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {bar^ω : Unit, foo^ω/1 : Unit | ρ}
+    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {bar^ω : Unit, foo^ω¹ : Unit | ρ}
   Result:
     OK
 tests/records01.types:22:1-22:77:
   Subtype:
-    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {foo^ω : Unit, bar^ω/1 : Unit | ρ}
+    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {foo^ω : Unit, bar^ω¹ : Unit | ρ}
   Supertype:
     ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      {bar^ω : Unit, baz^ω/1 : Unit, foo^ω/2 : Unit | ρ}
+      {bar^ω : Unit, baz^ω¹ : Unit, foo^ω² : Unit | ρ}
   Result:
     OK
 tests/records01.types:25:1-25:60:
@@ -80,9 +80,9 @@ tests/records01.types:25:1-25:60:
         Unit
 tests/records01.types:26:1-26:64:
   Subtype:
-    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {foo^ω : Unit, bar^ω/1 : Void | ρ}
+    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {foo^ω : Unit, bar^ω¹ : Void | ρ}
   Supertype:
-    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {bar^ω : Unit, foo^ω/1 : Unit | ρ}
+    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #). {bar^ω : Unit, foo^ω¹ : Unit | ρ}
   Result:
     FAIL
     Cannot unify types.

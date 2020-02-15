@@ -2,15 +2,15 @@ tests/recursion03.types:5:1-5:18:
   Subtype:
     μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
-      | Foo^ω/1 :
+      | Foo^ω¹ :
           μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
-      | Bar^ω/2 : Bar
+            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+      | Bar^ω² : Bar
       | ... ρ
       >
   Supertype:
     μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
   Result:
     FAIL
     Type is not polymorphic enough.
@@ -19,14 +19,14 @@ tests/recursion03.types:5:1-5:18:
 tests/recursion03.types:6:1-6:18:
   Subtype:
     μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
   Supertype:
     μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
-      | Foo^ω/1 :
+      | Foo^ω¹ :
           μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
-      | Bar^ω/2 : Bar
+            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+      | Bar^ω² : Bar
       | ... ρ
       >
   Result:
@@ -36,16 +36,16 @@ tests/recursion03.types:8:1-8:26:
     ∀ (ρ : Row). ∃ (ω : #).
       < Foo^ω :
           μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
       | ... ρ
       >
   Supertype:
     μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
-      | Foo^ω/1 :
+      | Foo^ω¹ :
           μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
-      | Bar^ω/2 : Bar
+            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+      | Bar^ω² : Bar
       | ... ρ
       >
   Result:
@@ -55,12 +55,12 @@ tests/recursion03.types:9:1-9:26:
     ∀ (ρ : Row). ∃ (ω : #).
       < Foo^ω :
           μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
       | ... ρ
       >
   Supertype:
     μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
   Result:
     OK
 tests/recursion03.types:11:1-11:26:
@@ -69,10 +69,10 @@ tests/recursion03.types:11:1-11:26:
       < Bar^ω :
           μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < Nil^ω : Unit
-            | Foo^ω/1 :
+            | Foo^ω¹ :
                 μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
-            | Bar^ω/2 : Bar
+                  <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+            | Bar^ω² : Bar
             | ... ρ
             >
       | ... ρ
@@ -80,10 +80,10 @@ tests/recursion03.types:11:1-11:26:
   Supertype:
     μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
-      | Foo^ω/1 :
+      | Foo^ω¹ :
           μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
-      | Bar^ω/2 : Bar
+            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+      | Bar^ω² : Bar
       | ... ρ
       >
   Result:
@@ -94,17 +94,17 @@ tests/recursion03.types:12:1-12:26:
       < Bar^ω :
           μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < Nil^ω : Unit
-            | Foo^ω/1 :
+            | Foo^ω¹ :
                 μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
-            | Bar^ω/2 : Bar
+                  <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+            | Bar^ω² : Bar
             | ... ρ
             >
       | ... ρ
       >
   Supertype:
     μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
   Result:
     FAIL
     Type is not polymorphic enough.
@@ -114,10 +114,10 @@ tests/recursion03.types:14:1-14:26:
   Subtype:
     μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
       < Nil^ω : Unit
-      | Foo^ω/1 :
+      | Foo^ω¹ :
           μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
-      | Bar^ω/2 : Bar
+            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+      | Bar^ω² : Bar
       | ... ρ
       >
   Supertype:
@@ -125,10 +125,10 @@ tests/recursion03.types:14:1-14:26:
       < Foo^ω :
           μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < Nil^ω : Unit
-            | Foo^ω/1 :
+            | Foo^ω¹ :
                 μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
-            | Bar^ω/2 : Bar
+                  <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+            | Bar^ω² : Bar
             | ... ρ
             >
       | ... ρ
@@ -141,16 +141,16 @@ tests/recursion03.types:14:1-14:26:
 tests/recursion03.types:15:1-15:26:
   Subtype:
     μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
+      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
   Supertype:
     ∀ (ρ : Row). ∃ (ω : #).
       < Foo^ω :
           μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
             < Nil^ω : Unit
-            | Foo^ω/1 :
+            | Foo^ω¹ :
                 μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nil^ω : Unit| Foo^ω/1 : Foo | ... ρ>
-            | Bar^ω/2 : Bar
+                  <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+            | Bar^ω² : Bar
             | ... ρ
             >
       | ... ρ

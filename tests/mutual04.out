@@ -5,18 +5,18 @@ tests/mutual04.types:9:1-9:10:
       -> ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
         < Left^ω :
             μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-              < EZero^ω : a/1
-              | ESucc^ω/1 :
+              < EZero^ω : a¹
+              | ESucc^ω¹ :
                   ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                    <OZero^ω : a/1| OSucc^ω/1 : Even | ... ρ>
+                    <OZero^ω : a¹| OSucc^ω¹ : Even | ... ρ>
               | ... ρ
               >
-        | Right^ω/1 :
+        | Right^ω¹ :
             μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-              < OZero^ω : a/1
-              | OSucc^ω/1 :
+              < OZero^ω : a¹
+              | OSucc^ω¹ :
                   ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                    <EZero^ω : a/1| ESucc^ω/1 : Odd | ... ρ>
+                    <EZero^ω : a¹| ESucc^ω¹ : Odd | ... ρ>
               | ... ρ
               >
         | ... ρ

@@ -1,10 +1,11 @@
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE LambdaCase        #-}
 
 module STL.Pretty
   ( module Data.Text.Prettyprint.Doc
   , AnsiStyle, aKind, aKeyword, aConstructor, aVariable, aLabel
   , CPretty(..), putDocLn
-  , ppSubscript
+  , ppSubscript, ppSuperscript
   , renderDoc
   ) where
 
@@ -48,6 +49,25 @@ ppSubscript = pretty . mkSubscript . show
         if code >= 48 && code <= 57
         then chr (code - 48 + 8320)
         else c
+
+ppSuperscript :: Int -> Doc a
+ppSuperscript = pretty . mkSuperscript . show
+  where
+    mkSuperscript :: String -> String
+    mkSuperscript =
+      map $ \case
+        '0' -> '⁰'
+        '1' -> '¹'
+        '2' -> '²'
+        '3' -> '³'
+        '4' -> '⁴'
+        '5' -> '⁵'
+        '6' -> '⁶'
+        '7' -> '⁷'
+        '8' -> '⁸'
+        '9' -> '⁹'
+        c -> c
+
 
 putDocLn :: Doc AnsiStyle -> IO ()
 putDocLn doc = do
