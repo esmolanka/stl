@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
-module Runtime
+module STL.Runtime
   ( deriveSerialisation
   , (:~>)
   , module Data.StructuralType

@@ -1,0 +1,3 @@
+packages:
+  ./stl.cabal
+  runtime/stl-runtime.cabal
