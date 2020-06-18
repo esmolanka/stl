@@ -467,8 +467,8 @@ genHaskell modul rootTy = do
     , ppImport "Data.Void" "X"
     , ppImport "Data.Map" "X"
     , ppImport "Data.Text" "X"
-    , ppImport "Runtime" "R"
-    , ppImportUnqualified "Runtime" ["(:~>)"]
+    , ppImport "STL.Runtime" "R"
+    , ppImportUnqualified "STL.Runtime" ["(:~>)"]
     , mempty
     , vsep $ punctuate line $ map cpretty defs
     , mempty
