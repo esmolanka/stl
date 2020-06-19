@@ -24,6 +24,7 @@ import Data.List (intersperse)
 
 import STL.Pretty
 import qualified STL.Syntax as S
+import qualified STL.Elab as Elab
 import Data.StructuralType
 
 ----------------------------------------------------------------------
@@ -269,18 +270,10 @@ genCtors = \case
         pure $ (ctorName, cty) : rest'
 
 genParams :: forall m. (MonadGen m) => [S.Binding S.Variance] -> m [VarName]
-genParams = mapM genParam
-  where
-    isFancy :: S.Kind -> Bool
-    isFancy = \case
-      S.Star -> False
-      _other -> True
-
-    genParam :: S.Binding S.Variance -> m VarName
-    genParam (S.Binding pos (S.Var x) k _) =
-      case k of
-        Just k' | isFancy k' -> throwError $ pretty pos <> ": only Type kind currently supported"
-        _ -> pure (VarName x)
+genParams = mapM $ \case
+  S.Binding _ (S.Var x) Nothing _ -> pure (VarName x)
+  S.Binding _ (S.Var x) (Just S.Star) _ -> pure (VarName x)
+  S.Binding pos (S.Var _) (Just other) _ -> throwError $ pretty pos <> ":" <+> pretty (Elab.dsKind pos other) <+> "kind not supported"
 
 genDefinition :: (MonadGen m) => S.GlobalName -> [S.Binding S.Variance] -> [S.GlobalName] -> S.Type -> m HaskellDef
 genDefinition name params recursionClauses body = do
