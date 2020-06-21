@@ -1,3 +1,5 @@
 packages:
   ./stl.cabal
   runtime/stl-runtime.cabal
+optional-packages:
+  runtime/examples/TimeService/time-service.cabal

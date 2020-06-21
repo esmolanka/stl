@@ -1,0 +1,42 @@
+
+module API
+
+type Month =
+  | Jan
+  | Feb
+  | Mar
+  | Apr
+  | May
+  | Jun
+  | Jul
+  | Aug
+  | Sep
+  | Oct
+  | Nov
+  | Dec
+
+type DayOfWeek =
+  | Mon
+  | Tue
+  | Wed
+  | Thu
+  | Fri
+  | Sat
+  | Sun
+
+type UnixTime = Int
+
+type TimeOfDay = Float
+
+type Date =
+  { day   : Int
+  , month : Month
+  , year  : Int
+  }
+
+provide
+  { getCurrentTime : Unit -> UnixTime
+  , unixTimeToDate : UnixTime -> Date
+  , unixTimeToTimeOfDay : UnixTime -> TimeOfDay
+  , dateToDayOfWeek ?: Date -> DayOfWeek
+  }
