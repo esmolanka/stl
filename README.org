@@ -1,4 +1,4 @@
-* Structurally Typed interface description Language
+#+TITLE: Structurally Typed interface description Language
 
 An interface description language based on higher-rank, row-type
 polymorphic structural type system.
@@ -8,9 +8,10 @@ A few examples:
 #+BEGIN_SRC stl
   -- Records:
   type Color =
-    { r : Int    -- `Int`, `Float`, and `String` are base types.
-    , g : Int
-    , b : Int
+    { red    : Float  -- `Int`, `Float`, and `String` are base types
+    , green  : Float
+    , blue   : Float  -- required fields denoted by `:`
+    , alpha ?: Float  -- optional fields denoted by `?:`
     }
 
   -- Variants with no payload (enums):
@@ -37,15 +38,16 @@ A few examples:
     }
 
   -- Parametric polymorphism:
-  type Maybe a =
-    | Nothing
+  type Maybe a =     -- `a` is a parameter of kind `Type`
+    | Nothing        -- it's just a shortcut to `Nothing : Unit`
     | Just : a
 
   -- Recursive data type with a parameter:
   type ConsList a =
     | Nil
-    | Cons : { head : a, tail : ConsList } -- Don't need
-      --   to specify parameters on recursive reference.
+    | Cons : { head : a, tail : ConsList }
+  -- Note that there's no need to specify parameters on a recursive
+  -- reference to itself
 
   -- Mutually recursive types:
   type Even =
@@ -62,48 +64,54 @@ A few examples:
     | Cons : { head : a, tail : b }
 
   -- Functor composition:
-  type PairHT a b = {head : a, tail : b}
-  type SumNC a b = | Nil : a | Cons : b
-  type Compose
-         (f : Type -> Type)
-         (g : Type -> Type)
-         (a : Type) = f (g a)
+  type PairHT a b = { head : a, tail : b }
+  type SumNC  a b = ⟨ Nil : a | Cons : b ⟩
+  type Compose (f g : Type -> Type) (a : Type) = f (g a)
   type AltConsListF a b = Compose (SumNC Unit) (PairHT a) b
 
-  -- ConsList is equivalent to fixed functor composition:
+  -- And it turns out, `ConsList` is equivalent to `Fix AltConsListF`!
+  -- Data serialised as `ConsList a` can be deserialised as `Fix
+  -- (AltConsListF a)`, and vice versa.
   #check ConsList <: Fix AltConsListF
   #check Fix AltConsListF <: ConsList
 #+END_SRC
 
-** Key features
+* Key features
 
-- Structural types: names of the types do not matters; only the
-  structure matters. Easier refactoring, no module "owns" a type.
-- Order of record fields or variant alternatives does not matter: e.g.
-  ~{foo : Int, bar : Bool}~ *is* equivalent to ~{bar : Bool, foo :
-  Int}~; but the field names matter: ~{bar : Int}~ *is not* equivalent
-  to ~{baz : Int}~.
-- Schema evolution is based on subtyping: if a new version of the type
-  is a subtype of the old version, the change is not breaking; if it
-  is not, then the change *is* breaking. This is easy to check in your
-  VCS commit hook, in a test suite.
+- Structural types: name of a type does not matters; only its
+  structure matters. It makes refactoring easier. No module can “own”
+  a type.
+- The order of fields in a record or alternatives in a variant does
+  not matter: e.g. ={foo : Int, bar : Bool}= *is* equivalent to
+  ={bar : Bool, foo : Int}=; but the field names matter: ={bar : Int}=
+  *is not* equivalent to ={baz : Int}=.
+- Schema evolution is based on structural subtyping: if a new version
+  of the type is a subtype of the old version, then the change is
+  guaranteed to be not breaking; if it is not, then the change *is*
+  breaking. This is easy to check in a VCS commit hook or an automatic
+  test suite on CI.
 - If a schema of a service is a subtype of a schema of a client, then
   the service and the client are compatible in the API. This is easy
-  to check on handshake instead of checking programmer-assigned
-  versions.
+  to check on handshake instead of checking human-assigned version
+  numbers but unlike the latter it leaves less room for error and
+  gives more flexibility.
 - Underlying type system supports parametrised types, recursive types,
-  and polymorphic function types, so the API can be modelled using
-  very natural and high-level constructs; during the boilerplate
-  generation most of these high-level constructs can be compiled away.
+  and polymorphic function types, so the API can be modelled in terms
+  of high-level constructs, not bloated with implementation details
+  and never-ending annotations; during the boilerplate generation for
+  your target language, the most of these high-level constructs can be
+  compiled away.
 
-** What is missing for the first cut prototype
+* What is missing for the first cut
 
-- [ ] A proper name for the language.
+- [ ] A proper name.
 - [ ] Comprehensible error messages from the subsumption
   checker. They're too technical and too verbose at the moment.
 - [ ] Module system with exports, imports, etc.
 - [ ] User-defined foreign types.
+- [ ] Sharing in type serialistion.
+- [ ] An efficient wire format.
 - [X] Bindings generator (for Haskell at least).
-- [X] Type term serialisation.
-- [ ] Type term serialistion with sharing.
+- [X] Type serialisation.
 - [X] Run-time subsumption checker and type negotiation machinery.
+- [X] Editor integration (VSCode, Emacs)
