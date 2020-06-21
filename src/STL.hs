@@ -1,4 +1,3 @@
-
 module STL
   ( module STL.Core.Types
   , module STL.Core.Eval

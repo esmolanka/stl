@@ -309,7 +309,7 @@ mkKind pos ctor = case ctor of
   _other -> otherError pos ("unknown kind" <+> pretty ctor)
 
 mkFileName :: T.Text -> FilePath
-mkFileName t = T.unpack t ++ ".stl"
+mkFileName t = T.unpack t ++ ".types"
 
 type Located = LocatedBy Position
 
