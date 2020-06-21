@@ -17,11 +17,21 @@ type Font =
 type Drawing =
   | Circle    : { radius : Float, color : Color }
   | Square    : { side : Float, color : Color }
-  | Label     : { caption : String, color : Color }
-  | Scale     : { x : Float, y : Float }
-  | Rotate    : { radians : Float }
-  | Translate : { x : Float, y : Float }
+  | Label     : { caption : String, font : Font, color : Color }
+  | Scale     : { x : Float, y : Float, drawing : Drawing }
+  | Rotate    : { radians : Float, drawing : Drawing }
+  | Translate : { x : Float, y : Float, drawing : Drawing }
   | Compose   : { background : Drawing, foreground : Drawing }
+
+type SimpleDrawing =
+  | Circle    : { radius : Float, color : Color }
+  | Translate : { x : Float, y : Float, drawing : SimpleDrawing }
+
+type CanvasSizeFun = Drawing -> { width : Float, height : Float }
+type CanvasSizeSimpleFun = SimpleDrawing -> { width : Float, height : Float }
+
+#check CanvasSizeFun <: CanvasSizeSimpleFun
+#check CanvasSizeSimpleFun <: CanvasSizeFun
 
 -- API entry point:
 provide
