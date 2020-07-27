@@ -1,7 +1,10 @@
 #+TITLE: Structurally Typed interface description Language
+#+HTML_HEAD: <style>:root {--monospace-font: "PragmataPro", "Iosevka", monospaced !important;} </style>
 
-An interface description language based on higher-rank, row-type
-polymorphic structural type system.
+* Introduction
+
+This is an interface description language based on higher-rank,
+row-type polymorphic structural type system.
 
 A few examples:
 
@@ -82,12 +85,12 @@ A few examples:
   structure matters. It makes refactoring easier. No module can “own”
   a type.
 - The order of fields in a record or alternatives in a variant does
-  not matter: e.g. ={foo : Int, bar : Bool}= *is* equivalent to
+  not matter: e.g. ={foo : Int, bar : Bool}= /is/ equivalent to
   ={bar : Bool, foo : Int}=; but the field names matter: ={bar : Int}=
-  *is not* equivalent to ={baz : Int}=.
+  /is not/ equivalent to ={baz : Int}=.
 - Schema evolution is based on structural subtyping: if a new version
   of the type is a subtype of the old version, then the change is
-  guaranteed to be not breaking; if it is not, then the change *is*
+  guaranteed to be not breaking; if it is not, then the change /is/
   breaking. This is easy to check in a VCS commit hook or an automatic
   test suite on CI.
 - If a schema of a service is a subtype of a schema of a client, then
