@@ -27,6 +27,7 @@ data BaseType
   | TList
   | TDict
   | TNat
+  | TPair
   deriving (Show, Eq, Ord, Generic)
 
 data Kind
@@ -117,6 +118,7 @@ extract = mkType
       Core.TList   -> TList
       Core.TDict   -> TDict
       Core.TNat    -> TNat
+      Core.TPair   -> TPair
 
     mkKind :: Core.Kind -> Kind
     mkKind = \case
@@ -176,6 +178,7 @@ inject = mkType
       TList   -> Core.TList
       TDict   -> Core.TDict
       TNat    -> Core.TNat
+      TPair   -> Core.TPair
 
     mkKind :: Kind -> Core.Kind
     mkKind = \case

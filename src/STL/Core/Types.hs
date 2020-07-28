@@ -14,6 +14,7 @@ module STL.Core.Types
   , dummyPos
   ) where
 
+import Control.Arrow (first)
 import Control.Category ((>>>))
 import Control.Monad.Reader
 
@@ -123,6 +124,7 @@ data BaseType
   | TList
   | TDict
   | TNat
+  | TPair
   deriving (Eq, Ord, Generic)
 
 instance CPretty BaseType where
@@ -136,6 +138,7 @@ instance CPretty BaseType where
     TList   -> aConstructor "List"
     TDict   -> aConstructor "Dict"
     TNat    -> aConstructor "Nat"
+    TPair   -> aConstructor "Pair"
 
 data TypeF e
   = TRef      { _getPosition :: Position, _refName :: Var, _refIndex :: Int }

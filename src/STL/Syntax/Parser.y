@@ -195,6 +195,8 @@ AppType :: { Type }
 CompoundType :: { Type }
   : AtomType                        { $1 }
   | CompoundType '[' AtomType ']'   { Fix $ TArray (typePos $1 <> position $4) $1 $3 }
+  | '(' sepBy2(AppType, ',') ')'    { mkTuple $2 }
+
   | '{' '}'                         { Fix $ TMkRec (position $1 <> position $2) (mkUnion $ mkMixins (position $1) []) }
   | '{' sepBy1(Mixin, ',') '}'      { Fix $ TMkRec (position $1 <> position $3) (mkUnion $ mkMixins (position $1) $2) }
 

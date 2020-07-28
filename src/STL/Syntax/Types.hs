@@ -70,6 +70,8 @@ data TypeF e
 
   | TMixin    { _typePos :: Position, _mixinRow :: Row e }
   | TUnion    { _typePos :: Position, _unionA :: e, _unionB :: e, _unionRest :: [e] }
+
+  | TTuple    { _typePos :: Position, _tupleA :: e, _tupleB :: e, _tupleRest :: [e] }
   | TArray    { _typePos :: Position, _arrayElem :: e, _arraySize :: e }
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 

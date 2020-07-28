@@ -172,6 +172,12 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
                      , Fix $ Core.TRef pos rho 0
                      ]
                  ]
+
+      TTuple pos a b cs -> do
+        a' <- a
+        b' <- b
+        cs' <- sequence cs
+        pure $ foldr (\x rest -> Core.unspine (Fix (Core.TBase pos Core.TPair)) [x, rest]) (last (a' : b' : cs')) (init (a' : b' : cs'))
       TArray pos a n -> do
         a' <- a
         n' <- n

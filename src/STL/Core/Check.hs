@@ -391,6 +391,7 @@ baseKind = \case
   TList   -> Arr Star Covariant Star
   TDict   -> Arr Star Covariant Star
   TNat    -> Arr Nat Covariant Star
+  TPair   -> Arr Star Covariant (Arr Star Covariant Star)
 
 inferKindClosed :: Type -> Kind
 inferKindClosed ty =
