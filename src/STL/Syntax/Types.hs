@@ -63,8 +63,13 @@ data TypeF e
   | TExists   { _typePos :: Position, _existsBindings :: [Binding ()], _existsBody :: e }
   | TArrow    { _typePos :: Position, _arrA :: e, _arrB :: e, _arrRest :: [e] }
   | TApp      { _typePos :: Position, _appF :: e, _appA :: e, _appRest :: [e] }
-  | TRecord   { _typePos :: Position, _recordRow :: Row e  }
-  | TVariant  { _typePos :: Position, _variantRow :: Row e }
+
+  | TMkRec    { _typePos :: Position, _recMixin :: e }
+  | TMkTbl    { _typePos :: Position, _tblMixin :: e }
+  | TMkVnt    { _typePos :: Position, _vntMixin :: e }
+
+  | TMixin    { _typePos :: Position, _mixinRow :: Row e }
+  | TUnion    { _typePos :: Position, _unionA :: e, _unionB :: e, _unionRest :: [e] }
   | TArray    { _typePos :: Position, _arrayElem :: e, _arraySize :: e }
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
@@ -80,7 +85,6 @@ data Presence
 
 data Row t
   = RExtend   { _rowPos :: Position, _extLabel :: Label, _extPresence :: Presence, _extType :: t, _extCont :: Row t }
-  | RExplicit { _rowPos :: Position, _extTail :: t }
   | RNil      { _rowPos :: Position }
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 

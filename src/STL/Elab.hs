@@ -8,22 +8,16 @@
 
 module STL.Elab where
 
-import Control.Arrow (first, second)
-
 import Control.Monad.Reader
-import Control.Monad.State
 
 import Data.Coerce
 import Data.Functor.Compose
 import Data.Functor.Foldable (Fix(..), cata)
 import Data.Functor.Identity
-import qualified Data.Set as S
-import qualified Data.Text as T
 
 import STL.Syntax.Position
 import STL.Syntax.Types
 
-import qualified STL.Core.Eval as Core
 import qualified STL.Core.Types as Core
 import STL.Pretty
 
@@ -113,57 +107,92 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         a' <- a
         as' <- sequence as
         pure $ Core.unspine f' (a' : as')
-      TRecord pos row -> do
-        (row', (pvars, rvars)) <- dsRow <$> sequence row
-        let withP k = foldr (\x -> Fix . Core.TExists pos x Core.Presence) k pvars
-            withR k = foldr (\x -> Fix . Core.TExists pos x Core.Row) k rvars
-        pure $ withR $ withP $ Core.unspine (Fix (Core.TRecord pos)) [row']
-      TVariant pos row -> do
-        (row', (pvars, rvars)) <- dsRow <$> sequence row
-        let withP k = foldr (\x -> Fix . Core.TExists pos x Core.Presence) k pvars
-            withR k = foldr (\x -> Fix . Core.TForall pos x Core.Row) k rvars
-        pure $ withR $ withP $ Core.unspine (Fix (Core.TVariant pos)) [row']
+
+      TMixin pos row -> do
+        let phi = Core.Var "ϕ"
+            rho = Core.Var "ρ"
+
+        ty <- fmap (dsRow (Fix $ Core.TRef pos rho 0)) . forM row $ \ty -> do
+          ty' <- ty
+          pure $ Core.unspine (Fix (Core.TRef pos phi 0)) [ty']
+
+        pure $ Fix $ Core.TLambda pos phi (Core.Arr Core.Star Core.Covariant Core.Star) Core.Covariant
+             $ Fix $ Core.TLambda pos rho Core.Row Core.Covariant
+             $ ty
+
+      TUnion pos a b cs -> do
+        let phi = Core.Var "ϕ"
+            rho = Core.Var "ρ"
+
+        a' <- a
+        b' <- b
+        cs' <- sequence cs
+
+        let union x y = Core.unspine x [Fix (Core.TRef pos phi 0), y]
+
+        pure $ Fix $ Core.TLambda pos phi (Core.Arr Core.Star Core.Covariant Core.Star) Core.Covariant
+             $ Fix $ Core.TLambda pos rho Core.Row Core.Covariant
+             $ foldr union (Fix (Core.TRef pos rho 0)) (a' : b' : cs')
+
+      TMkRec pos mixin -> do
+        let rho = Core.Var "ρ"
+        mixin' <- mixin
+        pure $ Fix $ Core.TExists pos rho Core.Row
+             $ Core.unspine (Fix $ Core.TRecord pos)
+                 [ Core.unspine mixin'
+                     [ Fix $ Core.TLambda pos (Core.Var "x") Core.Star Core.Covariant (Fix $ Core.TRef pos (Core.Var "x") 0)
+                     , Fix $ Core.TRef pos rho 0
+                     ]
+                 ]
+
+      TMkTbl pos mixin -> do
+        let rho = Core.Var "ρ"
+            size = Core.Var "n"
+        mixin' <- mixin
+        pure $ Fix $ Core.TExists pos size Core.Nat
+             $ Fix $ Core.TExists pos rho Core.Row
+             $ Core.unspine (Fix $ Core.TRecord pos)
+                 [ Core.unspine mixin'
+                     [ Fix $ Core.TLambda pos (Core.Var "x") Core.Star Core.Covariant
+                           $ Core.unspine (Fix (Core.TArray pos))
+                               [ Fix $ Core.TRef pos (Core.Var "x") 0
+                               , Fix $ Core.TRef pos size 0
+                               ]
+                     , Fix $ Core.TRef pos rho 0
+                     ]
+                 ]
+
+      TMkVnt pos mixin -> do
+        let rho = Core.Var "ρ"
+        mixin' <- mixin
+        pure $ Fix $ Core.TForall pos rho Core.Row
+             $ Core.unspine (Fix $ Core.TVariant pos)
+                 [ Core.unspine mixin'
+                     [ Fix $ Core.TLambda pos (Core.Var "x") Core.Star Core.Covariant (Fix $ Core.TRef pos (Core.Var "x") 0)
+                     , Fix $ Core.TRef pos rho 0
+                     ]
+                 ]
       TArray pos a n -> do
         a' <- a
         n' <- n
         pure $ Core.unspine (Fix (Core.TArray pos)) [a', n']
 
-dsRow :: Row Core.Type -> (Core.Type, ([Core.Var], [Core.Var]))
-dsRow t =
-  let (ty, (ps, rs)) = runState (go t) (0, 0)
-  in (ty, (replicate ps omega, replicate rs rho))
+dsRow :: Core.Type -> Row Core.Type -> Core.Type
+dsRow tail = go
   where
-    freeVars = S.map fst $ foldMap Core.freeVars t
-    mkVar x =
-      head $ filter (`S.notMember` freeVars) $
-        map (\n -> Core.Var (x <> T.replicate n "\'")) [0..]
+    omega = Core.Var "ω"
 
-    omega = mkVar "ω"
-    rho   = mkVar "ρ"
-
-    freshPresence :: Position -> State (Int, Int) Core.Type
-    freshPresence pos = do
-      n <- gets fst
-      modify (first succ)
-      pure (Fix (Core.TRef pos omega n))
-
-    freshRow :: Position -> State (Int, Int) Core.Type
-    freshRow pos = do
-      n <- gets snd
-      modify (second succ)
-      pure (Fix (Core.TRef pos rho n))
-
-    go :: Row Core.Type -> State (Int, Int) Core.Type
+    go :: Row Core.Type -> Core.Type
     go = \case
-      RNil pos -> freshRow pos
-      RExplicit _ ty -> pure ty
-      RExtend pos lbl prs ty cont -> do
-        prs' <- case prs of
-                  PPresent pos' -> pure (Fix (Core.TPresent pos'))
-                  PVariable pos' -> freshPresence pos'
-        cont' <- go cont
-        pure $ Core.unspine (Fix (Core.TExtend pos (dsLabel lbl)))
-          [ prs', ty, cont']
+      RNil _ -> tail
+      RExtend pos lbl prs ty cont ->
+        let prs' = case prs of
+                     PPresent pos' -> Fix $ Core.TPresent pos'
+                     PVariable pos' -> Fix $ Core.TExists pos' omega Core.Presence
+                                           $ Fix $ Core.TRef pos' omega 0
+        in Core.unspine
+             (Fix (Core.TExtend pos (dsLabel lbl)))
+             [ prs', ty, go cont]
 
 
 elabStatements :: forall m a. (MonadElab a m) => [Statement] -> m (Core.Program a) -> m (Core.Program a)

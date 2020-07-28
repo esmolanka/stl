@@ -226,13 +226,13 @@ genDefBody recursionClauses ty = do
         as' <- mapM fromDelayed =<< sequence as
         pure $ Inline $ foldl HApp f' (a' : as')
 
-      S.TRecord _ row -> do
-        fields <- genFields row
-        pure $ MkRecord fields
+      -- S.TRecord _ row -> do
+      --   fields <- genFields row
+      --   pure $ MkRecord fields
 
-      S.TVariant _ row -> do
-        ctors <- genCtors row
-        pure $ MkSumType ctors
+      -- S.TVariant _ row -> do
+      --   ctors <- genCtors row
+      --   pure $ MkSumType ctors
 
       S.TArray pos _ _ ->
         throwError $ pretty pos <> ": Nat-indexed arrays not supported"
@@ -240,7 +240,6 @@ genDefBody recursionClauses ty = do
 genFields :: (MonadGen m) => S.Row (m DelayedType) -> m [(FieldName, HaskellType)]
 genFields = \case
   S.RNil _ -> pure []
-  S.RExplicit pos _ -> throwError $ pretty pos <> ": explicit record tail not supported"
   S.RExtend _ (S.Label lbl) prs ty rest -> do
     ty' <- withSuffix lbl $ fromDelayed =<< ty
     let fname = FieldName lbl
@@ -253,7 +252,6 @@ genFields = \case
 genCtors :: (MonadGen m) => S.Row (m DelayedType) -> m [(CtorName, Maybe (Either [(FieldName, HaskellType)] HaskellType))]
 genCtors = \case
   S.RNil _ -> pure []
-  S.RExplicit pos _ -> throwError $ pretty pos <> ": explicit variant tail not supported"
   S.RExtend _ (S.Label lbl) _prs delayed rest -> do
     let ctorName = CtorName lbl
     delayed' <- delayed

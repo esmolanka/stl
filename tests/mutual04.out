@@ -2,21 +2,17 @@ tests/mutual04.types:9:1-9:10:
   Normalised:
     λ a. ∀ (a : Nat).
       (Nat a)
-      -> ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-        < Left^ω :
-            μ Even. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-              < EZero^ω : a¹
-              | ESucc^ω¹ :
-                  ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                    <OZero^ω : a¹| OSucc^ω¹ : Even | ... ρ>
+      -> ∀ (ρ : Row).
+        < Left? :
+            μ Even. ∀ (ρ : Row).
+              < EZero? : a¹
+              | ESucc? : ∀ (ρ : Row). <OZero? : a¹ | OSucc? : Even | ... ρ>
               | ... ρ
               >
-        | Right^ω¹ :
-            μ Odd. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-              < OZero^ω : a¹
-              | OSucc^ω¹ :
-                  ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                    <EZero^ω : a¹| ESucc^ω¹ : Odd | ... ρ>
+        | Right? :
+            μ Odd. ∀ (ρ : Row).
+              < OZero? : a¹
+              | OSucc? : ∀ (ρ : Row). <EZero? : a¹ | ESucc? : Odd | ... ρ>
               | ... ρ
               >
         | ... ρ

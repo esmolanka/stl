@@ -21,9 +21,7 @@ tests/basetype01.types:21:1-21:40:
     ∃ (n : Nat).
       (∃ (ρ : Row).
         { size : Nat n
-        , elements :
-            (∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-              <Int^ω : Int| Float^ω¹ : Float | ... ρ>)[n]
+        , elements : (∀ (ρ : Row). <Int? : Int | Float? : Float | ... ρ>)[n]
         | ρ
         })[n]
   Kind:

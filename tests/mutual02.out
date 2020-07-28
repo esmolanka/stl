@@ -1,88 +1,88 @@
 tests/mutual02.types:5:1-5:16:
   Normalised:
-    μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      < Now^ω :
+    μ Delay. ∀ (ρ : Row).
+      < Now? :
           ∃ (ρ : Row).
             { head : Int
             , tail :
-                μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < Yield^ω : Delay
-                  | Skip^ω¹ : Stream
-                  | EndOfStream^ω² : Unit
+                μ Stream. ∀ (ρ : Row).
+                  < Yield? : Delay
+                  | Skip? : Stream
+                  | EndOfStream? : Unit
                   | ... ρ
                   >
             | ρ
             }
-      | Later^ω¹ : Delay
+      | Later? : Delay
       | ... ρ
       >
   Kind:
     Type
 tests/mutual02.types:7:1-7:17:
   Normalised:
-    μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      < Yield^ω :
-          μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            < Now^ω : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}
-            | Later^ω¹ : Delay
+    μ Stream. ∀ (ρ : Row).
+      < Yield? :
+          μ Delay. ∀ (ρ : Row).
+            < Now? : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}
+            | Later? : Delay
             | ... ρ
             >
-      | Skip^ω¹ : Stream
-      | EndOfStream^ω² : Unit
+      | Skip? : Stream
+      | EndOfStream? : Unit
       | ... ρ
       >
   Kind:
     Type
 tests/mutual02.types:9:1-9:82:
   Subtype:
-    μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      < Now^ω :
+    μ Delay. ∀ (ρ : Row).
+      < Now? :
           ∃ (ρ : Row).
             { head : Int
             , tail :
-                μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < Yield^ω : Delay
-                  | Skip^ω¹ : Stream
-                  | EndOfStream^ω² : Unit
+                μ Stream. ∀ (ρ : Row).
+                  < Yield? : Delay
+                  | Skip? : Stream
+                  | EndOfStream? : Unit
                   | ... ρ
                   >
             | ρ
             }
-      | Later^ω¹ : Delay
+      | Later? : Delay
       | ... ρ
       >
   Supertype:
-    ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      < Later^ω :
-          μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            < Now^ω :
+    ∀ (ρ : Row).
+      < Later? :
+          μ Delay. ∀ (ρ : Row).
+            < Now? :
                 ∃ (ρ : Row).
                   { head : Int
                   , tail :
-                      μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                        < Yield^ω : Delay
-                        | Skip^ω¹ : Stream
-                        | EndOfStream^ω² : Unit
+                      μ Stream. ∀ (ρ : Row).
+                        < Yield? : Delay
+                        | Skip? : Stream
+                        | EndOfStream? : Unit
                         | ... ρ
                         >
                   | ρ
                   }
-            | Later^ω¹ : Delay
+            | Later? : Delay
             | ... ρ
             >
-      | Now^ω¹ :
+      | Now? :
           ∃ (ρ : Row).
             { head : Int
             , tail :
-                μ Stream. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-                  < Yield^ω :
-                      μ Delay. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                        < Now^ω : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}
-                        | Later^ω¹ : Delay
+                μ Stream. ∀ (ρ : Row).
+                  < Yield? :
+                      μ Delay. ∀ (ρ : Row).
+                        < Now? : ∃ (ρ : Row). {head : Int, tail : Stream | ρ}
+                        | Later? : Delay
                         | ... ρ
                         >
-                  | Skip^ω¹ : Stream
-                  | EndOfStream^ω² : Unit
+                  | Skip? : Stream
+                  | EndOfStream? : Unit
                   | ... ρ
                   >
             | ρ

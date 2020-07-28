@@ -248,6 +248,7 @@ ppType = ppType' 0
               case presence of
                 Fix (TPresent _) -> aLabel (pretty lbl)
                 Fix (TAbsent _)  -> "¬" <> aLabel (pretty lbl)
+                Fix (TExists _ _ Presence (Fix (TRef _ _ 0))) -> aLabel (pretty lbl) <> "?"
                 _other           -> aLabel (pretty lbl) <> "^" <> ppType' 2 presence
       in align $ nest 2 $ group (fieldName <+> ":" <> line <> ppType' 0 ty)
 
@@ -263,11 +264,14 @@ ppType = ppType' 0
       (Fix (TArrow _), [a, b]) ->
         parensIf (lvl > 0) $ group $ ppType' 1 a <> line <> aConstructor "->" <+> ppType' 0 b
 
+      (Fix (TExtend _ lbl), [presence, ty, row]) ->
+        ppRow lparen rparen comma pipe (first ((lbl, presence, ty) :) (collectRows row))
+
       (Fix (TRecord _), [row]) ->
         ppRow lbrace rbrace comma pipe (collectRows row)
 
       (Fix (TVariant _), [row]) ->
-        ppRow langle rangle pipe (pipe <+> "...") (collectRows row)
+        ppRow langle rangle (flatAlt mempty space <> pipe) (pipe <+> "...") (collectRows row)
 
       (Fix (TArray _), [el, sz]) ->
         ppType' 2 el <> brackets (ppType' 1 sz)

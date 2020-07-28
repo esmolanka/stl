@@ -1,71 +1,61 @@
 tests/param01.types:5:1-5:12:
   Normalised:
-    λ a. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nothing^ω : Unit| Just^ω¹ : a | ... ρ>
+    λ a. ∀ (ρ : Row). <Nothing? : Unit | Just? : a | ... ρ>
   Kind:
     Type -> Type
 tests/param01.types:6:1-6:17:
   Normalised:
-    ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nothing^ω : Unit| Just^ω¹ : Unit | ... ρ>
+    ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
   Kind:
     Type
 tests/param01.types:13:1-13:13:
   Normalised:
-    λ a. λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Left^ω : a| Right^ω¹ : b | ... ρ>
+    λ a. λ b. ∀ (ρ : Row). <Left? : a | Right? : b | ... ρ>
   Kind:
     Type -> Type -> Type
 tests/param01.types:14:1-14:18:
   Normalised:
-    λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Left^ω : Unit| Right^ω¹ : b | ... ρ>
+    λ b. ∀ (ρ : Row). <Left? : Unit | Right? : b | ... ρ>
   Kind:
     Type -> Type
 tests/param01.types:15:1-15:30:
   Normalised:
-    ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      < Left^ω : Unit
-      | Right^ω¹ :
-          ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nothing^ω : Unit| Just^ω¹ : Unit | ... ρ>
+    ∀ (ρ : Row).
+      < Left? : Unit
+      | Right? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
       | ... ρ
       >
   Kind:
     Type
 tests/param01.types:23:1-23:12:
   Normalised:
-    λ a. λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      < This^ω : a
-      | That^ω¹ : b
-      | These^ω² : ∃ (ρ : Row). {this : a, that : b | ρ}
+    λ a. λ b. ∀ (ρ : Row).
+      < This? : a
+      | That? : b
+      | These? : ∃ (ρ : Row). {this : a, that : b | ρ}
       | ... ρ
       >
   Kind:
     Type -> Type -> Type
 tests/param01.types:24:1-24:17:
   Normalised:
-    λ b. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      < This^ω : Unit
-      | That^ω¹ : b
-      | These^ω² : ∃ (ρ : Row). {this : Unit, that : b | ρ}
+    λ b. ∀ (ρ : Row).
+      < This? : Unit
+      | That? : b
+      | These? : ∃ (ρ : Row). {this : Unit, that : b | ρ}
       | ... ρ
       >
   Kind:
     Type -> Type
 tests/param01.types:25:1-25:29:
   Normalised:
-    ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      < This^ω : Unit
-      | That^ω¹ :
-          ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nothing^ω : Unit| Just^ω¹ : Unit | ... ρ>
-      | These^ω² :
+    ∀ (ρ : Row).
+      < This? : Unit
+      | That? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
+      | These? :
           ∃ (ρ : Row).
             { this : Unit
-            , that :
-                ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nothing^ω : Unit| Just^ω¹ : Unit | ... ρ>
+            , that : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
             | ρ
             }
       | ... ρ

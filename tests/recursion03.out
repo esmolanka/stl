@@ -1,16 +1,13 @@
 tests/recursion03.types:5:1-5:18:
   Subtype:
-    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      < Nil^ω : Unit
-      | Foo^ω¹ :
-          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-      | Bar^ω² : Bar
+    μ Bar. ∀ (ρ : Row).
+      < Nil? : Unit
+      | Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
+      | Bar? : Bar
       | ... ρ
       >
   Supertype:
-    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+    μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
   Result:
     FAIL
     Type is not polymorphic enough.
@@ -18,93 +15,72 @@ tests/recursion03.types:5:1-5:18:
         ▫
 tests/recursion03.types:6:1-6:18:
   Subtype:
-    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+    μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
   Supertype:
-    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      < Nil^ω : Unit
-      | Foo^ω¹ :
-          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-      | Bar^ω² : Bar
+    μ Bar. ∀ (ρ : Row).
+      < Nil? : Unit
+      | Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
+      | Bar? : Bar
       | ... ρ
       >
   Result:
     OK
 tests/recursion03.types:8:1-8:26:
   Subtype:
-    ∀ (ρ : Row). ∃ (ω : #).
-      < Foo^ω :
-          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-      | ... ρ
-      >
+    ∀ (ρ : Row).
+      <Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ> | ... ρ>
   Supertype:
-    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      < Nil^ω : Unit
-      | Foo^ω¹ :
-          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-      | Bar^ω² : Bar
+    μ Bar. ∀ (ρ : Row).
+      < Nil? : Unit
+      | Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
+      | Bar? : Bar
       | ... ρ
       >
   Result:
     OK
 tests/recursion03.types:9:1-9:26:
   Subtype:
-    ∀ (ρ : Row). ∃ (ω : #).
-      < Foo^ω :
-          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-      | ... ρ
-      >
+    ∀ (ρ : Row).
+      <Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ> | ... ρ>
   Supertype:
-    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+    μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
   Result:
     OK
 tests/recursion03.types:11:1-11:26:
   Subtype:
-    ∀ (ρ : Row). ∃ (ω : #).
-      < Bar^ω :
-          μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            < Nil^ω : Unit
-            | Foo^ω¹ :
-                μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-            | Bar^ω² : Bar
+    ∀ (ρ : Row).
+      < Bar? :
+          μ Bar. ∀ (ρ : Row).
+            < Nil? : Unit
+            | Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
+            | Bar? : Bar
             | ... ρ
             >
       | ... ρ
       >
   Supertype:
-    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      < Nil^ω : Unit
-      | Foo^ω¹ :
-          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-      | Bar^ω² : Bar
+    μ Bar. ∀ (ρ : Row).
+      < Nil? : Unit
+      | Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
+      | Bar? : Bar
       | ... ρ
       >
   Result:
     OK
 tests/recursion03.types:12:1-12:26:
   Subtype:
-    ∀ (ρ : Row). ∃ (ω : #).
-      < Bar^ω :
-          μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            < Nil^ω : Unit
-            | Foo^ω¹ :
-                μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-            | Bar^ω² : Bar
+    ∀ (ρ : Row).
+      < Bar? :
+          μ Bar. ∀ (ρ : Row).
+            < Nil? : Unit
+            | Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
+            | Bar? : Bar
             | ... ρ
             >
       | ... ρ
       >
   Supertype:
-    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+    μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
   Result:
     FAIL
     Type is not polymorphic enough.
@@ -112,23 +88,19 @@ tests/recursion03.types:12:1-12:26:
         ▫
 tests/recursion03.types:14:1-14:26:
   Subtype:
-    μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-      < Nil^ω : Unit
-      | Foo^ω¹ :
-          μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-      | Bar^ω² : Bar
+    μ Bar. ∀ (ρ : Row).
+      < Nil? : Unit
+      | Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
+      | Bar? : Bar
       | ... ρ
       >
   Supertype:
-    ∀ (ρ : Row). ∃ (ω : #).
-      < Foo^ω :
-          μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            < Nil^ω : Unit
-            | Foo^ω¹ :
-                μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-            | Bar^ω² : Bar
+    ∀ (ρ : Row).
+      < Foo? :
+          μ Bar. ∀ (ρ : Row).
+            < Nil? : Unit
+            | Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
+            | Bar? : Bar
             | ... ρ
             >
       | ... ρ
@@ -140,17 +112,14 @@ tests/recursion03.types:14:1-14:26:
         ▫
 tests/recursion03.types:15:1-15:26:
   Subtype:
-    μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
+    μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
   Supertype:
-    ∀ (ρ : Row). ∃ (ω : #).
-      < Foo^ω :
-          μ Bar. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #). ∃ (ω : #).
-            < Nil^ω : Unit
-            | Foo^ω¹ :
-                μ Foo. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nil^ω : Unit| Foo^ω¹ : Foo | ... ρ>
-            | Bar^ω² : Bar
+    ∀ (ρ : Row).
+      < Foo? :
+          μ Bar. ∀ (ρ : Row).
+            < Nil? : Unit
+            | Foo? : μ Foo. ∀ (ρ : Row). <Nil? : Unit | Foo? : Foo | ... ρ>
+            | Bar? : Bar
             | ... ρ
             >
       | ... ρ

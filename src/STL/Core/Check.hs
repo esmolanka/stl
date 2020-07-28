@@ -482,8 +482,8 @@ checkDefinitionTypeWellformedness pos name' ty = do
   let name = fromMaybe (GlobalName "return") name'
       nodes = containsNodes ty
       illegalError reason = IllegalDefinition pos name ty reason
-  when (containsLambdas nodes) $
-    throwError $ illegalError DefinitionContainsExplicitParametrisation
+  -- when (containsLambdas nodes) $
+  --   throwError $ illegalError DefinitionContainsExplicitParametrisation
   when (containsMus nodes) $
     throwError $ illegalError DefinitionContainsExplicitRecursion
   when (containsMetasOrSkolems nodes) $

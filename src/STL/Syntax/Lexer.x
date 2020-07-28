@@ -48,6 +48,7 @@ $upper      = [A-Z]
 
 @keyword    = "forall" | "exists"
             | "type" | "with" | "provide"
+            | "mix" | "mixin" | "table"
             | "module" | "import"
             | "#eval" | "#check"
 

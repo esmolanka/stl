@@ -13,6 +13,7 @@ module STL.Syntax.Parser
   , pModule
   ) where
 
+import Data.Either
 import Data.Functor.Foldable (Fix(..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as Lazy
@@ -59,6 +60,9 @@ import STL.Syntax.Types
   "exists"       { L _ (TokKeyword "exists")   }
   "type"         { L _ (TokKeyword "type")     }
   "with"         { L _ (TokKeyword "with")     }
+  "mix"          { L _ (TokKeyword "mix")      }
+  "mixin"        { L _ (TokKeyword "mixin")    }
+  "table"        { L _ (TokKeyword "table")    }
   "provide"      { L _ (TokKeyword "provide")  }
   "module"       { L _ (TokKeyword "module")   }
   "import"       { L _ (TokKeyword "import")   }
@@ -156,7 +160,9 @@ Type :: { Type }
        '.' Type                          { Fix $ TForall (position $1 <> typePos $4) (concat $2) $4 }
   | "exists" list1(CovarBindings)
        '.' Type                          { Fix $ TExists (position $1 <> typePos $4) (concat $2) $4 }
-  | VariantRowAlt                        { Fix $ TVariant (_rowPos $1) $1 }
+
+  | "mixin" '|' sepBy1(VarMixin, '|')    { mkUnion $ mkMixins (position $1) $3 }
+  | '|' sepBy1(VarMixin, '|')            { Fix $ TMkVnt (position $1) (mkUnion $ mkMixins (position $1) $2) }
 
 Variance :: { Variance }
   : {- empty -}                          { Covariant }
@@ -170,7 +176,7 @@ VarianceSpecific :: { Variance }
 Bindings :: { [Binding Variance] }
   : Variance VARIABLE                    { [Binding (position $2) (Var $ getVariable $ extract $2) Nothing $1] }
   | '(' list1(both(Variance, VARIABLE))
-    ':' Kind ')'                         { map (\(variance, idn) -> Binding (position idn)
+    ':' Kind ')'                         { map (\ (variance, idn) -> Binding (position idn)
                                                     (Var $ getVariable $ extract idn)
                                                     (Just $4)
                                                     variance) $2}
@@ -184,27 +190,46 @@ CovarBindings :: { [Binding ()] }
                                                     ()) $2}
 
 AppType :: { Type }
-  : list1(AtomType)   { mkApplication $1 }
+  : list1(CompoundType) { mkApplication $1 }
+
+CompoundType :: { Type }
+  : AtomType                        { $1 }
+  | CompoundType '[' AtomType ']'   { Fix $ TArray (typePos $1 <> position $4) $1 $3 }
+  | '{' '}'                         { Fix $ TMkRec (position $1 <> position $2) (mkUnion $ mkMixins (position $1) []) }
+  | '{' sepBy1(Mixin, ',') '}'      { Fix $ TMkRec (position $1 <> position $3) (mkUnion $ mkMixins (position $1) $2) }
+
+  | "table"
+    '{' sepBy1(Mixin, ',') '}'      { Fix $ TMkTbl (position $1 <> position $4) (mkUnion $ mkMixins (position $2) $3) }
+
+  | '<' '>'                         { Fix $ TMkVnt (position $1 <> position $2) (mkUnion $ mkMixins (position $1) []) }
+  | '<' sepBy1(VarMixin, '|') '>'   { Fix $ TMkVnt (position $1 <> position $3) (mkUnion $ mkMixins (position $1) $2) }
+
+  | "mixin" '{' '}'                 { mkUnion $ mkMixins (position $2) [] }
+  | "mixin"
+    '{' sepBy1(Mixin, ',') '}'      { mkUnion $ mkMixins (position $2) $3 }
+
+  | "mixin" '<' '>'                 { mkUnion $ mkMixins (position $2) [] }
+  | "mixin"
+    '<' sepBy1(VarMixin, '|') '>'   { mkUnion $ mkMixins (position $2) $3 }
 
 AtomType :: { Type }
-  : AtomType
-    '[' AtomType ']'  { Fix $ TArray (typePos $1 <> position $4) $1 $3 }
-  | VARIABLE          { Fix $ TRef (position $1) (Var $ getVariable $ extract $1) }
-  | CONSTRUCTOR       { mkConstructor (position $1) (getConstructor $ extract $1) }
-  | CONSTRUCTOR '.'
-    CONSTRUCTOR       { Fix $ TGlobal (position $1)
-                        (Just $ ModuleName $ getConstructor $ extract $3)
-                        (GlobalName $ getConstructor $ extract $1) }
-  | '(' Type ')'      { $2 }
-  | '{' '}'                              { Fix $ TRecord (position $1 <> position $2) (RNil (position $2)) }
-  | '{' RecordRow '}'                    { Fix $ TRecord (position $1 <> position $3) ($2 (position $3)) }
-  | '<' '>'                              { Fix $ TVariant (position $1 <> position $2) (RNil (position $2)) }
-  | '<' VariantRow '>'                   { Fix $ TVariant (position $1 <> position $3) ($2 (position $3)) }
+  : VARIABLE           { Fix $ TRef (position $1) (Var $ getVariable $ extract $1) }
+  | CONSTRUCTOR        { mkConstructor (position $1) (getConstructor $ extract $1) }
 
-RecordRow :: { Position -> Row Type }
-  : sepBy1(RecRowExt, ',')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
-  | sepBy1(RecRowExt, ',') '|' AppType   { \_ -> foldr ($) (RExplicit (position $2) $3) $1 }
-  | AppType                              { \_ -> RExplicit (typePos $1) $1 }
+  | CONSTRUCTOR '.'
+    CONSTRUCTOR        { Fix $ TGlobal (position $1)
+                         (Just $ ModuleName $ getConstructor $ extract $3)
+                         (GlobalName $ getConstructor $ extract $1) }
+  | '(' Type ')'       { $2 }
+
+
+Mixin :: { Either (Row Type -> Row Type) Type }
+  : RecRowExt          { Left  $1 }
+  | "mix" Type         { Right $2 }
+
+VarMixin :: { Either (Row Type -> Row Type) Type }
+  : VarRowExt          { Left  $1 }
+  | "mix" Type         { Right $2 }
 
 RecRowExt :: { Row Type -> Row Type }
   : VARIABLE ':' Type                    { RExtend (position $1 <> typePos $3)
@@ -216,12 +241,6 @@ RecRowExt :: { Row Type -> Row Type }
                                              (PVariable (position $3))
                                              $4 }
   | CONSTRUCTOR ':'                      {% otherError (position $1) "record field names must start with a lower-case letter or an underscore" }
-
-VariantRow :: { Position -> Row Type }
-  : sepBy1(VarRowExt, '|')               { \lastpos -> foldr ($) (RNil lastpos) $1 }
-
-VariantRowAlt :: { Row Type }
-  : list1(snd('|', VarRowExt))           { foldr ($) (RNil dummyPos) $1 }
 
 VarRowExt :: { Row Type -> Row Type }
   : CONSTRUCTOR                          { RExtend (position $1)
@@ -270,6 +289,10 @@ snd(p, q)
 both(p, q)
   : p q                    { ($1, $2) }
 
+sepBy(p, q)
+  : p                      { [$1] }
+  | p list(snd(q, p))      { $1 : $2 }
+
 sepBy1(p, q)
   : p list(snd(q, p))      { $1 : $2 }
 
@@ -280,11 +303,27 @@ sepBy2(p, q)
 --
 
 mkArrow :: [Type] -> Type
-mkArrow ts@(a : b : rest) = Fix $ TArrow (foldr1 (<>) $ map typePos ts) a b rest
+mkArrow ts@(a : b : rest) = Fix $ TArrow (foldMap typePos ts) a b rest
 mkArrow _ = error "Unexpected input on mkArrow"
 
+mkTuple :: [Type] -> Type
+mkTuple ts@(a : b : rest) = Fix $ TTuple (foldMap typePos ts) a b rest
+mkTuple _ = error "Unexpected input on mkTuple"
+
+mkUnion :: [Type] -> Type
+mkUnion [] = Fix $ TMixin dummyPos (RNil dummyPos)
+mkUnion (a : []) = a
+mkUnion ts@(a : b : rest) = Fix $ TUnion (foldMap typePos ts) a b rest
+
+mkMixins :: Position -> [Either (Row Type -> Row Type) Type] -> [Type]
+mkMixins pos ts =
+  let (rowexts, mixins) = partitionEithers ts
+      row :: Type
+      row = Fix $ TMixin pos $ foldr ($) (RNil pos) rowexts
+  in if null rowexts then mixins else row : mixins
+
 mkApplication :: [Type] -> Type
-mkApplication ts@(a : b : rest) = Fix $ TApp (foldr1 (<>) $ map typePos ts) a b rest
+mkApplication ts@(a : b : rest) = Fix $ TApp (foldMap typePos ts) a b rest
 mkApplication (a : []) = a
 mkApplication _ = error "Unexpected input on mkApplication"
 
