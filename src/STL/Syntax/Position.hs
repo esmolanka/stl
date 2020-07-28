@@ -6,6 +6,7 @@ module STL.Syntax.Position
   ) where
 
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc (Pretty (..), colon)
 
 data Position = Position
@@ -17,8 +18,13 @@ data Position = Position
   } deriving (Show, Ord, Eq)
 
 instance Semigroup Position where
-  Position fn l c _ _ <> Position _ _ _ l' c' =
-    Position fn l c l' c'
+  p@(Position fn l c _ _) <> q@(Position fn' _ _ l' c')
+    | "<" <- T.take 1 fn = q -- '<no location information>' case
+    | fn == fn' = Position fn l c l' c'
+    | otherwise = p
+
+instance Monoid Position where
+  mempty = dummyPos
 
 dummyPos :: Position
 dummyPos = Position "<no location information>" 1 1 1 1
