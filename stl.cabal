@@ -10,7 +10,7 @@ maintainer:          esmolanka@gmail.com
 copyright:           Eugene Smolanka
 category:            Language
 build-type:          Simple
-extra-source-files:  README.md
+extra-source-files:  README.org
 cabal-version:       >=1.10
 
 library
