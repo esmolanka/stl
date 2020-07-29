@@ -1,0 +1,30 @@
+tests/tuples01.types:2:1-2:26:
+  Normalised:
+    ∃ ρ. (Int × String × Float × ρ)
+  Kind:
+    Type
+tests/tuples01.types:4:1-4:19:
+  Normalised:
+    ∃ ρ. (Int × String × ρ)
+  Kind:
+    Type
+tests/tuples01.types:6:1-6:11:
+  Normalised:
+    ∃ ρ. (Int × ρ)
+  Kind:
+    Type
+tests/tuples01.types:8:1-8:28:
+  Normalised:
+    ∃ ρ. (Int × String × Float × ρ)
+  Kind:
+    Type
+tests/tuples01.types:10:1-10:20:
+  Normalised:
+    ∃ ρ. (Int × String × ρ)
+  Kind:
+    Type
+tests/tuples01.types:12:1-12:11:
+  Normalised:
+    ∃ ρ. (Int × ρ)
+  Kind:
+    Type

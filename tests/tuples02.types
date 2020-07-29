@@ -1,0 +1,4 @@
+
+#check (Int, String) <: (Int,)
+
+#check (Int, String, Float) <: exists a. (Int, a)

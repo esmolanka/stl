@@ -1,0 +1,14 @@
+tests/tuples02.types:2:1-2:29:
+  Subtype:
+    ∃ ρ. (Int × String × ρ)
+  Supertype:
+    ∃ ρ. (Int × ρ)
+  Result:
+    OK
+tests/tuples02.types:4:1-4:49:
+  Subtype:
+    ∃ ρ. (Int × String × Float × ρ)
+  Supertype:
+    ∃ a. ∃ ρ. (Int × a × ρ)
+  Result:
+    OK
