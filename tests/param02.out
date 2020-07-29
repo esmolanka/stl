@@ -1,56 +1,33 @@
-tests/param02.types:12:1-12:28:
+tests/param02.types:9:1-9:28:
   Normalised:
-    λ (f : Type -> Type). ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      {first^ω : f Unit, second^ω¹ : f Unit | ρ}
+    λ (f : Type -> Type). ∃ (ρ : Row). {first? : f Unit, second? : f Unit | ρ}
   Kind:
     (Type -> Type) -> Type
-tests/param02.types:13:1-13:34:
+tests/param02.types:10:1-10:34:
   Normalised:
-    ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-      { first^ω :
-          ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nothing^ω : Unit| Just^ω¹ : Unit | ... ρ>
-      , second^ω¹ :
-          ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            <Nothing^ω : Unit| Just^ω¹ : Unit | ... ρ>
+    ∃ (ρ : Row).
+      { first? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
+      , second? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
       | ρ
       }
   Kind:
     Type
-tests/param02.types:19:1-19:29:
+tests/param02.types:15:1-15:29:
   Normalised:
-    λ (g : (Type -> Type) -> Type). ∃ (ρ : Row). ∃ (ω : #).
-      { use^ω :
-          g (λ a. ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-              <Nothing^ω : Unit| Just^ω¹ : a | ... ρ>)
-      | ρ
-      }
+    λ (g : (Type -> Type) -> Type). ∃ (ρ : Row).
+      {use? : g (λ a. ∀ (ρ : Row). <Nothing? : Unit | Just? : a | ... ρ>) | ρ}
   Kind:
     ((Type -> Type) -> Type) -> Type
-tests/param02.types:20:1-20:51:
+tests/param02.types:16:1-16:51:
   Normalised:
-    ∃ (ρ : Row). ∃ (ω : #).
-      { use^ω :
-          ∃ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-            { first^ω :
-                ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nothing^ω : Unit| Just^ω¹ : Unit | ... ρ>
-            , second^ω¹ :
-                ∀ (ρ : Row). ∃ (ω : #). ∃ (ω : #).
-                  <Nothing^ω : Unit| Just^ω¹ : Unit | ... ρ>
+    ∃ (ρ : Row).
+      { use? :
+          ∃ (ρ : Row).
+            { first? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
+            , second? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
             | ρ
             }
       | ρ
       }
-  Kind:
-    Type
-tests/param02.types:24:1-24:15:
-  Normalised:
-    λ (r : Row). { | r}
-  Kind:
-    Row -> Type
-tests/param02.types:25:1-25:35:
-  Normalised:
-    ∀ (r : Row). { | r}
   Kind:
     Type

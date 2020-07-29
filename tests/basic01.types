@@ -14,10 +14,6 @@
 
 #eval { foo? : Unit }
 
-#eval forall (r : Row). { foo : Unit | r}
-
-#eval exists (r : Row). { foo : Unit | r}
-
 #eval <>
 
 #eval < Foo : Unit >
