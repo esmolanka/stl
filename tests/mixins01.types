@@ -1,0 +1,27 @@
+
+type Foo = mixin
+  { foo : Int
+  }
+
+type Bar = mixin
+  { bar : Int
+  }
+
+type Baz = mixin
+  { baz : Float
+  , mix Foo
+  , mix Bar
+  }
+
+type Rec1 =
+  { mix Foo
+  , mix Bar
+  }
+
+type Rec2 =
+  { foo : Int
+  , bar : Int
+  }
+
+#check Rec1 <: Rec2
+#check {mix Baz} <: Rec1

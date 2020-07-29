@@ -1,0 +1,27 @@
+
+type SimpleResource a = mixin
+  | FromFile   : String
+  | FromMemory : Int
+  | HardCoded  : a
+
+type DBResource = mixin
+  | FromDB : {database : String, table : String}
+
+type EtherResource =
+  mixin < FromEther : exists a. a >
+
+type Resource a =
+  | mix SimpleResource a
+  | mix DBResource
+  | mix EtherResource
+
+#eval Resource
+
+type Const b a = b
+
+type ResourceLoadEnum = variant of (Const Unit)
+  | mix SimpleResource Unit
+  | mix DBResource
+  | mix EtherResource
+
+#eval ResourceLoadEnum

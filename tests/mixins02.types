@@ -1,0 +1,22 @@
+
+type Foo = mixin
+  { foo : Int
+  , bar : Float
+  }
+
+type FooRecord = { mix Foo }
+#eval FooRecord
+
+type Identity a = a
+type FooRecord2 = record of Identity { mix Foo }
+#eval FooRecord2
+
+type Array (n : Nat) a = a[n]
+type FooTable = exists (n : Nat). record of (Array n) { mix Foo }
+#eval FooTable
+
+type Maybe a =
+  | Nothing
+  | Just : a
+type FooOverride = exists (n : Nat). record of Maybe { mix Foo }
+#eval FooOverride

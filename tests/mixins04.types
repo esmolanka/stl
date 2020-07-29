@@ -1,0 +1,13 @@
+
+type Nested = mixin f
+  { foo : f Int
+  , bar : { baz : f Int, quux : f Float }
+  }
+#eval Nested
+
+type NestedRecord = { mix Nested }
+#eval NestedRecord
+
+type Array (n : Nat) a = a[n]
+type NestedTable = exists (n : Nat). record of (Array n) { mix Nested }
+#eval NestedTable

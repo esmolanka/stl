@@ -1,0 +1,24 @@
+tests/mixins03.types:18:1-18:15:
+  Normalised:
+    λ a. ∀ (ρ : Row).
+      < FromFile? : String
+      | FromMemory? : Int
+      | HardCoded? : a
+      | FromDB? : ∃ (ρ : Row). {database : String, table : String | ρ}
+      | FromEther? : ∃ a. a
+      | ... ρ
+      >
+  Kind:
+    Type -> Type
+tests/mixins03.types:27:1-27:23:
+  Normalised:
+    ∀ (ρ : Row).
+      < FromFile? : Unit
+      | FromMemory? : Unit
+      | HardCoded? : Unit
+      | FromDB? : Unit
+      | FromEther? : Unit
+      | ... ρ
+      >
+  Kind:
+    Type
