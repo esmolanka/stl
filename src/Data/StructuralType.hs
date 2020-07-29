@@ -27,7 +27,6 @@ data BaseType
   | TList
   | TDict
   | TNat
-  | TPair
   deriving (Show, Eq, Ord, Generic)
 
 data Kind
@@ -51,6 +50,7 @@ data SType
   | TRecord SType
   | TVariant SType
   | TArray SType SType
+  | TPair SType SType
   | TPresent
   | TAbsent
   | TExtend Label SType SType SType
@@ -79,6 +79,8 @@ extract = mkType
           TVariant (extract r)
         (Core.TArray{}, [a, n]) ->
           TArray (extract a) (extract n)
+        (Core.TPair{}, [a, b]) ->
+          TPair (extract a) (extract b)
         (Core.TPresent{}, []) ->
           TPresent
         (Core.TAbsent{}, []) ->
@@ -118,7 +120,6 @@ extract = mkType
       Core.TList   -> TList
       Core.TDict   -> TDict
       Core.TNat    -> TNat
-      Core.TPair   -> TPair
 
     mkKind :: Core.Kind -> Kind
     mkKind = \case
@@ -148,6 +149,7 @@ inject = mkType
       TRecord r -> Core.TRecord pos $$ r
       TVariant r -> Core.TVariant pos $$ r
       TArray a n -> Core.TArray pos $$ a $$ n
+      TPair a b -> Core.TPair pos $$ a $$ b
       TPresent -> Core.TPresent pos
       TAbsent -> Core.TAbsent pos
       TExtend lbl p a r -> Core.TExtend pos (mkLabel lbl) $$ p $$ a $$ r
@@ -178,7 +180,6 @@ inject = mkType
       TList   -> Core.TList
       TDict   -> Core.TDict
       TNat    -> Core.TNat
-      TPair   -> Core.TPair
 
     mkKind :: Kind -> Core.Kind
     mkKind = \case

@@ -70,6 +70,7 @@ $whitespace+       ;
 "→"                { just (TokPunctuation "->") }
 "⊑"                { just (TokPunctuation "<:") }
 "±"                { just (TokPunctuation "+/-") }
+"×"                { just (TokPunctuation ",") }
 @punct             { TokPunctuation `via` decode }
 @keyword           { TokKeyword `via` decode }
 "∀"                { just (TokKeyword "forall") }

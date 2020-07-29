@@ -350,6 +350,8 @@ inferKind = para alg
         this `is` Arr Row Covariant Star
       TArray _ ->
         this `is` Arr Star Covariant (Arr Nat Covariant Star)
+      TPair _ ->
+        this `is` Arr Star Covariant (Arr Star Covariant Star)
       TPresent _ ->
         this `is` Presence
       TAbsent _ ->
@@ -391,7 +393,6 @@ baseKind = \case
   TList   -> Arr Star Covariant Star
   TDict   -> Arr Star Covariant Star
   TNat    -> Arr Nat Covariant Star
-  TPair   -> Arr Star Covariant (Arr Star Covariant Star)
 
 inferKindClosed :: Type -> Kind
 inferKindClosed ty =

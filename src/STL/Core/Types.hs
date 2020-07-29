@@ -124,7 +124,6 @@ data BaseType
   | TList
   | TDict
   | TNat
-  | TPair
   deriving (Eq, Ord, Generic)
 
 instance CPretty BaseType where
@@ -138,7 +137,6 @@ instance CPretty BaseType where
     TList   -> aConstructor "List"
     TDict   -> aConstructor "Dict"
     TNat    -> aConstructor "Nat"
-    TPair   -> aConstructor "Pair"
 
 data TypeF e
   = TRef      { _getPosition :: Position, _refName :: Var, _refIndex :: Int }
@@ -150,6 +148,7 @@ data TypeF e
   | TRecord   { _getPosition :: Position }
   | TVariant  { _getPosition :: Position }
   | TArray    { _getPosition :: Position }
+  | TPair     { _getPosition :: Position }
   | TPresent  { _getPosition :: Position }
   | TAbsent   { _getPosition :: Position }
   | TExtend   { _getPosition :: Position, _extLabel :: Label }
@@ -188,6 +187,7 @@ ppType = ppType' 0
       TRecord _       -> aConstructor "Record"
       TVariant _      -> aConstructor "Variant"
       TArray _        -> aConstructor "Array"
+      TPair _         -> aConstructor "Pair"
       TPresent _      -> aConstructor "▪"
       TAbsent _       -> aConstructor "▫"
       TExtend _ lbl   -> aConstructor "Extend" <+> cpretty lbl
@@ -262,6 +262,19 @@ ppType = ppType' 0
         in  ((lbl, presence, ty) : rest, tip)
       _ -> ([], this)
 
+    ppTuple :: Doc AnsiStyle -> Doc AnsiStyle -> Doc AnsiStyle -> [Type] -> Doc AnsiStyle
+    ppTuple lb rb cm tys =
+      group $ align $ enclose (lb <> flatAlt space mempty) (flatAlt line mempty <> rb) $ vcat $
+        zipWith (<>) (mempty : repeat (cm <> space)) (map (ppType' 1) tys)
+
+
+    collectPairs :: Type -> [Type]
+    collectPairs this = case spine this of
+      (Fix (TPair _), [h, t]) ->
+        let rest = collectPairs t
+        in  (h : rest)
+      _ -> [this]
+
     ppType' :: Int -> Type -> Doc AnsiStyle
     ppType' lvl = spine >>> \case
       (Fix (TArrow _), [a, b]) ->
@@ -278,6 +291,9 @@ ppType = ppType' 0
 
       (Fix (TArray _), [el, sz]) ->
         ppType' 2 el <> brackets (ppType' 1 sz)
+
+      (Fix (TPair _), [a, b]) ->
+        ppTuple lparen rparen (flatAlt mempty space <> "×") (a : collectPairs b)
 
       (Fix otherTyCon, []) ->
         ppTypeCon lvl otherTyCon

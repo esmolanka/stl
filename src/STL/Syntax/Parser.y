@@ -203,6 +203,7 @@ AppType :: { Type }
 CompoundType :: { Type }
   : AtomType                        { $1 }
   | CompoundType '[' AtomType ']'   { Fix $ TArray (typePos $1 <> position $4) $1 $3 }
+  | '(' AppType ',' ')'             { mkTuple [$2] }
   | '(' sepBy2(AppType, ',') ')'    { mkTuple $2 }
 
   | '{' '}'                         { Fix $ TRecord (position $1 <> position $2) (mkUnion $ mkMixins (position $1) Nothing []) Nothing }
@@ -327,7 +328,7 @@ mkArrow ts@(a : b : rest) = Fix $ TArrow (foldMap typePos ts) a b rest
 mkArrow _ = error "Unexpected input on mkArrow"
 
 mkTuple :: [Type] -> Type
-mkTuple ts@(a : b : rest) = Fix $ TTuple (foldMap typePos ts) a b rest
+mkTuple ts@(a : rest) = Fix $ TTuple (foldMap typePos ts) a rest
 mkTuple _ = error "Unexpected input on mkTuple"
 
 mkUnion :: [Type] -> Type

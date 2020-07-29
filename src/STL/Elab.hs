@@ -112,7 +112,6 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         a' <- a
         as' <- sequence as
         pure $ Core.unspine f' (a' : as')
-
       TRecord pos mixin mf -> do
         let rho = Core.Var "ρ"
         mixin' <- mixin
@@ -124,7 +123,6 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
                      , Fix $ Core.TRef pos rho 0
                      ]
                  ]
-
       TVariant pos mixin mf -> do
         let rho = Core.Var "ρ"
         mixin' <- mixin
@@ -136,7 +134,6 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
                      , Fix $ Core.TRef pos rho 0
                      ]
                  ]
-
       TMixin pos mbnd row -> do
         let rho = Core.Var "ρ"
             (phi, phiKind) = dsFunctorBindings mbnd
@@ -148,7 +145,6 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         pure $ Fix $ Core.TLambda pos phi phiKind Core.Covariant
              $ Fix $ Core.TLambda pos rho Core.Row Core.Covariant
              $ ty
-
       TUnion pos a b cs -> do
         let phi = Core.Var "ϕ"
             rho = Core.Var "ρ"
@@ -159,13 +155,15 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         pure $ Fix $ Core.TLambda pos phi (Core.Arr Core.Star Core.Covariant Core.Star) Core.Covariant
              $ Fix $ Core.TLambda pos rho Core.Row Core.Covariant
              $ foldr union (Fix (Core.TRef pos rho 0)) (a' : b' : cs')
-
-      TTuple pos a b cs -> do
+      TTuple pos a bs -> do
+        let rho = Core.Var "ρ"
         a' <- a
-        b' <- b
-        cs' <- sequence cs
-        pure $ foldr (\x rest -> Core.unspine (Fix (Core.TBase pos Core.TPair)) [x, rest]) (last (a' : b' : cs')) (init (a' : b' : cs'))
-
+        bs' <- sequence bs
+        pure $ Fix $ Core.TExists pos rho Core.Star $
+          foldr
+          (\x rest -> Core.unspine (Fix (Core.TPair pos)) [x, rest])
+          (Fix (Core.TRef pos rho 0))
+          (a' : bs')
       TArray pos a n -> do
         a' <- a
         n' <- n

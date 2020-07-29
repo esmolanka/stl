@@ -367,6 +367,7 @@ eqTypeCon a b =
     (TRecord _       , TRecord _       ) -> True
     (TVariant _      , TVariant _      ) -> True
     (TArray _        , TArray _        ) -> True
+    (TPair _         , TPair _         ) -> True
     (TPresent _      , TPresent _      ) -> True
     (TAbsent _       , TAbsent _       ) -> True
     (_               , _               ) -> False
