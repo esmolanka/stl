@@ -62,7 +62,8 @@ import STL.Syntax.Types
   "with"         { L _ (TokKeyword "with")     }
   "mix"          { L _ (TokKeyword "mix")      }
   "mixin"        { L _ (TokKeyword "mixin")    }
-  "table"        { L _ (TokKeyword "table")    }
+  "record of"    { L _ (TokKeyword "record of")  }
+  "variant of"   { L _ (TokKeyword "variant of") }
   "provide"      { L _ (TokKeyword "provide")  }
   "module"       { L _ (TokKeyword "module")   }
   "import"       { L _ (TokKeyword "import")   }
@@ -161,8 +162,11 @@ Type :: { Type }
   | "exists" list1(CovarBindings)
        '.' Type                          { Fix $ TExists (position $1 <> typePos $4) (concat $2) $4 }
 
-  | "mixin" '|' sepBy1(VarMixin, '|')    { mkUnion $ mkMixins (position $1) $3 }
-  | '|' sepBy1(VarMixin, '|')            { Fix $ TMkVnt (position $1) (mkUnion $ mkMixins (position $1) $2) }
+  | "mixin" maybe(OneBinding)
+    '|' sepBy1(VarMixin, '|')            { mkUnion $ mkMixins (position $1) $2 $4 }
+  | "variant of" AtomType
+    '|' sepBy1(VarMixin, '|')            { Fix $ TVariant (position $1) (mkUnion $ mkMixins (position $3) Nothing $4) (Just $2) }
+  | '|' sepBy1(VarMixin, '|')            { Fix $ TVariant (position $1) (mkUnion $ mkMixins (position $1) Nothing $2) Nothing }
 
 Variance :: { Variance }
   : {- empty -}                          { Covariant }
@@ -189,6 +193,10 @@ CovarBindings :: { [Binding ()] }
                                                     (Just $4)
                                                     ()) $2}
 
+OneBinding :: { Binding () }
+  : VARIABLE                             { Binding (position $1)  (Var $ getVariable $ extract $1) Nothing () }
+  | '(' VARIABLE ':' Kind ')'            { Binding (position $2) (Var $ getVariable $ extract $2) (Just $4) () }
+
 AppType :: { Type }
   : list1(CompoundType) { mkApplication $1 }
 
@@ -197,22 +205,32 @@ CompoundType :: { Type }
   | CompoundType '[' AtomType ']'   { Fix $ TArray (typePos $1 <> position $4) $1 $3 }
   | '(' sepBy2(AppType, ',') ')'    { mkTuple $2 }
 
-  | '{' '}'                         { Fix $ TMkRec (position $1 <> position $2) (mkUnion $ mkMixins (position $1) []) }
-  | '{' sepBy1(Mixin, ',') '}'      { Fix $ TMkRec (position $1 <> position $3) (mkUnion $ mkMixins (position $1) $2) }
+  | '{' '}'                         { Fix $ TRecord (position $1 <> position $2) (mkUnion $ mkMixins (position $1) Nothing []) Nothing }
+  | '{' sepBy1(Mixin, ',') '}'      { Fix $ TRecord (position $1 <> position $3) (mkUnion $ mkMixins (position $1) Nothing $2) Nothing }
 
-  | "table"
-    '{' sepBy1(Mixin, ',') '}'      { Fix $ TMkTbl (position $1 <> position $4) (mkUnion $ mkMixins (position $2) $3) }
+  | "record of" AtomType
+    '{' '}'                         { Fix $ TRecord (position $1 <> position $4) (mkUnion $ mkMixins (position $3) Nothing []) (Just $2) }
+  | "record of" AtomType
+    '{' sepBy1(Mixin, ',') '}'      { Fix $ TRecord (position $1 <> position $5) (mkUnion $ mkMixins (position $3) Nothing $4) (Just $2) }
 
-  | '<' '>'                         { Fix $ TMkVnt (position $1 <> position $2) (mkUnion $ mkMixins (position $1) []) }
-  | '<' sepBy1(VarMixin, '|') '>'   { Fix $ TMkVnt (position $1 <> position $3) (mkUnion $ mkMixins (position $1) $2) }
+  | '<' '>'                         { Fix $ TVariant (position $1 <> position $2) (mkUnion $ mkMixins (position $1) Nothing []) Nothing }
+  | '<' sepBy1(VarMixin, '|') '>'   { Fix $ TVariant (position $1 <> position $3) (mkUnion $ mkMixins (position $1) Nothing $2) Nothing }
 
-  | "mixin" '{' '}'                 { mkUnion $ mkMixins (position $2) [] }
-  | "mixin"
-    '{' sepBy1(Mixin, ',') '}'      { mkUnion $ mkMixins (position $2) $3 }
+  | "variant of" AtomType
+    '<' '>'                         { Fix $ TVariant (position $1 <> position $4) (mkUnion $ mkMixins (position $3) Nothing []) (Just $2) }
+  | "variant of" AtomType
+    '<' sepBy1(VarMixin, '|') '>'   { Fix $ TVariant (position $1 <> position $5) (mkUnion $ mkMixins (position $3) Nothing $4) (Just $2) }
 
-  | "mixin" '<' '>'                 { mkUnion $ mkMixins (position $2) [] }
-  | "mixin"
-    '<' sepBy1(VarMixin, '|') '>'   { mkUnion $ mkMixins (position $2) $3 }
+
+  | "mixin" maybe(OneBinding)
+    '{' '}'                         { mkUnion $ mkMixins (position $3) $2 [] }
+  | "mixin" maybe(OneBinding)
+    '{' sepBy1(Mixin, ',') '}'      { mkUnion $ mkMixins (position $3) $2 $4 }
+
+  | "mixin" maybe(OneBinding)
+    '<' '>'                         { mkUnion $ mkMixins (position $3) $2 [] }
+  | "mixin" maybe(OneBinding)
+    '<' sepBy1(VarMixin, '|') '>'   { mkUnion $ mkMixins (position $3) $2 $4 }
 
 AtomType :: { Type }
   : VARIABLE           { Fix $ TRef (position $1) (Var $ getVariable $ extract $1) }
@@ -282,6 +300,10 @@ list(p)
   : {- empty -}            { [] }
   | list1(p)               { $1 }
 
+maybe(p)
+  : {- -}                  { Nothing }
+  | p                      { Just $1 }
+
 fst(p, q)
   : p q                    { $1 }
 
@@ -290,10 +312,6 @@ snd(p, q)
 
 both(p, q)
   : p q                    { ($1, $2) }
-
-sepBy(p, q)
-  : p                      { [$1] }
-  | p list(snd(q, p))      { $1 : $2 }
 
 sepBy1(p, q)
   : p list(snd(q, p))      { $1 : $2 }
@@ -313,15 +331,15 @@ mkTuple ts@(a : b : rest) = Fix $ TTuple (foldMap typePos ts) a b rest
 mkTuple _ = error "Unexpected input on mkTuple"
 
 mkUnion :: [Type] -> Type
-mkUnion [] = Fix $ TMixin dummyPos (RNil dummyPos)
+mkUnion [] = Fix $ TMixin dummyPos Nothing (RNil dummyPos)
 mkUnion (a : []) = a
 mkUnion ts@(a : b : rest) = Fix $ TUnion (foldMap typePos ts) a b rest
 
-mkMixins :: Position -> [Either (Row Type -> Row Type) Type] -> [Type]
-mkMixins pos ts =
+mkMixins :: Position -> Maybe (Binding ()) -> [Either (Row Type -> Row Type) Type] -> [Type]
+mkMixins pos bnd ts =
   let (rowexts, mixins) = partitionEithers ts
       row :: Type
-      row = Fix $ TMixin pos $ foldr ($) (RNil pos) rowexts
+      row = Fix $ TMixin pos bnd $ foldr ($) (RNil pos) rowexts
   in if null rowexts then mixins else row : mixins
 
 mkApplication :: [Type] -> Type

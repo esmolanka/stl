@@ -14,6 +14,7 @@ import Data.Coerce
 import Data.Functor.Compose
 import Data.Functor.Foldable (Fix(..), cata)
 import Data.Functor.Identity
+import Data.Maybe
 
 import STL.Syntax.Position
 import STL.Syntax.Types
@@ -48,6 +49,10 @@ dsKind pos = \case
 
 dsBindings :: [Binding Variance] -> [(Core.Var, Core.Kind, Core.Variance)]
 dsBindings = map (\(Binding p x k v) -> (dsVar x, maybe Core.Star (dsKind p) k, dsVariance v))
+
+dsFunctorBindings :: Maybe (Binding ()) -> (Core.Var, Core.Kind)
+dsFunctorBindings Nothing = (Core.Var "ϕ", Core.Arr Core.Star Core.Covariant Core.Star)
+dsFunctorBindings (Just (Binding p x k _)) = (dsVar x, maybe (Core.Arr Core.Star Core.Covariant Core.Star) (dsKind p) k)
 
 ----------------------------------------------------------------------
 -- Elaboration monad
@@ -108,80 +113,69 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         as' <- sequence as
         pure $ Core.unspine f' (a' : as')
 
-      TMixin pos row -> do
-        let phi = Core.Var "ϕ"
-            rho = Core.Var "ρ"
+      TRecord pos mixin mf -> do
+        let rho = Core.Var "ρ"
+        mixin' <- mixin
+        mf' <- sequence mf
+        pure $ Fix $ Core.TExists pos rho Core.Row
+             $ Core.unspine (Fix $ Core.TRecord pos)
+                 [ Core.unspine mixin'
+                     [ fromMaybe (identityFunctor pos) mf'
+                     , Fix $ Core.TRef pos rho 0
+                     ]
+                 ]
 
+      TVariant pos mixin mf -> do
+        let rho = Core.Var "ρ"
+        mixin' <- mixin
+        mf' <- sequence mf
+        pure $ Fix $ Core.TForall pos rho Core.Row
+             $ Core.unspine (Fix $ Core.TVariant pos)
+                 [ Core.unspine mixin'
+                     [ fromMaybe (identityFunctor pos) mf'
+                     , Fix $ Core.TRef pos rho 0
+                     ]
+                 ]
+
+      TMixin pos mbnd row -> do
+        let rho = Core.Var "ρ"
+            (phi, phiKind) = dsFunctorBindings mbnd
         ty <- fmap (dsRow (Fix $ Core.TRef pos rho 0)) . forM row $ \ty -> do
           ty' <- ty
-          pure $ Core.unspine (Fix (Core.TRef pos phi 0)) [ty']
-
-        pure $ Fix $ Core.TLambda pos phi (Core.Arr Core.Star Core.Covariant Core.Star) Core.Covariant
+          pure $ if isJust mbnd
+            then ty'
+            else Core.unspine (Fix (Core.TRef pos phi 0)) [ty']
+        pure $ Fix $ Core.TLambda pos phi phiKind Core.Covariant
              $ Fix $ Core.TLambda pos rho Core.Row Core.Covariant
              $ ty
 
       TUnion pos a b cs -> do
         let phi = Core.Var "ϕ"
             rho = Core.Var "ρ"
-
         a' <- a
         b' <- b
         cs' <- sequence cs
-
         let union x y = Core.unspine x [Fix (Core.TRef pos phi 0), y]
-
         pure $ Fix $ Core.TLambda pos phi (Core.Arr Core.Star Core.Covariant Core.Star) Core.Covariant
              $ Fix $ Core.TLambda pos rho Core.Row Core.Covariant
              $ foldr union (Fix (Core.TRef pos rho 0)) (a' : b' : cs')
-
-      TMkRec pos mixin -> do
-        let rho = Core.Var "ρ"
-        mixin' <- mixin
-        pure $ Fix $ Core.TExists pos rho Core.Row
-             $ Core.unspine (Fix $ Core.TRecord pos)
-                 [ Core.unspine mixin'
-                     [ Fix $ Core.TLambda pos (Core.Var "x") Core.Star Core.Covariant (Fix $ Core.TRef pos (Core.Var "x") 0)
-                     , Fix $ Core.TRef pos rho 0
-                     ]
-                 ]
-
-      TMkTbl pos mixin -> do
-        let rho = Core.Var "ρ"
-            size = Core.Var "n"
-        mixin' <- mixin
-        pure $ Fix $ Core.TExists pos size Core.Nat
-             $ Fix $ Core.TExists pos rho Core.Row
-             $ Core.unspine (Fix $ Core.TRecord pos)
-                 [ Core.unspine mixin'
-                     [ Fix $ Core.TLambda pos (Core.Var "x") Core.Star Core.Covariant
-                           $ Core.unspine (Fix (Core.TArray pos))
-                               [ Fix $ Core.TRef pos (Core.Var "x") 0
-                               , Fix $ Core.TRef pos size 0
-                               ]
-                     , Fix $ Core.TRef pos rho 0
-                     ]
-                 ]
-
-      TMkVnt pos mixin -> do
-        let rho = Core.Var "ρ"
-        mixin' <- mixin
-        pure $ Fix $ Core.TForall pos rho Core.Row
-             $ Core.unspine (Fix $ Core.TVariant pos)
-                 [ Core.unspine mixin'
-                     [ Fix $ Core.TLambda pos (Core.Var "x") Core.Star Core.Covariant (Fix $ Core.TRef pos (Core.Var "x") 0)
-                     , Fix $ Core.TRef pos rho 0
-                     ]
-                 ]
 
       TTuple pos a b cs -> do
         a' <- a
         b' <- b
         cs' <- sequence cs
         pure $ foldr (\x rest -> Core.unspine (Fix (Core.TBase pos Core.TPair)) [x, rest]) (last (a' : b' : cs')) (init (a' : b' : cs'))
+
       TArray pos a n -> do
         a' <- a
         n' <- n
         pure $ Core.unspine (Fix (Core.TArray pos)) [a', n']
+
+    identityFunctor :: Position -> Core.Type
+    identityFunctor pos =
+      Fix $ Core.TLambda pos (Core.Var "x") Core.Star Core.Covariant
+          $ Fix $ Core.TRef pos (Core.Var "x") 0
+
 
 dsRow :: Core.Type -> Row Core.Type -> Core.Type
 dsRow tail = go

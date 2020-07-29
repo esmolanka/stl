@@ -48,7 +48,9 @@ $upper      = [A-Z]
 
 @keyword    = "forall" | "exists"
             | "type" | "with" | "provide"
-            | "mix" | "mixin" | "table"
+            | "mix" | "mixin"
+            | "record" $whitespace+ "of"
+            | "variant" $whitespace+ "of"
             | "module" | "import"
             | "#eval" | "#check"
 
@@ -90,7 +92,7 @@ via ftok f = ftok . f
 -- Decoders
 
 decode :: ByteString -> T.Text
-decode = TL.toStrict . decodeUtf8With lenientDecode
+decode = TL.toStrict . TL.unwords . TL.words . decodeUtf8With lenientDecode
 
 dropHeadLast :: ByteString -> ByteString
 dropHeadLast bs = BL.drop 1 (BL.take (BL.length bs - 1) bs)

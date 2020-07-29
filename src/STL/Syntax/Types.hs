@@ -64,11 +64,10 @@ data TypeF e
   | TArrow    { _typePos :: Position, _arrA :: e, _arrB :: e, _arrRest :: [e] }
   | TApp      { _typePos :: Position, _appF :: e, _appA :: e, _appRest :: [e] }
 
-  | TMkRec    { _typePos :: Position, _recMixin :: e }
-  | TMkTbl    { _typePos :: Position, _tblMixin :: e }
-  | TMkVnt    { _typePos :: Position, _vntMixin :: e }
+  | TRecord   { _typePos :: Position, _recMixin :: e, _recFunctor :: Maybe e }
+  | TVariant  { _typePos :: Position, _vntMixin :: e, _vntFunctor :: Maybe e }
 
-  | TMixin    { _typePos :: Position, _mixinRow :: Row e }
+  | TMixin    { _typePos :: Position, _mixinFunctor :: Maybe (Binding ()), _mixinRow :: Row e }
   | TUnion    { _typePos :: Position, _unionA :: e, _unionB :: e, _unionRest :: [e] }
 
   | TTuple    { _typePos :: Position, _tupleA :: e, _tupleB :: e, _tupleRest :: [e] }

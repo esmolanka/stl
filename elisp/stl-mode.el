@@ -50,6 +50,11 @@
     "exists"
     "type"
     "with"
+    "mix"
+    "mixin"
+    "record"
+    "variant"
+    "of"
     "provide"
     "module"
     "import"))
