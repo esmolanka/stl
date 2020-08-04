@@ -390,7 +390,6 @@ baseKind = \case
   TInt    -> Star
   TFloat  -> Star
   TString -> Star
-  TList   -> Arr Star Covariant Star
   TDict   -> Arr Star Covariant Star
   TNat    -> Arr Nat Covariant Star
 

@@ -121,7 +121,6 @@ data BaseType
   | TInt
   | TFloat
   | TString
-  | TList
   | TDict
   | TNat
   deriving (Eq, Ord, Generic)
@@ -134,7 +133,6 @@ instance CPretty BaseType where
     TInt    -> aConstructor "Int"
     TFloat  -> aConstructor "Float"
     TString -> aConstructor "String"
-    TList   -> aConstructor "List"
     TDict   -> aConstructor "Dict"
     TNat    -> aConstructor "Nat"
 

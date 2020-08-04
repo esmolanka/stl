@@ -16,7 +16,7 @@ cabal-version:       >=1.10
 library
   build-tools:         alex, happy
   hs-source-dirs:      src
-  ghc-options:         -Wall -fno-warn-name-shadowing -fno-warn-unused-do-bind
+  ghc-options:         -Wall -Werror -fno-warn-name-shadowing -fno-warn-unused-do-bind
   exposed-modules:
     STL
 

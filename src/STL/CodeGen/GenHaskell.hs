@@ -7,6 +7,8 @@
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
+{-# OPTIONS_GHC -Wwarn #-}
+
 module STL.CodeGen.GenHaskell (genHaskell) where
 
 import Control.Monad.Except
@@ -153,7 +155,6 @@ genBaseType = \case
   S.TInt    -> pure HInt
   S.TFloat  -> pure HFloat
   S.TString -> pure HString
-  S.TList   -> pure HList
   S.TDict   -> pure HDict
   S.TNat    -> pure HNat
 
@@ -415,7 +416,6 @@ ppSType namePrefix = group . go
       TInt -> ctor "TInt"
       TFloat -> ctor "TFloat"
       TString -> ctor "TString"
-      TList -> ctor "TList"
       TDict -> ctor "TDict"
       TNat -> ctor "TNat"
 

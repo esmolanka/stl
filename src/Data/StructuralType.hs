@@ -24,7 +24,6 @@ data BaseType
   | TInt
   | TFloat
   | TString
-  | TList
   | TDict
   | TNat
   deriving (Show, Eq, Ord, Generic)
@@ -117,7 +116,6 @@ extract = mkType
       Core.TInt    -> TInt
       Core.TFloat  -> TFloat
       Core.TString -> TString
-      Core.TList   -> TList
       Core.TDict   -> TDict
       Core.TNat    -> TNat
 
@@ -177,7 +175,6 @@ inject = mkType
       TInt    -> Core.TInt
       TFloat  -> Core.TFloat
       TString -> Core.TString
-      TList   -> Core.TList
       TDict   -> Core.TDict
       TNat    -> Core.TNat
 

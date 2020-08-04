@@ -21,6 +21,7 @@ data Token
   | TokKeyword     { getKeyword      :: !Text }   -- forall, type, mutual
   | TokConstructor { getConstructor  :: !Text }   -- Maybe, Just, Nothing
   | TokVariable    { getVariable     :: !Text }   -- a, b, head, tail
+  | TokQuotedLabel { getQuotedLabel  :: !Text }   -- 'foo', 'Bar'
   | TokUnknown     { getUnknown      :: !Text }   -- for unknown lexemes
   | TokEOF
     deriving (Show, Eq)
@@ -32,6 +33,7 @@ instance Pretty Token where
     TokKeyword x     -> "keyword" <+> squotes (pretty x)
     TokConstructor x -> "identifier" <+> squotes (pretty x)
     TokVariable x    -> "identifier" <+> squotes (pretty x)
+    TokQuotedLabel x -> "identifier" <+> squotes (pretty x)
     TokUnknown x     -> "sequence" <+> dquotes (pretty x <> "...")
     TokEOF           -> "end of file"
 

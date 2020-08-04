@@ -43,7 +43,6 @@ data BaseType
   | TInt        -- Star
   | TFloat      -- Star
   | TString     -- Star
-  | TList       -- Star -> Star
   | TDict       -- Star -> Star
   | TNat        -- Nat -> Star
   deriving (Show, Eq, Ord)

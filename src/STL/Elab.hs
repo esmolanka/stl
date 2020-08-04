@@ -87,7 +87,6 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         TInt    -> pure $ Fix (Core.TBase pos Core.TInt)
         TFloat  -> pure $ Fix (Core.TBase pos Core.TFloat)
         TString -> pure $ Fix (Core.TBase pos Core.TString)
-        TList   -> pure $ Fix (Core.TBase pos Core.TList)
         TDict   -> pure $ Fix (Core.TBase pos Core.TDict)
         TNat    -> pure $ Fix (Core.TBase pos Core.TNat)
       TRef pos x ->

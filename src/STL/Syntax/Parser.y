@@ -379,7 +379,6 @@ mkConstructor pos ctor = case ctor of
   "Int"    -> Fix (T pos TInt)
   "Float"  -> Fix (T pos TFloat)
   "String" -> Fix (T pos TString)
-  "List"   -> Fix (T pos TList)
   "Dict"   -> Fix (T pos TDict)
   "Nat"    -> Fix (T pos TNat)
   other    -> Fix $ TGlobal pos Nothing (GlobalName ctor)
