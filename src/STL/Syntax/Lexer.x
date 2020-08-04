@@ -44,7 +44,9 @@ $upper      = [A-Z]
 
 @paren      = [\(\)\[\]\<\>\{\}]
 
-@punct      = "=" | ":" | "->" | "|" | "." | "," | "<:" | "?" | "-" | "+/-"
+@punct      = "=" | ":" | "->" | "|" | "." | "," | "<:" | "?" | "-" | "+/-" |
+              -- reserved
+              "~" | "`" | "!" | "@" | "#" | "$" | "%" | "^" | "&" | "*" | "+" | ";" | "/" | \\
 
 @keyword    = "forall" | "exists"
             | "type" | "with" | "provide"
@@ -57,7 +59,7 @@ $upper      = [A-Z]
 $identrest  = [$alpha $digit _]
 @constr     = [$upper] [$identrest]*
 @variable   = [$lower _] [$identrest]*
-@quotedstr  = \' @variable \'
+@quotedvar  = \' [$identrest]+ \'
 
 :-
 
@@ -77,7 +79,7 @@ $whitespace+       ;
 "∃"                { just (TokKeyword "exists") }
 @constr            { TokConstructor `via` decode }
 @variable          { TokVariable `via` decode }
-@quotedstr         { TokVariable `via` (decode . dropHeadLast) }
+@quotedvar         { TokQuotedLabel `via` (decode . dropHeadLast) }
 
 {
 ----------------------------------------------------------------------

@@ -72,6 +72,7 @@ import STL.Syntax.Types
 
   CONSTRUCTOR    { L _ (TokConstructor _) }
   VARIABLE       { L _ (TokVariable    _) }
+  QUOTED         { L _ (TokQuotedLabel _) }
 
   EOF            { L _ TokEOF }
 
@@ -168,6 +169,9 @@ Type :: { Type }
     '|' sepBy1(VarMixin, '|')            { Fix $ TVariant (position $1) (mkUnion $ mkMixins (position $3) Nothing $4) (Just $2) }
   | '|' sepBy1(VarMixin, '|')            { Fix $ TVariant (position $1) (mkUnion $ mkMixins (position $1) Nothing $2) Nothing }
 
+----------------------------------------------------------------------
+-- Bindings
+
 Variance :: { Variance }
   : {- empty -}                          { Covariant }
   | '-'                                  { Contravariant }
@@ -197,31 +201,21 @@ OneBinding :: { Binding () }
   : VARIABLE                             { Binding (position $1)  (Var $ getVariable $ extract $1) Nothing () }
   | '(' VARIABLE ':' Kind ')'            { Binding (position $2) (Var $ getVariable $ extract $2) (Just $4) () }
 
+----------------------------------------------------------------------
+-- Applications and special forms
+
 AppType :: { Type }
-  : list1(CompoundType) { mkApplication $1 }
-
-CompoundType :: { Type }
-  : AtomType                        { $1 }
-  | CompoundType '[' AtomType ']'   { Fix $ TArray (typePos $1 <> position $4) $1 $3 }
-  | '(' AppType ',' ')'             { mkTuple [$2] }
-  | '(' sepBy2(AppType, ',') ')'    { mkTuple $2 }
-
-  | '{' '}'                         { Fix $ TRecord (position $1 <> position $2) (mkUnion $ mkMixins (position $1) Nothing []) Nothing }
-  | '{' sepBy1(Mixin, ',') '}'      { Fix $ TRecord (position $1 <> position $3) (mkUnion $ mkMixins (position $1) Nothing $2) Nothing }
+  : list1(CompoundType)             { mkApplication $1 }
 
   | "record of" AtomType
     '{' '}'                         { Fix $ TRecord (position $1 <> position $4) (mkUnion $ mkMixins (position $3) Nothing []) (Just $2) }
   | "record of" AtomType
     '{' sepBy1(Mixin, ',') '}'      { Fix $ TRecord (position $1 <> position $5) (mkUnion $ mkMixins (position $3) Nothing $4) (Just $2) }
 
-  | '<' '>'                         { Fix $ TVariant (position $1 <> position $2) (mkUnion $ mkMixins (position $1) Nothing []) Nothing }
-  | '<' sepBy1(VarMixin, '|') '>'   { Fix $ TVariant (position $1 <> position $3) (mkUnion $ mkMixins (position $1) Nothing $2) Nothing }
-
   | "variant of" AtomType
     '<' '>'                         { Fix $ TVariant (position $1 <> position $4) (mkUnion $ mkMixins (position $3) Nothing []) (Just $2) }
   | "variant of" AtomType
     '<' sepBy1(VarMixin, '|') '>'   { Fix $ TVariant (position $1 <> position $5) (mkUnion $ mkMixins (position $3) Nothing $4) (Just $2) }
-
 
   | "mixin" maybe(OneBinding)
     '{' '}'                         { mkUnion $ mkMixins (position $3) $2 [] }
@@ -233,6 +227,24 @@ CompoundType :: { Type }
   | "mixin" maybe(OneBinding)
     '<' sepBy1(VarMixin, '|') '>'   { mkUnion $ mkMixins (position $3) $2 $4 }
 
+----------------------------------------------------------------------
+-- Compound types
+
+CompoundType :: { Type }
+  : AtomType                        { $1 }
+  | CompoundType '[' AtomType ']'   { Fix $ TArray (typePos $1 <> position $4) $1 $3 }
+  | '(' AppType ',' ')'             { mkTuple [$2] }
+  | '(' sepBy2(AppType, ',') ')'    { mkTuple $2 }
+
+  | '{' '}'                         { Fix $ TRecord (position $1 <> position $2) (mkUnion $ mkMixins (position $1) Nothing []) Nothing }
+  | '{' sepBy1(Mixin, ',') '}'      { Fix $ TRecord (position $1 <> position $3) (mkUnion $ mkMixins (position $1) Nothing $2) Nothing }
+
+  | '<' '>'                         { Fix $ TVariant (position $1 <> position $2) (mkUnion $ mkMixins (position $1) Nothing []) Nothing }
+  | '<' sepBy1(VarMixin, '|') '>'   { Fix $ TVariant (position $1 <> position $3) (mkUnion $ mkMixins (position $1) Nothing $2) Nothing }
+
+----------------------------------------------------------------------
+-- Atomic types
+
 AtomType :: { Type }
   : VARIABLE           { Fix $ TRef (position $1) (Var $ getVariable $ extract $1) }
   | CONSTRUCTOR        { mkConstructor (position $1) (getConstructor $ extract $1) }
@@ -243,6 +255,8 @@ AtomType :: { Type }
                          (GlobalName $ getConstructor $ extract $1) }
   | '(' Type ')'       { $2 }
 
+----------------------------------------------------------------------
+-- Records, Variants, and Mixins
 
 Mixin :: { Either (Row Type -> Row Type) Type }
   : RecRowExt          { Left  $1 }
@@ -253,26 +267,35 @@ VarMixin :: { Either (Row Type -> Row Type) Type }
   | "mix" Type         { Right $2 }
 
 RecRowExt :: { Row Type -> Row Type }
-  : VARIABLE ':' Type                    { RExtend (position $1 <> typePos $3)
-                                             (Label $ getVariable $ extract $1)
+  : LowerOrQuotedLabel ':' Type          { RExtend (position $1 <> typePos $3)
+                                             (extract $1)
                                              (PPresent (position $1))
                                              $3 }
-  | VARIABLE '?' ':' Type                { RExtend (position $1 <> typePos $4)
-                                             (Label $ getVariable $ extract $1)
+  | LowerOrQuotedLabel '?' ':' Type      { RExtend (position $1 <> typePos $4)
+                                             (extract $1)
                                              (PVariable (position $3))
                                              $4 }
   | CONSTRUCTOR ':'                      {% otherError (position $1) "record field names must start with a lower-case letter or an underscore" }
 
 VarRowExt :: { Row Type -> Row Type }
-  : CONSTRUCTOR                          { RExtend (position $1)
-                                             (Label $ getConstructor $ extract $1)
+  : UpperOrQuotedLabel                   { RExtend (position $1)
+                                             (extract $1)
                                              (PVariable (position $1))
                                              (Fix (T (position $1) TUnit)) }
-  | CONSTRUCTOR ':' Type                 { RExtend (position $1 <> typePos $3)
-                                             (Label $ getConstructor $ extract $1)
+  | UpperOrQuotedLabel ':' Type          { RExtend (position $1 <> typePos $3)
+                                             (extract $1)
                                              (PVariable (position $1))
                                              $3 }
   | VARIABLE                             {% otherError (position $1) "variant alternative names must start with an upper-case letter" }
+
+
+LowerOrQuotedLabel :: { Located Label }
+  : VARIABLE           { (Label $ getVariable $ extract $1) @@ $1 }
+  | QUOTED             { (Label $ getQuotedLabel $ extract $1) @@ $1 }
+
+UpperOrQuotedLabel :: { Located Label }
+  : CONSTRUCTOR        { (Label $ getConstructor $ extract $1) @@ $1 }
+  | QUOTED             { (Label $ getQuotedLabel $ extract $1) @@ $1 }
 
 ----------------------------------------------------------------------
 -- Kind
