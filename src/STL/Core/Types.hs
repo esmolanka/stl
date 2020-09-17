@@ -66,7 +66,7 @@ ppKind nested = \case
   Presence -> aKind "#"
   Nat -> aKind "Nat"
   Arr f v a -> parensIf nested $
-    ppVariance v <> ppKind True f <+> aKind "->" <+> ppKind False a
+    ppVariance v <> ppKind True f <+> aKind "→" <+> ppKind False a
   where
     parensIf :: Bool -> Doc a -> Doc a
     parensIf True = parens
@@ -181,7 +181,7 @@ ppType = ppType' 0
       TRef _ x n      -> ppVar x n
       TGlobal _ name  -> cpretty name
       TBase _ base    -> cpretty base
-      TArrow _        -> aConstructor "(->)"
+      TArrow _        -> aConstructor "(→)"
       TRecord _       -> aConstructor "Record"
       TVariant _      -> aConstructor "Variant"
       TArray _        -> aConstructor "Array"
@@ -241,7 +241,7 @@ ppType = ppType' 0
     ppTip :: Doc AnsiStyle -> Type -> [Doc AnsiStyle]
     ppTip ext = \case
       Fix (TNil _) -> []
-      other        -> [flatAlt mempty space <> ext <+> ppType' 0 other]
+      other        -> [ext <+> ppType' 0 other]
 
     ppField :: (Label, Type, Type) -> Doc AnsiStyle
     ppField (Label lbl, presence, ty) =
@@ -276,16 +276,17 @@ ppType = ppType' 0
     ppType' :: Int -> Type -> Doc AnsiStyle
     ppType' lvl = spine >>> \case
       (Fix (TArrow _), [a, b]) ->
-        parensIf (lvl > 0) $ group $ ppType' 1 a <> line <> aConstructor "->" <+> ppType' 0 b
+        parensIf (lvl > 0) $ group $ ppType' 1 a <> line <> aConstructor "→" <+> ppType' 0 b
 
       (Fix (TExtend _ lbl), [presence, ty, row]) ->
-        ppRow lparen rparen comma pipe (first ((lbl, presence, ty) :) (collectRows row))
+        ppRow lparen rparen comma (comma <+> "…") (first ((lbl, presence, ty) :) (collectRows row))
 
       (Fix (TRecord _), [row]) ->
-        ppRow lbrace rbrace comma pipe (collectRows row)
+        ppRow lbrace rbrace comma (comma <+> "…") (collectRows row)
 
       (Fix (TVariant _), [row]) ->
-        ppRow langle rangle (flatAlt mempty space <> pipe) (pipe <+> "...") (collectRows row)
+        let spacepipe = flatAlt mempty space <> pipe
+        in ppRow langle rangle spacepipe (spacepipe <+> "…") (collectRows row)
 
       (Fix (TArray _), [el, sz]) ->
         ppType' 2 el <> brackets (ppType' 1 sz)
