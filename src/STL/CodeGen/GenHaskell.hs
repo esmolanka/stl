@@ -198,7 +198,7 @@ genDefBody recursionClauses ty = do
       S.TRef _ (S.Var x) ->
         pure $ Inline $ HRef (VarName x)
 
-      S.TGlobal _ Nothing name -> do
+      S.TGlobal _ [] name -> do
         name' <- genName name
         if name' `elem` recursionClauses
           then do
@@ -206,7 +206,7 @@ genDefBody recursionClauses ty = do
             pure $ Inline $ applyParams (HGlobal name') params
           else pure $ Inline $ HGlobal name'
 
-      S.TGlobal pos (Just _mod) _name ->
+      S.TGlobal pos _mods _name ->
         throwError $ pretty pos <> ": qualified names not supported"
 
       S.TForall pos _ _ ->

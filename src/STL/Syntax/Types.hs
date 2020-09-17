@@ -57,7 +57,7 @@ data Binding v = Binding
 data TypeF e
   = T         { _typePos :: Position, _baseType :: BaseType }
   | TRef      { _typePos :: Position, _refName :: Var }
-  | TGlobal   { _typePos :: Position, _globalQualifiers :: Maybe ModuleName, _globalName :: GlobalName }
+  | TGlobal   { _typePos :: Position, _globalQualifiers :: [ModuleName], _globalName :: GlobalName }
   | TForall   { _typePos :: Position, _forallBindings :: [Binding ()], _forallBody :: e }
   | TExists   { _typePos :: Position, _existsBindings :: [Binding ()], _existsBody :: e }
   | TArrow    { _typePos :: Position, _arrA :: e, _arrB :: e, _arrRest :: [e] }

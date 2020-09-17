@@ -33,6 +33,7 @@ import STL.Syntax.Types
 %error     { parseError }
 %tokentype { LocatedBy Position Token }
 %monad     { Either (Position, Doc Void) }
+%expect    2
 
 %token
   '('            { L _ (TokParen '('   ) }
@@ -67,6 +68,7 @@ import STL.Syntax.Types
   "provide"      { L _ (TokKeyword "provide")  }
   "module"       { L _ (TokKeyword "module")   }
   "import"       { L _ (TokKeyword "import")   }
+
   "#eval"        { L _ (TokKeyword "#eval")    }
   "#check"       { L _ (TokKeyword "#check")   }
 
@@ -246,14 +248,17 @@ CompoundType :: { Type }
 -- Atomic types
 
 AtomType :: { Type }
-  : VARIABLE           { Fix $ TRef (position $1) (Var $ getVariable $ extract $1) }
-  | CONSTRUCTOR        { mkConstructor (position $1) (getConstructor $ extract $1) }
+  : VARIABLE                        { Fix $ TRef (position $1) (Var $ getVariable $ extract $1) }
+  | CONSTRUCTOR                     { mkConstructor (position $1) (getConstructor $ extract $1) }
 
-  | CONSTRUCTOR '.'
-    CONSTRUCTOR        { Fix $ TGlobal (position $1)
-                         (Just $ ModuleName $ getConstructor $ extract $3)
-                         (GlobalName $ getConstructor $ extract $1) }
-  | '(' Type ')'       { $2 }
+  | sepBy2(CONSTRUCTOR, '.')        { let
+                                        modules = map (fmap (ModuleName . getConstructor)) (init $1)
+                                        typename = fmap (GlobalName . getConstructor) (last $1)
+                                        pos = (foldr (<>) (position typename) (map position modules))
+                                      in
+                                        Fix $ TGlobal pos (map extract modules) (extract typename) }
+
+  | '(' Type ')'                    { $2 }
 
 ----------------------------------------------------------------------
 -- Records, Variants, and Mixins
@@ -275,7 +280,7 @@ RecRowExt :: { Row Type -> Row Type }
                                              (extract $1)
                                              (PVariable (position $3))
                                              $4 }
-  | CONSTRUCTOR ':'                      {% otherError (position $1) "record field names must start with a lower-case letter or an underscore" }
+  | CONSTRUCTOR ':'                      {% otherError (position $1) "record field names must start with a lower-case letter or underscore" }
 
 VarRowExt :: { Row Type -> Row Type }
   : UpperOrQuotedLabel                   { RExtend (position $1)
@@ -381,7 +386,7 @@ mkConstructor pos ctor = case ctor of
   "String" -> Fix (T pos TString)
   "Dict"   -> Fix (T pos TDict)
   "Nat"    -> Fix (T pos TNat)
-  other    -> Fix $ TGlobal pos Nothing (GlobalName ctor)
+  other    -> Fix $ TGlobal pos [] (GlobalName ctor)
 
 mkKind :: Position -> T.Text -> Either (Position, Doc Void) Kind
 mkKind pos ctor = case ctor of

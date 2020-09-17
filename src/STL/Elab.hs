@@ -91,9 +91,9 @@ elabType sugared = pure $ runIdentity (cata alg sugared)
         TNat    -> pure $ Fix (Core.TBase pos Core.TNat)
       TRef pos x ->
         pure $ Fix (Core.TRef pos (dsVar x) 0)
-      TGlobal pos Nothing name -> do
+      TGlobal pos [] name -> do
         pure $ Fix (Core.TGlobal pos (dsGlobalName name))
-      TGlobal pos (Just _mod) _name ->
+      TGlobal pos _mods _name ->
         error $ show $ pretty pos <> colon <+> "Qualified names are not yet supported"
       TForall _ bnds body -> do
         body' <- body
