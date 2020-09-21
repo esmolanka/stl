@@ -1,7 +1,8 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main (main, runModule) where
 
@@ -193,25 +194,36 @@ runRepl = do
       ]
     , mempty
     ]
-  replLoop ">>> " $ \str -> do
+  replLoop ">>> " id $ \str prog -> do
     case parseStatement "<repl>" (UTF8.fromString str) of
-      Left err -> putStrLn err
-      Right stmt ->
+      Left err -> do
+        putStrLn err
+        pure prog
+      Right stmt -> do
         let checking =
-              checkProgram (dsStatement mainHandlers stmt (dsReturn mainHandlers Nothing)) $ \_ ->
+              checkProgram (prog . dsStatement mainHandlers stmt $ dsReturn mainHandlers Nothing) $ \_ ->
               case stmt of
-                (Typedef pos name _ _) -> eval pos (Fix (TGlobal pos (dsGlobalName name)))
-                _                      -> pure ()
-        in runTCT checking >>= either putDocLn pure
+                (Typedef pos name _ _) -> do
+                  eval pos (Fix (TGlobal pos (dsGlobalName name)))
+                  pure (prog . dsStatement mainHandlers stmt)
+                _other ->
+                  pure prog
+        runTCT checking >>= \case
+          Right newprog ->
+            pure newprog
+          Left msg -> do
+            putDocLn msg
+            pure prog
 
-replLoop :: String -> (String -> IO ()) -> IO ()
-replLoop prompt f =
-  runInputT defaultSettings (withInterrupt loop)
+replLoop :: forall a. String -> a -> (String -> a -> IO a) -> IO ()
+replLoop prompt initst f =
+  runInputT defaultSettings (withInterrupt (loop initst)) >> pure ()
   where
-    loop = handle (\Interrupt -> outputStrLn "Ctrl-C" >> loop) $ do
+    loop :: a -> InputT IO a
+    loop st = handle (\Interrupt -> outputStrLn "Ctrl-C" >> loop st) $ do
       input <- getInputLine prompt
       case fmap (id &&& words) input of
-        Nothing -> return ()
-        Just (_, []) -> loop
-        Just (_, [":q"]) -> return ()
-        Just (input', _) -> liftIO (f input') >> loop
+        Nothing -> return st
+        Just (_, []) -> loop st
+        Just (_, [":q"]) -> return st
+        Just (input', _) -> liftIO (f input' st) >>= loop
