@@ -71,7 +71,6 @@ data Err
 data IllegalDefinitionReason
   = DefinitionContainsMetasOrSkolems
   | DefinitionContainsExplicitRecursion
-  | DefinitionContainsExplicitParametrisation
 
 errPosition :: Err -> Position
 errPosition = \case
@@ -147,8 +146,6 @@ instance Pretty IllegalDefinitionReason where
       "contains meta variables or skolems"
     DefinitionContainsExplicitRecursion ->
       "contains explicit recursion"
-    DefinitionContainsExplicitParametrisation ->
-      "contains non-top-level parametrisation"
 
 ----------------------------------------------------------------------
 -- Context
@@ -240,11 +237,13 @@ expectArrowPushAny = local
 
 expectArrowPop :: forall m a. (MonadTC m) => m a -> m a
 expectArrowPop = local
-  (\ctx -> ctx { ctxKindAnn = case ctxKindAnn ctx of
-                                NoExpectation -> NoExpectation
-                                ExpectArrow _ _ ex -> ex
-                                ExpectExactly (Arr _ _ b) -> ExpectExactly b
-                                ExpectExactly _ -> NoExpectation })
+  (\ctx -> ctx { ctxKindAnn =
+    case ctxKindAnn ctx of
+      NoExpectation -> NoExpectation
+      ExpectArrow _ _ ex -> ex
+      ExpectExactly (Arr _ _ b) -> ExpectExactly b
+      ExpectExactly _ -> NoExpectation
+  })
 
 expectExactly :: forall m a. (MonadTC m) => Kind -> m a -> m a
 expectExactly k = local
@@ -483,8 +482,6 @@ checkDefinitionTypeWellformedness pos name' ty = do
   let name = fromMaybe (GlobalName "return") name'
       nodes = containsNodes ty
       illegalError reason = IllegalDefinition pos name ty reason
-  -- when (containsLambdas nodes) $
-  --   throwError $ illegalError DefinitionContainsExplicitParametrisation
   when (containsMus nodes) $
     throwError $ illegalError DefinitionContainsExplicitRecursion
   when (containsMetasOrSkolems nodes) $
