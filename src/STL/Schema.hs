@@ -78,7 +78,8 @@ ppSchemaType lvl0 = pp lvl0
       SParam (VarName x) ->
         aVariable (pretty x)
       SNamed (Name xs) as ->
-        hsep (aConstructor (hcat $ punctuate dot $ map pretty xs) : map (pp 1) as)
+        aConstructor (hcat $ punctuate dot $ map pretty xs) <>
+        if null as then mempty else parens (hsep $ punctuate comma $ map (pp 0) as)
       SPrim prim ->
         cpretty prim
       SArrow fs a ->
@@ -123,8 +124,12 @@ instance CPretty SchemaDef where
     let (Name nameParts) = name
         pName = hcat $ punctuate "." $ map pretty nameParts
         pParam (VarName x) = aVariable (pretty x)
+        pParams =
+          if null params
+          then mempty
+          else parens (hsep $ punctuate comma $ map pParam params)
     in group $ nest 2 $ vsep
-       [ aKeyword "type" <+> hsep (pName : map pParam params) <+> "="
+       [ aKeyword "schema" <+> pName <> pParams <+> "="
        , cpretty body
        ]
 
