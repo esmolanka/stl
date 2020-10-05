@@ -24,11 +24,12 @@ import Data.Void
 import qualified Options.Applicative as Opt
 
 import STL
-import STL.Schema (genSchema)
+import STL.CodeGen.GenHaskell (genHaskell)
 import STL.Core.Check
 import STL.Core.Subsumption
 import STL.Elab (dsStatement, dsReturn, dsGlobalName, dsModule, Handlers(..))
 import STL.Pretty hiding (list)
+import STL.Schema (genSchema, genSchema')
 import STL.Syntax (parseStatement, parseModule, Statement(..))
 
 ----------------------------------------------------------------------
@@ -93,7 +94,7 @@ runModule handlers fn = do
 
 ----------------------------------------------------------------------
 
-data Backend = GenSchema
+data Backend = GenSchema | GenHaskell
 
 data Mode
   = Run
@@ -111,6 +112,7 @@ parseMode =
             Opt.long "against" <>
             Opt.metavar "SRC" <>
             Opt.help "Source supertype .stl to check against")) <|>
+
   (Compile
      <$> (Opt.flag' GenSchema $
            Opt.long "schema" <>
@@ -120,6 +122,17 @@ parseMode =
            Opt.short 'O' <>
            Opt.metavar "FILE" <>
            Opt.help "Output file")) <|>
+
+    (Compile
+     <$> (Opt.flag' GenHaskell $
+           Opt.long "haskell" <>
+           Opt.help "Generate a Haskell binding")
+     <*> (Opt.optional $ Opt.strOption $
+           Opt.long "output" <>
+           Opt.short 'O' <>
+           Opt.metavar "FILE" <>
+           Opt.help "Output file")) <|>
+
   (pure Run)
 
 data Config = Config
@@ -173,6 +186,18 @@ main = do
             Right a -> pure a
       (program, _mRootTy) <- run =<< runModule silentHandlers fn
       case genSchema program of
+        Left err -> putDocLn err >> exitFailure
+        Right doc ->
+          case output of
+            Nothing -> putDocLn doc
+            Just fn  -> IO.withFile fn IO.WriteMode (\hnd -> hPutDoc hnd doc)
+
+    Just (fn, Compile GenHaskell output) -> do
+      let run = \case
+            Left err -> putDocLn err >> exitFailure
+            Right a -> pure a
+      (program, _mRootTy) <- run =<< runModule silentHandlers fn
+      case genSchema' program >>= flip genHaskell Nothing of
         Left err -> putDocLn err >> exitFailure
         Right doc ->
           case output of

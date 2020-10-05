@@ -37,6 +37,8 @@ library
     STL.Pretty
     STL.Schema
 
+    STL.CodeGen.GenHaskell
+
     Data.StructuralType
 
   build-depends:
