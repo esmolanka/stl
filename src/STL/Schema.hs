@@ -60,7 +60,7 @@ data SchemaType where
   SParam   :: VarName -> SchemaType
   SNamed   :: Name -> [SchemaType] -> SchemaType
   SPrim    :: PrimType -> SchemaType
-  SArrow   :: SchemaType -> SchemaType -> SchemaType
+  SArrow   :: [SchemaType] -> SchemaType -> SchemaType
   STuple   :: [SchemaType] -> SchemaType
   SArray   :: SchemaType -> SchemaType
   SRecord  :: [(FieldName, FieldOpt, SchemaType)] -> SchemaType
@@ -73,10 +73,6 @@ instance CPretty SchemaType where
 ppSchemaType :: Int -> SchemaType -> Doc AnsiStyle
 ppSchemaType lvl0 = pp lvl0
   where
-    parensIf :: Bool -> Doc a -> Doc a
-    parensIf True = parens
-    parensIf False = id
-
     pp :: Int -> SchemaType -> Doc AnsiStyle
     pp lvl = \case
       SParam (VarName x) ->
@@ -85,16 +81,17 @@ ppSchemaType lvl0 = pp lvl0
         hsep (aConstructor (hcat $ punctuate dot $ map pretty xs) : map (pp 1) as)
       SPrim prim ->
         cpretty prim
-      SArrow f a ->
-        parensIf (lvl > 0) $ group $ pp 1 f <> line <> "→" <+> pp 0 a
+      SArrow fs a ->
+        let (open, close) = if lvl > 0 then (lparen, rparen) else (flatAlt space mempty, mempty)
+        in ppList open close (flatAlt mempty space <> "→") (map (pp 1) fs ++ [pp 0 a])
       STuple ts ->
-        tupled $ map (pp 0) ts
+        ppList lparen rparen comma (map (pp 0) ts)
       SArray a ->
         brackets (pp 0 a)
       SRecord fs ->
-        ppRow lbrace rbrace comma (map ppField fs)
+        ppList lbrace rbrace comma (map ppField fs)
       SVariant cs ->
-        ppRow "⟨" "⟩" (flatAlt mempty space <> pipe) (map ppCtor cs)
+        ppList "⟨" "⟩" (flatAlt mempty space <> pipe) (map ppCtor cs)
 
     ppOpt :: FieldOpt -> Doc AnsiStyle
     ppOpt = \case
@@ -109,8 +106,8 @@ ppSchemaType lvl0 = pp lvl0
       (CtorName lbl, Nothing) -> aLabel (pretty lbl)
       (CtorName lbl, Just sty) -> aLabel (pretty lbl) <+> colon <+> pp 0 sty
 
-    ppRow :: Doc AnsiStyle -> Doc AnsiStyle -> Doc AnsiStyle -> [Doc AnsiStyle] -> Doc AnsiStyle
-    ppRow lb rb cm fields =
+    ppList :: Doc AnsiStyle -> Doc AnsiStyle -> Doc AnsiStyle -> [Doc AnsiStyle] -> Doc AnsiStyle
+    ppList lb rb cm fields =
       group $ align $ enclose (lb <> flatAlt space mempty) (flatAlt line mempty <> rb) $ vcat $
         zipWith (<>) (mempty : repeat (cm <> space)) fields
 
@@ -282,7 +279,7 @@ extractDefinition (Core.GlobalName n) kind0 type0 = do
 extractByKind :: (MonadExtract m) => Core.Type -> Core.Kind -> m ([VarName], SchemaType)
 extractByKind ty = \case
   Core.Arr Core.Star _ k -> do
-    (var@(Core.Var x), body) <- extractArrow ty
+    (var@(Core.Var x), body) <- extractLambda ty
     (xs, st) <- extendCtx var RoleParam $ withDefParam (VarName x) $ extractByKind body k
     pure (VarName x : xs, st)
   Core.Star -> do
@@ -291,8 +288,8 @@ extractByKind ty = \case
   _other -> do
     throwError ()
 
-extractArrow :: (MonadExtract m) => Core.Type -> m (Core.Var, Core.Type)
-extractArrow = \case
+extractLambda :: (MonadExtract m) => Core.Type -> m (Core.Var, Core.Type)
+extractLambda = \case
   Fix (Core.TLambda _pos x _k _v body) -> pure (x, body)
   _other -> throwError ()
 
@@ -330,12 +327,22 @@ extractStar = underQuantifiers $ Core.spine >>> \case
       _other -> throwError ()
   (Fix (Core.TGlobal _pos (Core.GlobalName n)), args) -> SNamed (Name [n]) <$> traverse extractStar args
   (Fix (Core.TBase _pos bt), []) -> SPrim <$> extractBaseType bt
-  (Fix (Core.TArrow _pos), [f, a]) -> SArrow <$> extractStar f <*> extractStar a
+  (Fix (Core.TArrow _pos), [a, b]) -> (\a' (as', b') -> SArrow (a' : as') b') <$> extractStar a <*> extractArrow b
   (Fix (Core.TArray _pos), [a, _n]) -> SArray <$> extractStar a -- FIXME: Don't ignore the size
   (Fix (Core.TPair p), args) -> STuple <$> extractTuple (Core.unspine (Fix (Core.TPair p)) args)
   (Fix (Core.TRecord _pos), [r]) -> SRecord <$> extractRecordRows r
   (Fix (Core.TVariant _pos), [r]) -> SVariant <$> extractVariantCases r
   (_other, _args) -> throwError ()
+
+extractArrow :: (MonadExtract m) => Core.Type -> m ([SchemaType], SchemaType)
+extractArrow = underQuantifiers $ Core.spine >>> \case
+  (Fix (Core.TArrow _pos), [a, b]) -> do
+    a' <- extractStar a
+    (as', b') <- extractArrow b
+    pure (a' : as', b')
+  (other, args) -> do
+    b' <- extractStar (Core.unspine other args)
+    pure ([], b')
 
 extractTuple :: (MonadExtract m) => Core.Type -> m [SchemaType]
 extractTuple = underQuantifiers $ Core.spine >>> \case
