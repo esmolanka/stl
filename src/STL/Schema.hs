@@ -222,7 +222,11 @@ evalDefinition groupNames (Core.Definition pos name params body) = do
   ty <- Core.normalise lookupGlobal (Core.etaExpand kind (Core.extendWithParameters pos params body))
   case runExtract (extractDefinition groupNames name kind ty) of
     Right def -> emit def
-    Left{} -> addGlobal name (Core.normaliseClosed $ Core.extendWithParameters pos params $ Core.handleSelfReference name body)
+    Left _reason ->
+      addGlobal name $
+        Core.normaliseClosed $
+        Core.extendWithParameters pos params $
+        Core.handleSelfReference name body
   where
     notFoundInternalError = error $ "internal error: global not found: " ++ show name
 
@@ -256,7 +260,7 @@ data ExtractEnv = ExtractEnv
 
 type MonadExtract m =
   ( MonadReader ExtractEnv m
-  , MonadError () m
+  , MonadError (Doc AnsiStyle) m
   )
 
 ----------------------------------------------------------------------
@@ -307,13 +311,13 @@ extractByKind ty = \case
   Core.Star -> do
     st <- extractRecursion ty
     pure ([], st)
-  _other -> do
-    throwError ()
+  other -> do
+    throwError $ "Unexpected kind:" <+> cpretty other
 
 extractLambda :: (MonadExtract m) => Core.Type -> m (Core.Var, Core.Type)
 extractLambda = \case
   Fix (Core.TLambda _pos x _k _v body) -> pure (x, body)
-  _other -> throwError ()
+  other -> throwError $ "Unexpected type instead of lambda:" <+> cpretty other
 
 extractRecursion :: (MonadExtract m) => Core.Type -> m SchemaType
 extractRecursion = \case
@@ -325,7 +329,7 @@ underQuantifiers f = Core.spine >>> \case
   (Fix (Core.TForall _pos x k ty), args) -> do
     role <- case k of
       Core.Row -> pure RoleUniversalTail
-      _other   -> throwError ()
+      other    -> throwError $ "Universal quantifier of unexpected kind:" <+> cpretty other
     extendCtx x role $
       underQuantifiers f (Core.unspine ty args)
   (Fix (Core.TExists _pos x k ty), args) -> do
@@ -334,7 +338,7 @@ underQuantifiers f = Core.spine >>> \case
       Core.Row      -> pure RoleExistentialTail
       Core.Presence -> pure RoleExistentialPresence
       Core.Nat      -> pure RoleExistentialSize
-      _other        -> throwError ()
+      other         -> throwError $ "Existential quantifier of unexpected kind:" <+> cpretty other
     extendCtx x role $
       underQuantifiers f (Core.unspine ty args)
   (other, args) ->
@@ -346,7 +350,7 @@ extractStar = underQuantifiers $ Core.spine >>> \case
     lookupCtx x n >>= \case
       RoleParam -> pure $ SParam (VarName name)
       RoleSelfReference -> SNamed <$> asks exDefName <*> asks (map SParam . exDefParams)
-      _other -> throwError ()
+      _other -> throwError "Unexpected variable reference"
   (Fix (Core.TGlobal _pos name), args) -> do
     let name' = extractName name
     recursive <- asks (elem name' . exDefGroup)
@@ -360,7 +364,7 @@ extractStar = underQuantifiers $ Core.spine >>> \case
   (Fix (Core.TPair p), args) -> STuple <$> extractTuple (Core.unspine (Fix (Core.TPair p)) args)
   (Fix (Core.TRecord _pos), [r]) -> SRecord <$> extractRecordRows r
   (Fix (Core.TVariant _pos), [r]) -> SVariant <$> extractVariantCases r
-  (_other, _args) -> throwError ()
+  other -> throwError $ "Unexpected type:" <+> cpretty (uncurry Core.unspine other)
 
 extractArrow :: (MonadExtract m) => Core.Type -> m ([SchemaType], SchemaType)
 extractArrow = underQuantifiers $ Core.spine >>> \case
@@ -379,7 +383,7 @@ extractTuple = underQuantifiers $ Core.spine >>> \case
     lookupCtx x n >>= \case
       RoleParam -> pure [SParam (VarName name)]
       RoleExistentialType -> pure []
-      _other -> throwError ()
+      _other -> throwError "Unexpected variable reference"
   (other, args) -> (: []) <$> extractStar (Core.unspine other args)
 
 extractRecordRows :: (MonadExtract m) => Core.Type -> m [(FieldName, FieldOpt, SchemaType)]
@@ -388,7 +392,7 @@ extractRecordRows = underQuantifiers $ Core.spine >>> \case
     lookupCtx x n >>= \case
       RoleUniversalTail -> pure []
       RoleExistentialTail -> pure []
-      _other -> throwError ()
+      _other -> throwError "Unexpected variable reference"
   (Fix (Core.TNil _pos), []) -> pure []
   (Fix (Core.TExtend _pos (Core.Label lbl)), [presence, ty, row]) -> do
     rest <- extractRecordRows row
@@ -397,7 +401,7 @@ extractRecordRows = underQuantifiers $ Core.spine >>> \case
       Just optionality -> do
         ty' <- extractStar ty
         pure $ (FieldName lbl, optionality, ty') : rest
-  _ -> throwError ()
+  other -> throwError $ "Unexpected row-type:" <+> cpretty (uncurry Core.unspine other)
 
 extractVariantCases :: (MonadExtract m) => Core.Type -> m [(CtorName, Maybe SchemaType)]
 extractVariantCases = underQuantifiers $ Core.spine >>> \case
@@ -405,7 +409,7 @@ extractVariantCases = underQuantifiers $ Core.spine >>> \case
     lookupCtx x n >>= \case
       RoleUniversalTail -> pure []
       RoleExistentialTail -> pure []
-      _other -> throwError ()
+      _other -> throwError "Unexpected variable reference"
   (Fix (Core.TNil _pos), []) -> pure []
   (Fix (Core.TExtend _pos (Core.Label lbl)), [presence, ty, row]) -> do
     rest <- extractVariantCases row
@@ -415,17 +419,17 @@ extractVariantCases = underQuantifiers $ Core.spine >>> \case
         extractStar ty >>= \case
           SPrim PUnit -> pure $ (CtorName lbl, Nothing) : rest
           sty         -> pure $ (CtorName lbl, Just sty) : rest
-  _ -> throwError ()
+  other -> throwError $ "Unexpected row-type:" <+> cpretty (uncurry Core.unspine other)
 
 extractPresence :: (MonadExtract m) => Core.Type -> m (Maybe FieldOpt)
 extractPresence = underQuantifiers $ Core.spine >>> \case
   (Fix (Core.TRef _pos x n), []) ->
     lookupCtx x n >>= \case
       RoleExistentialPresence -> pure (Just OptionalField)
-      _other -> throwError ()
+      _other -> throwError "Unexpected variable reference"
   (Fix (Core.TPresent _pos), []) -> pure (Just RequiredField)
   (Fix (Core.TAbsent  _pos), []) -> pure Nothing
-  _ -> throwError ()
+  other -> throwError $ "Unexpected presence-type:" <+> cpretty (uncurry Core.unspine other)
 
 extractBaseType :: (MonadExtract m) => Core.BaseType -> m PrimType
 extractBaseType = \case
@@ -435,5 +439,5 @@ extractBaseType = \case
   Core.TInt    -> pure PInt
   Core.TFloat  -> pure PFloat
   Core.TString -> pure PString
-  Core.TDict   -> throwError ()
-  Core.TNat    -> throwError ()
+  Core.TDict   -> throwError "Dicts are not supported"
+  Core.TNat    -> throwError "Nats are not supported"
