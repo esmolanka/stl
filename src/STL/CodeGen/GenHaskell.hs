@@ -293,18 +293,25 @@ ppHaskellType t =
 ppHaskellDef :: HaskellDef -> Doc AnsiStyle
 ppHaskellDef = \case
   Newtype name params body ->
-    vsep [ aKeyword "newtype" <+>
-           ppTypeName name <+>
-           ppParams params <> "=" <+>
-           ppTypeName name
-         , indent 2 $ lbrace <+> unAnnotate ("get" <> ppTypeName name) <+> "::" <+> cpretty body <+> rbrace
+    vsep [ group $ nest 2 $
+             aKeyword "newtype" <+>
+             hsep (ppTypeName name : map ppVarName params) <+> "=" <+>
+             ppTypeName name <> line <>
+             lbrace <+> unAnnotate ("get" <> ppTypeName name) <+> "::" <+> group (cpretty body) <+> rbrace
+         , indent 2 $ ppDeriving ["X.Eq", "X.Show"]
+         ]
+
+  Record name params [] ->
+    vsep [ aKeyword "data" <+>
+           hsep (ppTypeName name : map ppVarName params) <+> "=" <+>
+           ppTypeName name <+> "{}"
          , indent 2 $ ppDeriving ["X.Eq", "X.Show"]
          ]
 
   Record name params fields ->
     vsep [ aKeyword "data" <+>
-           ppTypeName name <+>
-           ppParams params <> "=" <+> ppTypeName name
+           hsep (ppTypeName name : map ppVarName params) <+> "=" <+>
+           ppTypeName name
          , indent 2 $ vsep $
              zipWith (<+>) (lbrace : repeat comma) (map (ppField name) fields) ++
              [rbrace <+> ppDeriving ["X.Eq", "X.Show"]]
@@ -312,17 +319,12 @@ ppHaskellDef = \case
 
   SumType name params ctors ->
     vsep [ aKeyword "data" <+>
-           ppTypeName name <+>
-           ppParams params
+           hsep (ppTypeName name : map ppVarName params)
          , indent 2 $ vsep $
              zipWith (<+>) ("=" : repeat "|") (map (ppCtor name) ctors)
          , indent 4 $ ppDeriving ["X.Eq", "X.Show"]
          ]
   where
-    ppParams [] = mempty
-    ppParams params =
-      hsep (map ppVarName params) <> space
-
     ppField _name (fld, ty) =
       ppFieldName fld <+> "::" <+> cpretty ty
 
@@ -333,6 +335,8 @@ ppHaskellDef = \case
              uniquifiedCtor
            Just (Right ty) ->
              uniquifiedCtor <+> ppHaskellType ty
+           Just (Left []) ->
+             uniquifiedCtor
            Just (Left fields) ->
              vsep [ uniquifiedCtor
                   , indent 4 $ vsep $
