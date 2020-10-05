@@ -180,7 +180,7 @@ genSchema' program = do
       (Core.purifyProgram program)
       (\_ -> asks (fmap snd . Core.ctxGlobals)))
   (_, _, output) <- runRWST
-    (traverseProgram evalDefinition evalReturn program)
+    (traverseProgram evalDefinitionGroup evalReturn program)
     (initEnv gamma)
     initState
   pure (runOutput output [])
@@ -193,10 +193,10 @@ genSchema' program = do
       }
 
 
-traverseProgram :: (Monad m) => (Core.Definition -> m ()) -> (Core.Type -> m ()) -> Core.Program Void -> m ()
+traverseProgram :: (Monad m) => ([Core.Definition] -> m ()) -> (Core.Type -> m ()) -> Core.Program Void -> m ()
 traverseProgram f g = cata $ getTerm >>> \case
-  Core.PLet _pos def rest -> f def >> rest
-  Core.PMutual _pos defs rest -> traverse f defs >> rest
+  Core.PLet _pos def rest -> f [def] >> rest
+  Core.PMutual _pos defs rest -> f defs >> rest
   Core.PReturn _pos ty -> g ty
   Core.PNil -> pure ()
   where
@@ -206,11 +206,16 @@ traverseProgram f g = cata $ getTerm >>> \case
       Core.Later x _ -> absurd x
 
 
-evalDefinition :: (MonadEval m) => Core.Definition -> m ()
-evalDefinition (Core.Definition pos name params body) = do
+evalDefinitionGroup :: (MonadEval m) => [Core.Definition] -> m ()
+evalDefinitionGroup defs =
+  let names = map Core._defName defs
+  in mapM_ (evalDefinition names) defs
+
+evalDefinition :: (MonadEval m) => [Core.GlobalName] -> Core.Definition -> m ()
+evalDefinition groupNames (Core.Definition pos name params body) = do
   kind <- asks (M.findWithDefault notFoundInternalError name . evGamma)
   ty <- Core.normalise lookupGlobal (Core.etaExpand kind (Core.extendWithParameters pos params body))
-  case runExtract (extractDefinition name kind ty) of
+  case runExtract (extractDefinition groupNames name kind ty) of
     Right def -> emit def
     Left{} -> addGlobal name (Core.normaliseClosed $ Core.extendWithParameters pos params $ Core.handleSelfReference name body)
   where
@@ -239,6 +244,7 @@ data VarRole
 
 data ExtractEnv = ExtractEnv
   { exGamma     :: M.Map Core.Var [VarRole]
+  , exDefGroup  :: [Name]
   , exDefName   :: Name
   , exDefParams :: [VarName]
   } deriving (Show, Eq)
@@ -266,15 +272,26 @@ withDefParam :: (MonadExtract m) => VarName -> m a -> m a
 withDefParam param =
   local (\env -> env {exDefParams = param : exDefParams env})
 
+withDefGroup :: (MonadExtract m) => [Name] -> m a -> m a
+withDefGroup names =
+  local (\env -> env {exDefGroup = names})
+
 ----------------------------------------------------------------------
 
 runExtract :: ExceptT e (Reader ExtractEnv) a -> Either e a
-runExtract = runExceptT >>> flip runReader (ExtractEnv mempty (Name []) [])
+runExtract = runExceptT >>> flip runReader (ExtractEnv mempty [] (Name []) [])
 
-extractDefinition :: (MonadExtract m) => Core.GlobalName -> Core.Kind -> Core.Type -> m SchemaDef
-extractDefinition (Core.GlobalName n) kind0 type0 = do
-  (params, body) <- withDefName (Name [n]) (extractByKind type0 kind0)
-  pure (SchemaDef (Name [n]) params body)
+extractName :: Core.GlobalName -> Name
+extractName (Core.GlobalName n) = Name [n]
+
+extractDefinition :: (MonadExtract m) => [Core.GlobalName] -> Core.GlobalName -> Core.Kind -> Core.Type -> m SchemaDef
+extractDefinition groupNames name kind0 type0 = do
+  let name' = extractName name
+  (params, body) <-
+    withDefName name' $
+      withDefGroup (map extractName groupNames) $
+        extractByKind type0 kind0
+  pure (SchemaDef name' params body)
 
 extractByKind :: (MonadExtract m) => Core.Type -> Core.Kind -> m ([VarName], SchemaType)
 extractByKind ty = \case
@@ -325,7 +342,13 @@ extractStar = underQuantifiers $ Core.spine >>> \case
       RoleParam -> pure $ SParam (VarName name)
       RoleSelfReference -> SNamed <$> asks exDefName <*> asks (map SParam . exDefParams)
       _other -> throwError ()
-  (Fix (Core.TGlobal _pos (Core.GlobalName n)), args) -> SNamed (Name [n]) <$> traverse extractStar args
+  (Fix (Core.TGlobal _pos name), args) -> do
+    let name' = extractName name
+    recursive <- asks (elem name' . exDefGroup)
+    case (recursive, args) of
+      (False, _) -> SNamed name' <$> traverse extractStar args
+      (True, []) -> SNamed name' <$> asks (map SParam . exDefParams)
+      (True, _)  -> error "internal error: explicit arguments to self-reference"
   (Fix (Core.TBase _pos bt), []) -> SPrim <$> extractBaseType bt
   (Fix (Core.TArrow _pos), [a, b]) -> (\a' (as', b') -> SArrow (a' : as') b') <$> extractStar a <*> extractArrow b
   (Fix (Core.TArray _pos), [a, _n]) -> SArray <$> extractStar a -- FIXME: Don't ignore the size
