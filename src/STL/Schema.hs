@@ -322,7 +322,7 @@ underQuantifiers f = Core.spine >>> \case
       Core.Row -> pure RoleUniversalTail
       _other   -> throwError ()
     extendCtx x role $
-      f (Core.unspine ty args)
+      underQuantifiers f (Core.unspine ty args)
   (Fix (Core.TExists _pos x k ty), args) -> do
     role <- case k of
       Core.Star     -> pure RoleExistentialType
@@ -331,7 +331,7 @@ underQuantifiers f = Core.spine >>> \case
       Core.Nat      -> pure RoleExistentialSize
       _other        -> throwError ()
     extendCtx x role $
-      f (Core.unspine ty args)
+      underQuantifiers f (Core.unspine ty args)
   (other, args) ->
     f (Core.unspine other args)
 
