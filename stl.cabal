@@ -33,10 +33,9 @@ library
     STL.Syntax.Token
     STL.Syntax.Types
 
-    STL.Pretty
     STL.Elab
-
-    STL.CodeGen.GenHaskell
+    STL.Pretty
+    STL.Schema
 
     Data.StructuralType
 

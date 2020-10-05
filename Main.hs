@@ -19,17 +19,17 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
 import Data.Functor.Foldable (Fix(..))
 import Data.Text.Prettyprint.Doc.Render.Text (hPutDoc)
+import Data.Void
 
 import qualified Options.Applicative as Opt
 
-import Data.StructuralType (extract)
 import STL
-import STL.CodeGen.GenHaskell (genHaskell)
+import STL.Schema (genSchema)
 import STL.Core.Check
 import STL.Core.Subsumption
 import STL.Elab (dsStatement, dsReturn, dsGlobalName, dsModule, Handlers(..))
 import STL.Pretty hiding (list)
-import STL.Syntax (parseStatement, parseModule, Statement(..), Module(..))
+import STL.Syntax (parseStatement, parseModule, Statement(..))
 
 ----------------------------------------------------------------------
 -- Utils
@@ -74,25 +74,26 @@ mainHandlers = Handlers eval check (\_ k -> purifyProgram k)
 silentHandlers :: (MonadTC m, MonadIO m) => Handlers (m ())
 silentHandlers = Handlers (\_ _ -> pure ()) (\_ _ _ -> pure ()) (\_ k -> purifyProgram k)
 
-runModule :: (MonadIO m) => Handlers (ExceptT Err (ReaderT Ctx m) ()) -> FilePath -> m (Either (Doc AnsiStyle) (Module, Maybe Type))
+runModule :: (MonadIO m) => Handlers (ExceptT Err (ReaderT Ctx m) ()) -> FilePath -> m (Either (Doc AnsiStyle) (Program Void, Maybe Type))
 runModule handlers fn = do
   str <- liftIO $ BL.readFile fn
   case parseModule fn str of
     Left err ->
       pure (Left (pretty err))
     Right modul ->
-      runTCT $ checkProgram (dsModule handlers modul) $ \case
-        Just ty -> do
-          hNormalise handlers (getPosition ty) ty
-          inferKind ty
-          ty' <- normalise lookupGlobal ty
-          pure (modul, Just ty')
-        Nothing ->
-          pure (modul, Nothing)
+      let program = dsModule handlers modul
+      in  runTCT $ checkProgram program $ \case
+            Just ty -> do
+              hNormalise handlers (getPosition ty) ty
+              inferKind ty
+              ty' <- normalise lookupGlobal ty
+              pure (purifyProgram program, Just ty')
+            Nothing ->
+              pure (purifyProgram program, Nothing)
 
 ----------------------------------------------------------------------
 
-data Backend = GenHaskell
+data Backend = GenSchema
 
 data Mode
   = Run
@@ -111,9 +112,9 @@ parseMode =
             Opt.metavar "SRC" <>
             Opt.help "Source supertype .stl to check against")) <|>
   (Compile
-     <$> (Opt.flag' GenHaskell $
-           Opt.long "haskell" <>
-           Opt.help "Generate Haskell bindings for given module")
+     <$> (Opt.flag' GenSchema $
+           Opt.long "schema" <>
+           Opt.help "Generate a schema")
      <*> (Opt.optional $ Opt.strOption $
            Opt.long "output" <>
            Opt.short 'O' <>
@@ -166,12 +167,12 @@ main = do
         (Right _,  _) -> pure ()
         (Left err, _) -> putDocLn (cpretty err) >> exitFailure
 
-    Just (fn, Compile GenHaskell output) -> do
+    Just (fn, Compile GenSchema output) -> do
       let run = \case
             Left err -> putDocLn err >> exitFailure
             Right a -> pure a
-      (modul, mRootTy) <- run =<< runModule silentHandlers fn
-      case genHaskell modul (extract <$> mRootTy) of
+      (program, _mRootTy) <- run =<< runModule silentHandlers fn
+      case genSchema program of
         Left err -> putDocLn err >> exitFailure
         Right doc ->
           case output of

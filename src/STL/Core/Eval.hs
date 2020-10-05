@@ -13,6 +13,7 @@ import qualified Data.Map as M
 import Data.Monoid (Any (..))
 import Data.Set (Set)
 import qualified Data.Set as S
+import qualified Data.Text as T
 
 import STL.Core.Types
 
@@ -126,7 +127,7 @@ subst x n0 sub0 expr = runReader (cata alg expr) (n0, sub0)
         return (Fix (TMu pos x' b'))
       other -> Fix <$> sequence other
 
-normalise :: forall m. (Monad m) => (GlobalName -> m (Maybe (Type, Kind))) -> Type -> m Type
+normalise :: forall m. (Monad m) => (GlobalName -> m (Maybe Type)) -> Type -> m Type
 normalise resolveGlobal = cata alg
   where
     alg :: TypeF (m Type) -> m Type
@@ -135,7 +136,7 @@ normalise resolveGlobal = cata alg
         definition <- resolveGlobal name
         case definition of
           Nothing -> pure (Fix (TGlobal pos name))
-          Just (term, _) -> normalise resolveGlobal term
+          Just term -> normalise resolveGlobal term
       TApp pos f a -> do
         f' <- f
         a' <- a
@@ -150,3 +151,21 @@ normalise resolveGlobal = cata alg
 normaliseClosed :: Type -> Type
 normaliseClosed t =
   runReader (normalise (const (pure Nothing)) t) ()
+
+etaExpand :: Kind -> Type -> Type
+etaExpand k ty =
+  let vars = takeVars k (aToZ ++ numbered)
+  in foldr addLambda (foldl addApplication ty vars) vars
+  where
+    aToZ = map (Var . flip T.cons T.empty) ['a' .. 'z']
+    numbered = map (Var . T.pack . ("t" ++) . show) [1 :: Int ..]
+
+    addLambda :: (Var, Kind, Variance) -> Type -> Type
+    addLambda (x, k, v) ty = Fix (TLambda dummyPos x k v ty)
+
+    addApplication :: Type -> (Var, Kind, Variance) -> Type
+    addApplication ty (x, _, _) = Fix (TApp dummyPos ty (Fix (TRef dummyPos x 0)))
+
+    takeVars :: Kind -> [Var] -> [(Var, Kind, Variance)]
+    takeVars (Arr k v rest) (x : xs) = (x, k, v) : takeVars rest xs
+    takeVars _other _ = []

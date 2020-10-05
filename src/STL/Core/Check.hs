@@ -210,16 +210,23 @@ extendCtx x flavour kind variance cont = flip local cont $ \ctx ->
 
 -- Globals
 
-lookupGlobal :: forall m. (MonadTC m) => GlobalName -> m (Maybe (Type, Kind))
+lookupGlobalKind :: forall m. (MonadTC m) => Position -> GlobalName -> m Kind
+lookupGlobalKind pos name = do
+  mkind <- asks $ fmap snd . M.lookup name . ctxGlobals
+  case mkind of
+    Nothing -> throwError $ GlobalNotFound pos name
+    Just k -> pure k
+
+lookupGlobal :: forall m. (MonadTC m) => GlobalName -> m (Maybe Type)
 lookupGlobal name = asks $
-  M.lookup name . ctxGlobals
+  fmap fst . M.lookup name . ctxGlobals
 
 withGlobal :: forall m a. (MonadTC m) => Position -> GlobalName -> Type -> Kind -> m a -> m a
 withGlobal pos name ty k cont = do
   oldg <- lookupGlobal name
   case oldg of
     Nothing -> local (\ctx -> ctx { ctxGlobals = M.insert name (ty, k) (ctxGlobals ctx) }) cont
-    Just (oldty, _) -> throwError $ GlobalAlreadyDefined pos name (getPosition oldty)
+    Just oldty -> throwError $ GlobalAlreadyDefined pos name (getPosition oldty)
 
 -- Bidirectional kind checking
 
@@ -333,8 +340,7 @@ inferKind = para alg
             this `is` kind
           Just (VarInfo kind _ _ Nothing) -> this `is` kind
       TGlobal pos name ->
-        lookupGlobal name >>=
-        maybe (throwError $ GlobalNotFound pos name) ((this `is`) . snd)
+        lookupGlobalKind pos name >>= (this `is`)
       TSkolem _ _ _ k ->
         this `is` k
       TMeta _ _ _ k ->
