@@ -1,17 +1,17 @@
 tests/arrays02.types:15:1-15:34:
   Subtype:
-    (∃ (n : Nat). ∃ (ρ : Row). {a : Int[n], b : Int[n] | ρ}) -> Int
+    (∃ (n : Nat). ∃ (ρ : Row). {a : Int[n], b : Int[n], … ρ}) → Int
   Supertype:
-    (∃ (n : Nat). ∃ (ρ : Row). {name : String[n], a : Int[n], b : Int[n] | ρ})
-    -> Int
+    (∃ (n : Nat). ∃ (ρ : Row). {name : String[n], a : Int[n], b : Int[n], … ρ})
+    → Int
   Result:
     OK
 tests/arrays02.types:16:1-16:34:
   Subtype:
-    (∃ (n : Nat). ∃ (ρ : Row). {name : String[n], a : Int[n], b : Int[n] | ρ})
-    -> Int
+    (∃ (n : Nat). ∃ (ρ : Row). {name : String[n], a : Int[n], b : Int[n], … ρ})
+    → Int
   Supertype:
-    (∃ (n : Nat). ∃ (ρ : Row). {a : Int[n], b : Int[n] | ρ}) -> Int
+    (∃ (n : Nat). ∃ (ρ : Row). {a : Int[n], b : Int[n], … ρ}) → Int
   Result:
     FAIL
     Cannot unify types.

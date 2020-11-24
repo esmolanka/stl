@@ -1,47 +1,46 @@
 tests/basic02.types:2:1-2:14:
   Normalised:
-    ∃ (ρ : Row). {fst : Unit, snd : Void | ρ}
+    ∃ (ρ : Row). {fst : Unit, snd : Void, … ρ}
   Kind:
     Type
 tests/basic02.types:5:1-5:10:
   Normalised:
-    ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | ... ρ>
+    ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | … ρ>
   Kind:
     Type
 tests/basic02.types:11:1-11:20:
   Normalised:
     ∀ (ρ : Row).
-      < Left? : ∃ (ρ : Row). {fst : Unit, snd : Void | ρ}
-      | Right? : ∃ (ρ : Row). {fst : Unit, snd : Void | ρ}
-      | ... ρ
+      < Left? : ∃ (ρ : Row). {fst : Unit, snd : Void, … ρ}
+      | Right? : ∃ (ρ : Row). {fst : Unit, snd : Void, … ρ}
+      | … ρ
       >
   Kind:
     Type
 tests/basic02.types:17:1-17:28:
   Normalised:
     ∃ (ρ : Row).
-      { first? : ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | ... ρ>
-      , second? : ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | ... ρ>
-      | ρ
+      { first? : ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | … ρ>
+      , second? : ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | … ρ>
+      , … ρ
       }
   Kind:
     Type
 tests/basic02.types:23:1-23:20:
   Normalised:
     ∃ (ρ : Row).
-      { first : ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | ... ρ>
-      , second : ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | ... ρ>
-      | ρ
+      { first : ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | … ρ>
+      , second : ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | … ρ>
+      , … ρ
       }
   Kind:
     Type
 tests/basic02.types:29:1-29:25:
   Normalised:
     ∃ (ρ : Row).
-      { choice :
-          Unit -> Void -> ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | ... ρ>
-      , product : Unit -> Void -> ∃ (ρ : Row). {fst : Unit, snd : Void | ρ}
-      | ρ
+      { choice : Unit → Void → ∀ (ρ : Row). <Inl? : Unit | Inr? : Void | … ρ>
+      , product : Unit → Void → ∃ (ρ : Row). {fst : Unit, snd : Void, … ρ}
+      , … ρ
       }
   Kind:
     Type

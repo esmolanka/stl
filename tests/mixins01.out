@@ -1,14 +1,14 @@
 tests/mixins01.types:26:1-26:20:
   Subtype:
-    ∃ (ρ : Row). {foo : Int, bar : Int | ρ}
+    ∃ (ρ : Row). {foo : Int, bar : Int, … ρ}
   Supertype:
-    ∃ (ρ : Row). {foo : Int, bar : Int | ρ}
+    ∃ (ρ : Row). {foo : Int, bar : Int, … ρ}
   Result:
     OK
 tests/mixins01.types:27:1-27:25:
   Subtype:
-    ∃ (ρ : Row). {baz : Float, foo : Int, bar : Int | ρ}
+    ∃ (ρ : Row). {baz : Float, foo : Int, bar : Int, … ρ}
   Supertype:
-    ∃ (ρ : Row). {foo : Int, bar : Int | ρ}
+    ∃ (ρ : Row). {foo : Int, bar : Int, … ρ}
   Result:
     OK

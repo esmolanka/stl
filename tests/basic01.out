@@ -10,41 +10,41 @@ tests/basic01.types:3:1-3:11:
     Type
 tests/basic01.types:5:1-5:19:
   Normalised:
-    Unit -> Unit
+    Unit → Unit
   Kind:
     Type
 tests/basic01.types:7:1-7:23:
   Normalised:
-    ∀ a. a -> a
+    ∀ a. a → a
   Kind:
     Type
 tests/basic01.types:9:1-9:36:
   Normalised:
-    (∀ a. a) -> ∀ b. b
+    (∀ a. a) → ∀ b. b
   Kind:
     Type
 tests/basic01.types:11:1-11:9:
   Normalised:
-    ∃ (ρ : Row). { | ρ}
+    ∃ (ρ : Row). {, … ρ}
   Kind:
     Type
 tests/basic01.types:13:1-13:21:
   Normalised:
-    ∃ (ρ : Row). {foo : Unit | ρ}
+    ∃ (ρ : Row). {foo : Unit, … ρ}
   Kind:
     Type
 tests/basic01.types:15:1-15:22:
   Normalised:
-    ∃ (ρ : Row). {foo? : Unit | ρ}
+    ∃ (ρ : Row). {foo? : Unit, … ρ}
   Kind:
     Type
 tests/basic01.types:17:1-17:9:
   Normalised:
-    ∀ (ρ : Row). < | ... ρ>
+    ∀ (ρ : Row). < | … ρ>
   Kind:
     Type
 tests/basic01.types:19:1-19:21:
   Normalised:
-    ∀ (ρ : Row). <Foo? : Unit | ... ρ>
+    ∀ (ρ : Row). <Foo? : Unit | … ρ>
   Kind:
     Type

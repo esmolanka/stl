@@ -1,18 +1,21 @@
 tests/mixins04.types:6:1-6:13:
   Normalised:
-    λ (f : Type -> Type). λ (ρ : Row).
-      (foo : f Int, bar : ∃ (ρ : Row). {baz : f Int, quux : f Float | ρ} | ρ)
+    λ (f : Type → Type). λ (ρ : Row).
+      (foo : f Int, bar : ∃ (ρ : Row). {baz : f Int, quux : f Float, … ρ}, … ρ)
   Kind:
-    (Type -> Type) -> Row -> Row
+    (Type → Type) → Row → Row
 tests/mixins04.types:9:1-9:19:
   Normalised:
     ∃ (ρ : Row).
-      {foo : Int, bar : ∃ (ρ : Row). {baz : Int, quux : Float | ρ} | ρ}
+      {foo : Int, bar : ∃ (ρ : Row). {baz : Int, quux : Float, … ρ}, … ρ}
   Kind:
     Type
 tests/mixins04.types:13:1-13:18:
   Normalised:
     ∃ (n : Nat). ∃ (ρ : Row).
-      {foo : Int[n], bar : ∃ (ρ : Row). {baz : Int[n], quux : Float[n] | ρ} | ρ}
+      { foo : Int[n]
+      , bar : ∃ (ρ : Row). {baz : Int[n], quux : Float[n], … ρ}
+      , … ρ
+      }
   Kind:
     Type

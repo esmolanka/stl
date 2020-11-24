@@ -2,20 +2,20 @@ tests/mutual04.types:9:1-9:10:
   Normalised:
     λ a. ∀ (a : Nat).
       (Nat a)
-      -> ∀ (ρ : Row).
+      → ∀ (ρ : Row).
         < Left? :
             μ Even. ∀ (ρ : Row).
               < EZero? : a¹
-              | ESucc? : ∀ (ρ : Row). <OZero? : a¹ | OSucc? : Even | ... ρ>
-              | ... ρ
+              | ESucc? : ∀ (ρ : Row). <OZero? : a¹ | OSucc? : Even | … ρ>
+              | … ρ
               >
         | Right? :
             μ Odd. ∀ (ρ : Row).
               < OZero? : a¹
-              | OSucc? : ∀ (ρ : Row). <EZero? : a¹ | ESucc? : Odd | ... ρ>
-              | ... ρ
+              | OSucc? : ∀ (ρ : Row). <EZero? : a¹ | ESucc? : Odd | … ρ>
+              | … ρ
               >
-        | ... ρ
+        | … ρ
         >
   Kind:
-    Type -> Type
+    Type → Type

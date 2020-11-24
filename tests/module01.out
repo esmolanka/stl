@@ -1,7 +1,7 @@
 tests/module01.types:12:16-12:42:
   Normalised:
     ∀ a. ∀ b.
-      (∀ (ρ : Row). <Left? : a | Right? : b | ... ρ>)
-      -> ∀ (ρ : Row). <Nothing? : Unit | Just? : b | ... ρ>
+      (∀ (ρ : Row). <Left? : a | Right? : b | … ρ>)
+      → ∀ (ρ : Row). <Nothing? : Unit | Just? : b | … ρ>
   Kind:
     Type

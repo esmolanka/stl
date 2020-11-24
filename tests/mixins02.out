@@ -1,24 +1,24 @@
 tests/mixins02.types:8:1-8:16:
   Normalised:
-    ∃ (ρ : Row). {foo : Int, bar : Float | ρ}
+    ∃ (ρ : Row). {foo : Int, bar : Float, … ρ}
   Kind:
     Type
 tests/mixins02.types:12:1-12:17:
   Normalised:
-    ∃ (ρ : Row). {foo : Int, bar : Float | ρ}
+    ∃ (ρ : Row). {foo : Int, bar : Float, … ρ}
   Kind:
     Type
 tests/mixins02.types:16:1-16:15:
   Normalised:
-    ∃ (n : Nat). ∃ (ρ : Row). {foo : Int[n], bar : Float[n] | ρ}
+    ∃ (n : Nat). ∃ (ρ : Row). {foo : Int[n], bar : Float[n], … ρ}
   Kind:
     Type
 tests/mixins02.types:22:1-22:18:
   Normalised:
     ∃ (n : Nat). ∃ (ρ : Row).
-      { foo : ∀ (ρ : Row). <Nothing? : Unit | Just? : Int | ... ρ>
-      , bar : ∀ (ρ : Row). <Nothing? : Unit | Just? : Float | ... ρ>
-      | ρ
+      { foo : ∀ (ρ : Row). <Nothing? : Unit | Just? : Int | … ρ>
+      , bar : ∀ (ρ : Row). <Nothing? : Unit | Just? : Float | … ρ>
+      , … ρ
       }
   Kind:
     Type

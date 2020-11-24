@@ -1,33 +1,33 @@
 tests/param02.types:9:1-9:28:
   Normalised:
-    λ (f : Type -> Type). ∃ (ρ : Row). {first? : f Unit, second? : f Unit | ρ}
+    λ (f : Type → Type). ∃ (ρ : Row). {first? : f Unit, second? : f Unit, … ρ}
   Kind:
-    (Type -> Type) -> Type
+    (Type → Type) → Type
 tests/param02.types:10:1-10:34:
   Normalised:
     ∃ (ρ : Row).
-      { first? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
-      , second? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
-      | ρ
+      { first? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | … ρ>
+      , second? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | … ρ>
+      , … ρ
       }
   Kind:
     Type
 tests/param02.types:15:1-15:29:
   Normalised:
-    λ (g : (Type -> Type) -> Type). ∃ (ρ : Row).
-      {use? : g (λ a. ∀ (ρ : Row). <Nothing? : Unit | Just? : a | ... ρ>) | ρ}
+    λ (g : (Type → Type) → Type). ∃ (ρ : Row).
+      {use? : g (λ a. ∀ (ρ : Row). <Nothing? : Unit | Just? : a | … ρ>), … ρ}
   Kind:
-    ((Type -> Type) -> Type) -> Type
+    ((Type → Type) → Type) → Type
 tests/param02.types:16:1-16:51:
   Normalised:
     ∃ (ρ : Row).
       { use? :
           ∃ (ρ : Row).
-            { first? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
-            , second? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | ... ρ>
-            | ρ
+            { first? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | … ρ>
+            , second? : ∀ (ρ : Row). <Nothing? : Unit | Just? : Unit | … ρ>
+            , … ρ
             }
-      | ρ
+      , … ρ
       }
   Kind:
     Type

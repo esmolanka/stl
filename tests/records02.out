@@ -6,7 +6,7 @@ tests/records02.types:10:1-10:13:
       , module : Unit
       , with : Unit
       , provides : Unit
-      | ρ
+      , … ρ
       }
   Kind:
     Type

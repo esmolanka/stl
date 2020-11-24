@@ -4,9 +4,9 @@ tests/mutual03.types:4:1-4:11:
       < EZero? : Unit
       | ESucc? :
           μ Odd. ∀ (ρ : Row).
-            <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | ... ρ>
+            <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | … ρ>
       | ESuccSucc? : Even
-      | ... ρ
+      | … ρ
       >
   Kind:
     Type
@@ -16,9 +16,9 @@ tests/mutual03.types:6:1-6:10:
       < OZero? : Unit
       | OSucc? :
           μ Even. ∀ (ρ : Row).
-            <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | ... ρ>
+            <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | … ρ>
       | OSuccSucc? : Odd
-      | ... ρ
+      | … ρ
       >
   Kind:
     Type
@@ -31,29 +31,29 @@ tests/mutual03.types:8:1-8:56:
             < OZero? : Unit
             | OSucc? :
                 μ Even. ∀ (ρ : Row).
-                  <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | ... ρ>
+                  <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | … ρ>
             | OSuccSucc? : Odd
-            | ... ρ
+            | … ρ
             >
       | ESuccSucc? :
           μ Even. ∀ (ρ : Row).
             < EZero? : Unit
             | ESucc? :
                 μ Odd. ∀ (ρ : Row).
-                  <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | ... ρ>
+                  <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | … ρ>
             | ESuccSucc? : Even
-            | ... ρ
+            | … ρ
             >
-      | ... ρ
+      | … ρ
       >
   Supertype:
     μ Even. ∀ (ρ : Row).
       < EZero? : Unit
       | ESucc? :
           μ Odd. ∀ (ρ : Row).
-            <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | ... ρ>
+            <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | … ρ>
       | ESuccSucc? : Even
-      | ... ρ
+      | … ρ
       >
   Result:
     OK
@@ -63,9 +63,9 @@ tests/mutual03.types:9:1-9:56:
       < EZero? : Unit
       | ESucc? :
           μ Odd. ∀ (ρ : Row).
-            <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | ... ρ>
+            <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | … ρ>
       | ESuccSucc? : Even
-      | ... ρ
+      | … ρ
       >
   Supertype:
     ∀ (ρ : Row).
@@ -75,20 +75,20 @@ tests/mutual03.types:9:1-9:56:
             < OZero? : Unit
             | OSucc? :
                 μ Even. ∀ (ρ : Row).
-                  <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | ... ρ>
+                  <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | … ρ>
             | OSuccSucc? : Odd
-            | ... ρ
+            | … ρ
             >
       | ESuccSucc? :
           μ Even. ∀ (ρ : Row).
             < EZero? : Unit
             | ESucc? :
                 μ Odd. ∀ (ρ : Row).
-                  <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | ... ρ>
+                  <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | … ρ>
             | ESuccSucc? : Even
-            | ... ρ
+            | … ρ
             >
-      | ... ρ
+      | … ρ
       >
   Result:
     OK
@@ -101,29 +101,29 @@ tests/mutual03.types:11:1-11:55:
             < EZero? : Unit
             | ESucc? :
                 μ Odd. ∀ (ρ : Row).
-                  <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | ... ρ>
+                  <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | … ρ>
             | ESuccSucc? : Even
-            | ... ρ
+            | … ρ
             >
       | OSuccSucc? :
           μ Odd. ∀ (ρ : Row).
             < OZero? : Unit
             | OSucc? :
                 μ Even. ∀ (ρ : Row).
-                  <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | ... ρ>
+                  <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | … ρ>
             | OSuccSucc? : Odd
-            | ... ρ
+            | … ρ
             >
-      | ... ρ
+      | … ρ
       >
   Supertype:
     μ Odd. ∀ (ρ : Row).
       < OZero? : Unit
       | OSucc? :
           μ Even. ∀ (ρ : Row).
-            <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | ... ρ>
+            <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | … ρ>
       | OSuccSucc? : Odd
-      | ... ρ
+      | … ρ
       >
   Result:
     OK
@@ -133,9 +133,9 @@ tests/mutual03.types:12:1-12:55:
       < OZero? : Unit
       | OSucc? :
           μ Even. ∀ (ρ : Row).
-            <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | ... ρ>
+            <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | … ρ>
       | OSuccSucc? : Odd
-      | ... ρ
+      | … ρ
       >
   Supertype:
     ∀ (ρ : Row).
@@ -145,20 +145,20 @@ tests/mutual03.types:12:1-12:55:
             < EZero? : Unit
             | ESucc? :
                 μ Odd. ∀ (ρ : Row).
-                  <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | ... ρ>
+                  <OZero? : Unit | OSucc? : Even | OSuccSucc? : Odd | … ρ>
             | ESuccSucc? : Even
-            | ... ρ
+            | … ρ
             >
       | OSuccSucc? :
           μ Odd. ∀ (ρ : Row).
             < OZero? : Unit
             | OSucc? :
                 μ Even. ∀ (ρ : Row).
-                  <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | ... ρ>
+                  <EZero? : Unit | ESucc? : Odd | ESuccSucc? : Even | … ρ>
             | OSuccSucc? : Odd
-            | ... ρ
+            | … ρ
             >
-      | ... ρ
+      | … ρ
       >
   Result:
     OK

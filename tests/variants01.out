@@ -1,22 +1,22 @@
 tests/variants01.types:3:1-3:16:
   Subtype:
-    ∀ (ρ : Row). < | ... ρ>
+    ∀ (ρ : Row). < | … ρ>
   Supertype:
-    ∀ (ρ : Row). < | ... ρ>
+    ∀ (ρ : Row). < | … ρ>
   Result:
     OK
 tests/variants01.types:6:1-6:26:
   Subtype:
-    ∀ (ρ : Row). < | ... ρ>
+    ∀ (ρ : Row). < | … ρ>
   Supertype:
-    ∀ (ρ : Row). <Foo? : Unit | ... ρ>
+    ∀ (ρ : Row). <Foo? : Unit | … ρ>
   Result:
     OK
 tests/variants01.types:9:1-9:26:
   Subtype:
-    ∀ (ρ : Row). <Foo? : Unit | ... ρ>
+    ∀ (ρ : Row). <Foo? : Unit | … ρ>
   Supertype:
-    ∀ (ρ : Row). < | ... ρ>
+    ∀ (ρ : Row). < | … ρ>
   Result:
     FAIL
     Type is not polymorphic enough.
@@ -24,23 +24,23 @@ tests/variants01.types:9:1-9:26:
         ▫
 tests/variants01.types:12:1-12:62:
   Subtype:
-    ∀ (ρ : Row). <Foo? : Unit | Bar? : Void | ... ρ>
+    ∀ (ρ : Row). <Foo? : Unit | Bar? : Void | … ρ>
   Supertype:
-    ∀ (ρ : Row). <Bar? : Void | Foo? : Unit | ... ρ>
+    ∀ (ρ : Row). <Bar? : Void | Foo? : Unit | … ρ>
   Result:
     OK
 tests/variants01.types:15:1-15:75:
   Subtype:
-    ∀ (ρ : Row). <Foo? : Unit | Bar? : Unit | ... ρ>
+    ∀ (ρ : Row). <Foo? : Unit | Bar? : Unit | … ρ>
   Supertype:
-    ∀ (ρ : Row). <Baz? : Unit | Bar? : Unit | Foo? : Unit | ... ρ>
+    ∀ (ρ : Row). <Baz? : Unit | Bar? : Unit | Foo? : Unit | … ρ>
   Result:
     OK
 tests/variants01.types:18:1-18:62:
   Subtype:
-    ∀ (ρ : Row). <Foo? : Unit | Bar? : Void | ... ρ>
+    ∀ (ρ : Row). <Foo? : Unit | Bar? : Void | … ρ>
   Supertype:
-    ∀ (ρ : Row). <Bar? : Unit | Foo? : Unit | ... ρ>
+    ∀ (ρ : Row). <Bar? : Unit | Foo? : Unit | … ρ>
   Result:
     FAIL
     Cannot unify types.
@@ -49,8 +49,8 @@ tests/variants01.types:18:1-18:62:
         Unit
 tests/variants01.types:19:1-19:80:
   Subtype:
-    ∀ (ρ : Row). <Foo? : Unit | Bar? : ∃ (ρ : Row). {foo? : Unit | ρ} | ... ρ>
+    ∀ (ρ : Row). <Foo? : Unit | Bar? : ∃ (ρ : Row). {foo? : Unit, … ρ} | … ρ>
   Supertype:
-    ∀ (ρ : Row). <Bar? : ∃ (ρ : Row). {bar? : Unit | ρ} | Foo? : Unit | ... ρ>
+    ∀ (ρ : Row). <Bar? : ∃ (ρ : Row). {bar? : Unit, … ρ} | Foo? : Unit | … ρ>
   Result:
     OK

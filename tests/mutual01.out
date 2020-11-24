@@ -2,8 +2,8 @@ tests/mutual01.types:4:1-4:11:
   Normalised:
     μ Even. ∀ (ρ : Row).
       < EZero? : Unit
-      | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | ... ρ>
-      | ... ρ
+      | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | … ρ>
+      | … ρ
       >
   Kind:
     Type
@@ -11,8 +11,8 @@ tests/mutual01.types:6:1-6:10:
   Normalised:
     μ Odd. ∀ (ρ : Row).
       < OZero? : Unit
-      | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | ... ρ>
-      | ... ρ
+      | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | … ρ>
+      | … ρ
       >
   Kind:
     Type
@@ -23,16 +23,16 @@ tests/mutual01.types:8:1-8:37:
       | ESucc? :
           μ Odd. ∀ (ρ : Row).
             < OZero? : Unit
-            | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | ... ρ>
-            | ... ρ
+            | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | … ρ>
+            | … ρ
             >
-      | ... ρ
+      | … ρ
       >
   Supertype:
     μ Even. ∀ (ρ : Row).
       < EZero? : Unit
-      | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | ... ρ>
-      | ... ρ
+      | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | … ρ>
+      | … ρ
       >
   Result:
     OK
@@ -40,8 +40,8 @@ tests/mutual01.types:9:1-9:37:
   Subtype:
     μ Even. ∀ (ρ : Row).
       < EZero? : Unit
-      | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | ... ρ>
-      | ... ρ
+      | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | … ρ>
+      | … ρ
       >
   Supertype:
     ∀ (ρ : Row).
@@ -49,10 +49,10 @@ tests/mutual01.types:9:1-9:37:
       | ESucc? :
           μ Odd. ∀ (ρ : Row).
             < OZero? : Unit
-            | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | ... ρ>
-            | ... ρ
+            | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | … ρ>
+            | … ρ
             >
-      | ... ρ
+      | … ρ
       >
   Result:
     OK
@@ -63,16 +63,16 @@ tests/mutual01.types:11:1-11:37:
       | OSucc? :
           μ Even. ∀ (ρ : Row).
             < EZero? : Unit
-            | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | ... ρ>
-            | ... ρ
+            | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | … ρ>
+            | … ρ
             >
-      | ... ρ
+      | … ρ
       >
   Supertype:
     μ Odd. ∀ (ρ : Row).
       < OZero? : Unit
-      | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | ... ρ>
-      | ... ρ
+      | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | … ρ>
+      | … ρ
       >
   Result:
     OK
@@ -80,8 +80,8 @@ tests/mutual01.types:12:1-12:37:
   Subtype:
     μ Odd. ∀ (ρ : Row).
       < OZero? : Unit
-      | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | ... ρ>
-      | ... ρ
+      | OSucc? : ∀ (ρ : Row). <EZero? : Unit | ESucc? : Odd | … ρ>
+      | … ρ
       >
   Supertype:
     ∀ (ρ : Row).
@@ -89,10 +89,10 @@ tests/mutual01.types:12:1-12:37:
       | OSucc? :
           μ Even. ∀ (ρ : Row).
             < EZero? : Unit
-            | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | ... ρ>
-            | ... ρ
+            | ESucc? : ∀ (ρ : Row). <OZero? : Unit | OSucc? : Even | … ρ>
+            | … ρ
             >
-      | ... ρ
+      | … ρ
       >
   Result:
     OK
