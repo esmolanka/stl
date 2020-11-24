@@ -6,9 +6,10 @@ module Data.StructuralType where
 import Control.Arrow
 
 import Data.Coerce
-import Data.Functor.Foldable
-import qualified Data.Text as T
+import Data.Fix (Fix(..))
+import Data.Functor.Foldable ()
 import Data.Text (Text)
+import qualified Data.Text as T
 
 import GHC.Generics
 import qualified STL.Core.Eval as Core

@@ -11,10 +11,11 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Control.Monad.State
 
+import Data.Fix (Fix(..))
 import Data.Foldable (fold)
 import Data.Functor.Compose
+import Data.Functor.Foldable (cata, para)
 import Data.Functor.Identity
-import Data.Functor.Foldable (Fix(..), cata, para)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe

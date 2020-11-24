@@ -11,8 +11,9 @@ module STL.Elab where
 import Control.Monad.Reader
 
 import Data.Coerce
+import Data.Fix (Fix(..))
 import Data.Functor.Compose
-import Data.Functor.Foldable (Fix(..), cata)
+import Data.Functor.Foldable (cata)
 import Data.Functor.Identity
 import Data.Maybe
 

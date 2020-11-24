@@ -17,7 +17,7 @@ import Control.Monad.Reader
 
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
-import Data.Functor.Foldable (Fix(..))
+import Data.Fix (Fix(..))
 import Data.Text.Prettyprint.Doc.Render.Text (hPutDoc)
 import Data.Void
 

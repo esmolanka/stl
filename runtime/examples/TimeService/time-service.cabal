@@ -9,5 +9,5 @@ cabal-version:       >=1.10
 executable time-service
   main-is:             Main.hs
   other-modules:       API
-  build-depends:       stl-runtime, base >=4.12 && <4.13, time, containers, text
+  build-depends:       stl-runtime, base >=4.12 && <5, time, containers, text
   default-language:    Haskell2010

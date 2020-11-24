@@ -13,8 +13,9 @@ import Control.Monad.Except
 import Control.Monad.RWS.Strict
 import Control.Monad.Reader
 
+import Data.Fix (Fix(..))
 import Data.Functor.Compose
-import Data.Functor.Foldable (Fix(..), cata)
+import Data.Functor.Foldable (cata)
 import Data.Map (Map)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)

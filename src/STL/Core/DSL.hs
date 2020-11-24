@@ -2,8 +2,8 @@
 
 module STL.Core.DSL where
 
+import Data.Fix (Fix(..))
 import Data.Functor.Compose
-import Data.Functor.Foldable (Fix(..))
 import Data.Text (Text)
 import STL.Core.Types
 

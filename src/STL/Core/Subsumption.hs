@@ -16,7 +16,7 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad.State
 
-import Data.Functor.Foldable (Fix(..))
+import Data.Fix (Fix(..))
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
 import Data.Map (Map)

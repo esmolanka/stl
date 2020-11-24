@@ -22,7 +22,7 @@ library
                        STL.Runtime.Remote.InMemory
                        STL.Runtime.Remote.Logger
   other-modules:       STL.Runtime.Builtins
-  build-depends:       stl, base >=4.12 && <4.13, text, mtl, bytestring,
+  build-depends:       stl, base >=4.12 && <5, text, mtl, bytestring,
                        containers, aeson, template-haskell, stm, io-streams,
                        network, attoparsec
   default-language:    Haskell2010

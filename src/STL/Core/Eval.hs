@@ -6,8 +6,9 @@ module STL.Core.Eval where
 import Control.Monad.Reader
 
 import Data.Bifunctor
+import Data.Fix (Fix(..))
 import Data.Foldable (fold)
-import Data.Functor.Foldable (Fix(..), cata)
+import Data.Functor.Foldable (cata)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Monoid (Any (..))

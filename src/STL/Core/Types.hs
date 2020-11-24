@@ -19,8 +19,9 @@ import Control.Category ((>>>))
 import Control.Monad.Reader
 
 import Data.Char (isUpper)
+import Data.Fix (Fix(..))
 import Data.Functor.Compose
-import Data.Functor.Foldable (Fix(..), cata, para)
+import Data.Functor.Foldable (cata, para)
 import Data.List (foldl')
 import Data.String
 import Data.Text (Text)

@@ -14,7 +14,7 @@ module STL.Syntax.Parser
   ) where
 
 import Data.Either
-import Data.Functor.Foldable (Fix(..))
+import Data.Fix (Fix(..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as Lazy
 import Data.Text.Prettyprint.Doc

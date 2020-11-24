@@ -7,7 +7,7 @@
 
 module STL.Syntax.Types where
 
-import Data.Functor.Foldable (Fix(..))
+import Data.Fix (Fix(..))
 import Data.Text
 import STL.Syntax.Position
 
