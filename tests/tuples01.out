@@ -13,18 +13,18 @@ tests/tuples01.types:6:1-6:11:
     ∃ ρ. (Int × ρ)
   Kind:
     Type
-tests/tuples01.types:8:1-8:28:
+tests/tuples01.types:8:1-8:27:
   Normalised:
     ∃ ρ. (Int × String × Float × ρ)
   Kind:
     Type
-tests/tuples01.types:10:1-10:20:
+tests/tuples01.types:10:1-10:19:
   Normalised:
     ∃ ρ. (Int × String × ρ)
   Kind:
     Type
-tests/tuples01.types:12:1-12:11:
+tests/tuples01.types:12:1-12:28:
   Normalised:
-    ∃ ρ. (Int × ρ)
+    (∃ ρ. (Int × String × ρ)) → Float
   Kind:
     Type

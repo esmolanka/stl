@@ -5,8 +5,8 @@
 
 #eval (Int,)
 
-#eval (Int × String × Float)
+#eval Int × String × Float
 
-#eval (Int × String)
+#eval Int × String
 
-#eval (Int ×)
+#eval Int * String -> Float
