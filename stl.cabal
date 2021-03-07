@@ -36,6 +36,8 @@ library
     STL.Elab
     STL.Pretty
     STL.Schema
+    STL.Schema.Types
+    STL.Schema.Extract
 
     STL.CodeGen.GenHaskell
 
