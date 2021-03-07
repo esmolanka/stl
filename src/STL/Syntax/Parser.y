@@ -52,6 +52,7 @@ import STL.Syntax.Types
   '->'           { L _ (TokPunctuation "->"  ) }
   '|'            { L _ (TokPunctuation "|"   ) }
   ','            { L _ (TokPunctuation ","   ) }
+  '*'            { L _ (TokPunctuation "*"   ) }
   '.'            { L _ (TokPunctuation "."   ) }
   '?'            { L _ (TokPunctuation "?"   ) }
   '<:'           { L _ (TokPunctuation "<:"  ) }
@@ -158,8 +159,9 @@ Type_ :: { Type }
   : Type EOF                             { $1 }
 
 Type :: { Type }
-  : AppType                              { $1 }
-  | AppType '->' sepBy1(AppType,'->')    { mkArrow ($1 : $3) }
+  : ComplexType                          { $1 }
+  | AppType '->' sepBy1(AppType, '->')   { mkArrow ($1 : $3) }
+
   | "forall" list1(CovarBindings)
        '.' Type                          { Fix $ TForall (position $1 <> typePos $4) (concat $2) $4 }
   | "exists" list1(CovarBindings)
@@ -204,10 +206,10 @@ OneBinding :: { Binding () }
   | '(' VARIABLE ':' Kind ')'            { Binding (position $2) (Var $ getVariable $ extract $2) (Just $4) () }
 
 ----------------------------------------------------------------------
--- Applications and special forms
+-- Complex types
 
-AppType :: { Type }
-  : list1(CompoundType)             { mkApplication $1 }
+ComplexType :: { Type }
+  : AppType                         { $1 }
 
   | "record of" AtomType
     '{' '}'                         { Fix $ TRecord (position $1 <> position $4) (mkUnion $ mkMixins (position $3) Nothing []) (Just $2) }
@@ -230,13 +232,21 @@ AppType :: { Type }
     '<' sepBy1(VarMixin, '|') '>'   { mkUnion $ mkMixins (position $3) $2 $4 }
 
 ----------------------------------------------------------------------
+-- Application type
+
+AppType :: { Type }
+  : list1(CompoundType)             { mkApplication $1 }
+  | sepBy2(CompoundType, '*')       { mkTuple $1 }
+
+----------------------------------------------------------------------
 -- Compound types
 
 CompoundType :: { Type }
   : AtomType                        { $1 }
   | CompoundType '[' AtomType ']'   { Fix $ TArray (typePos $1 <> position $4) $1 $3 }
-  | '(' AppType ',' ')'             { mkTuple [$2] }
-  | '(' sepBy2(AppType, ',') ')'    { mkTuple $2 }
+
+  | '(' ComplexType ',' ')'         { mkTuple [$2] }
+  | '(' sepBy2(ComplexType,',') ')' { mkTuple $2 }
 
   | '{' '}'                         { Fix $ TRecord (position $1 <> position $2) (mkUnion $ mkMixins (position $1) Nothing []) Nothing }
   | '{' sepBy1(Mixin, ',') '}'      { Fix $ TRecord (position $1 <> position $3) (mkUnion $ mkMixins (position $1) Nothing $2) Nothing }
@@ -265,11 +275,11 @@ AtomType :: { Type }
 
 Mixin :: { Either (Row Type -> Row Type) Type }
   : RecRowExt          { Left  $1 }
-  | "mix" Type         { Right $2 }
+  | "mix" AppType      { Right $2 }
 
 VarMixin :: { Either (Row Type -> Row Type) Type }
   : VarRowExt          { Left  $1 }
-  | "mix" Type         { Right $2 }
+  | "mix" AppType      { Right $2 }
 
 RecRowExt :: { Row Type -> Row Type }
   : LowerOrQuotedLabel ':' Type          { RExtend (position $1 <> typePos $3)
