@@ -1,120 +1,127 @@
-#+TITLE: Structurally Typed interface description Language
-#+HTML_HEAD: <style>:root {--monospace-font: "PragmataPro", "Iosevka", monospaced !important;} </style>
+#+TITLE: Row-type polymorphism + Interface description languages
 
-* Introduction
+Attempt to apply a type system with row-type polymorphic records and
+variants to the domain of interface description languages.
 
-This is an interface description language based on higher-rank,
-row-type polymorphic structural type system.
+- [[http://homepages.inf.ed.ac.uk/slindley/papers/corelinks.pdf][Row-based Effect Types for Database Integration (Lindley, Cheney)]]
+- [[https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/scopedlabels.pdf][Extensible records with scoped labels (Leijen)]]
 
-A few examples:
+Motivating features:
 
+1. Structural typing better suits the needs of communication between
+   systems and serialisation/deserialisation than nominal typing.
+   - Names of types don't matter, only their structure matters.
+   - Field order doesn't matter either.
+2. Subtyping relation on types matches the compatibility property:
+   - Values serialised as ~X~ can be deserialised as ~Y~ iff ~X <: Y~.
+   - The service is compatible with the client iff ~TypeOfService <: TypeOfClient~.
+   - Schema evolution is non-breaking iff ~TypeOfVersionₙ₊₁ <: TypeOfVersionₙ~.
+
+The language supports a set of base types, including arrow type for
+functions.
 #+BEGIN_SRC stl
-  -- Records:
+  type Flag = Bool
+  type Count = Int
+  type Length = Float
+  type Name = String
+  type GetWordCount = String -> Count
+
+  #check Int <: Int     -- OK, trivial
+  #check Name <: String -- OK, names don't matter
+  #check String <: Name -- OK
+  #check Float <: Int   -- Not OK, different types
+  #check Int <: Float   -- Not OK
+#+END_SRC
+
+Records with required and optional fields.
+#+BEGIN_SRC stl
   type Color =
-    { red    : Float  -- `Int`, `Float`, and `String` are base types
+    { red    : Float
     , green  : Float
-    , blue   : Float  -- required fields denoted by `:`
-    , alpha ?: Float  -- optional fields denoted by `?:`
+    , blue   : Float
+    , alpha ?: Float -- optional field
     }
 
-  -- Variants with no payload (enums):
+  type ColorNoAlpha =
+    { red    : Float
+    , green  : Float
+    , blue   : Float
+    }
+
+  #check Color <: ColorNoAlpha  -- OK, field addition
+  #check ColorNoAlpha <: Color  -- OK, since `alpha` is optional
+  #check {red : Float} <: Color -- Not OK, `green` and `blue` are missing
+#+END_SRC
+
+Variants with no payload, also know as enums.
+#+BEGIN_SRC stl
   type Font =
     | SansSerif
     | Serif
     | Monospaced
 
-  -- Variants with payloads (and recursion):
-  type Drawing =
-    | Circle    : { radius : Float, color : Color }
+  type FontAlt = ⟨SansSerif | Serif | Monospaced⟩ -- the same as `Font`
+
+  type RichFont =
+    | SansSerif
+    | Serif
+    | Monospaced
+    | Cursive
+
+  #check Font <: RichFont  -- OK, alternative restriction
+  #check RichFont <: Font  -- Not OK, the client won't be able to handle `Cursive`
+#+END_SRC
+
+Variants with payloads. Any types can be payloads, including other
+variants and records.
+#+BEGIN_SRC stl
+  type SimpleDrawing =
+    | Dot       : Color                             -- variant payload
+    | Circle    : { radius : Float, color : Color } -- record payload
     | Square    : { side : Float, color : Color }
     | Label     : { caption : String, font : Font, color : Color }
+#+END_SRC
+
+Recursive types.
+#+BEGIN_SRC stl
+  type Drawing =
+    | Element   : SimpleDrawing
     | Scale     : { x : Float, y : Float, drawing : Drawing }
     | Rotate    : { radians : Float, drawing : Drawing }
     | Translate : { x : Float, y : Float, drawing : Drawing }
     | Compose   : { background : Drawing, foreground : Drawing }
+#+END_SRC
 
-  -- API as a record of functions:
+Types can be parameterised by other types.
+#+BEGIN_SRC stl
+  type Maybe a =      -- `a` is a parameter of kind `Type`
+    | Nothing
+    | Just : a
+
+  #check Maybe Int <: ⟨Nothing | Just : Int⟩  -- OK
+  #check ⟨Nothing | Just : Int⟩ <: Maybe Int  -- OK
+#+END_SRC
+
+API can be represented as a record of functions.
+#+BEGIN_SRC stl
   type DrawingAPI =
     { canvasSize  : Drawing -> { width : Float, height : Float }
     , toGrayscale : Drawing -> Drawing
     , merge       : List Drawing -> Drawing
     }
-
-  -- Parametric polymorphism:
-  type Maybe a =     -- `a` is a parameter of kind `Type`
-    | Nothing        -- it's just a shortcut to `Nothing : Unit`
-    | Just : a
-
-  -- Recursive data type with a parameter:
-  type ConsList a =
-    | Nil
-    | Cons : { head : a, tail : ConsList }
-  -- Note that there's no need to specify parameters on a recursive
-  -- reference to itself
-
-  -- Mutually recursive types:
-  type Even =
-    | EZero
-    | ESucc : Odd
-  with Odd  =
-    | OZero
-    | OSucc : Even
-
-  -- Higher kinded types:
-  type Fix (f : Type -> Type) = f Fix
-  type ConsListF a b =
-    | Nil
-    | Cons : { head : a, tail : b }
-
-  -- Functor composition:
-  type PairHT a b = { head : a, tail : b }
-  type SumNC  a b = ⟨ Nil : a | Cons : b ⟩
-  type Compose (f g : Type -> Type) (a : Type) = f (g a)
-  type AltConsListF a b = Compose (SumNC Unit) (PairHT a) b
-
-  -- And it turns out, `ConsList` is equivalent to `Fix AltConsListF`!
-  -- Data serialised as `ConsList a` can be deserialised as `Fix
-  -- (AltConsListF a)`, and vice versa.
-  #check ConsList <: Fix AltConsListF
-  #check Fix AltConsListF <: ConsList
 #+END_SRC
 
-* Key features
+Arrow type is contravariant in its argument and covariant its result.
+#+BEGIN_SRC stl
+  type A = ...
+  type B = ...
+  type C = ...
+  type D = ...
 
-- Structural types: name of a type does not matters; only its
-  structure matters. It makes refactoring easier. No module can “own”
-  a type.
-- The order of fields in a record or alternatives in a variant does
-  not matter: e.g. ={foo : Int, bar : Bool}= /is/ equivalent to
-  ={bar : Bool, foo : Int}=; but the field names matter: ={bar : Int}=
-  /is not/ equivalent to ={baz : Int}=.
-- Schema evolution is based on structural subtyping: if a new version
-  of the type is a subtype of the old version, then the change is
-  guaranteed to be not breaking; if it is not, then the change /is/
-  breaking. This is easy to check in a VCS commit hook or an automatic
-  test suite on CI.
-- If a schema of a service is a subtype of a schema of a client, then
-  the service and the client are compatible in the API. This is easy
-  to check on handshake instead of checking human-assigned version
-  numbers but unlike the latter it leaves less room for error and
-  gives more flexibility.
-- Underlying type system supports parametrised types, recursive types,
-  and polymorphic function types, so the API can be modelled in terms
-  of high-level constructs, not bloated with implementation details
-  and never-ending annotations; during the boilerplate generation for
-  your target language, the most of these high-level constructs can be
-  compiled away.
+  -- If
+  #check B <: A
+  #check C <: D
 
-* What is missing for the first cut
-
-- [ ] A proper name.
-- [ ] Comprehensible error messages from the subsumption
-  checker. They're too technical and too verbose at the moment.
-- [ ] Module system with exports, imports, etc.
-- [ ] User-defined foreign types.
-- [ ] Sharing in type serialistion.
-- [ ] An efficient wire format.
-- [X] Bindings generator (for Haskell at least).
-- [X] Type serialisation.
-- [X] Run-time subsumption checker and type negotiation machinery.
-- [X] Editor integration (VSCode, Emacs)
+  -- Then
+  #check A -> C <: B -> D
+#+END_SRC
